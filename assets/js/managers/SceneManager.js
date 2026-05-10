@@ -37,52 +37,41 @@ export class SceneManager {
     setupRenderer() {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = LIGHTING_SETTINGS.TONE_MAPPING_EXPOSURE;
         document.body.appendChild(this.renderer.domElement);
     }
 
     setupLighting() {
-        // Ambient light for general illumination
-        const ambientLight = new THREE.AmbientLight(
-            LIGHTING_SETTINGS.MAIN_LIGHT_COLOR, 
-            LIGHTING_SETTINGS.AMBIENT_INTENSITY
-        );
+        const L = LIGHTING_SETTINGS;
+
+        const ambientLight = new THREE.AmbientLight(L.AMBIENT_COLOR, L.AMBIENT_INTENSITY);
         this.scene.add(ambientLight);
 
-        // Main directional light (simulating sun)
-        const mainLight = new THREE.DirectionalLight(
-            LIGHTING_SETTINGS.MAIN_LIGHT_COLOR, 
-            LIGHTING_SETTINGS.MAIN_LIGHT_INTENSITY
-        );
-        mainLight.position.set(60, 60, 60);
-        mainLight.castShadow = true;
-        mainLight.shadow.mapSize.width = LIGHTING_SETTINGS.SHADOW_MAP_SIZE;
-        mainLight.shadow.mapSize.height = LIGHTING_SETTINGS.SHADOW_MAP_SIZE;
-        this.scene.add(mainLight);
+        const keyLight = new THREE.DirectionalLight(L.KEY_COLOR, L.KEY_INTENSITY);
+        keyLight.position.set(L.KEY_POSITION.x, L.KEY_POSITION.y, L.KEY_POSITION.z);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width  = L.SHADOW_MAP_SIZE;
+        keyLight.shadow.mapSize.height = L.SHADOW_MAP_SIZE;
+        keyLight.shadow.camera.near = 1;
+        keyLight.shadow.camera.far  = 200;
+        keyLight.shadow.bias = -0.0005;
+        this.scene.add(keyLight);
 
-        // Fill light from opposite direction
-        const fillLight = new THREE.DirectionalLight(
-            LIGHTING_SETTINGS.FILL_LIGHT_COLOR, 
-            LIGHTING_SETTINGS.FILL_LIGHT_INTENSITY
-        );
-        fillLight.position.set(-60, 60, -60);
+        const fillLight = new THREE.DirectionalLight(L.FILL_COLOR, L.FILL_INTENSITY);
+        fillLight.position.set(L.FILL_POSITION.x, L.FILL_POSITION.y, L.FILL_POSITION.z);
         this.scene.add(fillLight);
 
-        // Add point lights for local illumination
-        const pointLight1 = new THREE.PointLight(
-            LIGHTING_SETTINGS.POINT_LIGHT_COLOR, 
-            LIGHTING_SETTINGS.POINT_LIGHT_INTENSITY
-        );
-        pointLight1.position.set(24, 24, 12);
-        this.scene.add(pointLight1);
+        const sconce1 = new THREE.PointLight(L.SCONCE_COLOR, L.SCONCE_INTENSITY, L.SCONCE_DISTANCE);
+        sconce1.position.set(L.SCONCE_X, L.SCONCE_Y, L.SCONCE_Z);
+        this.scene.add(sconce1);
 
-        const pointLight2 = new THREE.PointLight(
-            LIGHTING_SETTINGS.POINT_LIGHT_COLOR, 
-            LIGHTING_SETTINGS.POINT_LIGHT_INTENSITY
-        );
-        pointLight2.position.set(-24, 24, 12);
-        this.scene.add(pointLight2);
+        const sconce2 = new THREE.PointLight(L.SCONCE_COLOR, L.SCONCE_INTENSITY, L.SCONCE_DISTANCE);
+        sconce2.position.set(-L.SCONCE_X, L.SCONCE_Y, L.SCONCE_Z);
+        this.scene.add(sconce2);
     }
 
     setupControls() {

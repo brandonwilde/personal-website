@@ -76,11 +76,9 @@ export class BookshelfScene {
     createWoodMaterial(texture) {
         return new THREE.MeshStandardMaterial({
             map: texture,
-            normalMap: texture,
-            roughness: 0.8,
-            metalness: 0.1,
-            bumpMap: texture,
-            bumpScale: 0.02
+            color: new THREE.Color(0xc8a87a),
+            roughness: 0.85,
+            metalness: 0.0
         });
     }
 
