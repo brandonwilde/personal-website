@@ -68,6 +68,7 @@ export class Shelf {
             book.position.y = this.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS/2 + book.dimensions.height/2;
             book.position.z = 0;
             book.initialY = book.position.y;
+            book.initialZ = book.position.z;
 
             // console.log(`Book ${book.bookId}: thickness=${book.dimensions.thickness}, x=${bookX}`);
 

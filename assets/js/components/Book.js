@@ -17,6 +17,7 @@ export class Book extends THREE.Group {
         this.isHovered = false;
         this.isOpen = false;
         this.initialY = 0;
+        this.initialZ = 0;
 
         this.createGeometry();
         this.setupAnimations();
@@ -207,7 +208,7 @@ export class Book extends THREE.Group {
         this.isHovered = isHovered;
 
         window.gsap.to(this.position, {
-            y:        isHovered ? this.initialY + this.animations.hover.y : this.initialY,
+            z:        isHovered ? this.initialZ + this.animations.hover.y : this.initialZ,
             duration: this.animations.hover.duration,
             ease:     this.animations.hover.ease
         });
