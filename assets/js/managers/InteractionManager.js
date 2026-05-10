@@ -53,6 +53,7 @@ export class InteractionManager {
                 intersectedBook.object.setHovered(true);
             }
             this.hoveredBook = intersectedBook;
+            this.renderer.domElement.style.cursor = intersectedBook ? 'pointer' : 'default';
         }
     }
 
