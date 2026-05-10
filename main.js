@@ -1,5 +1,6 @@
 import { BookshelfScene } from './assets/js/BookshelfScene.js';
 import { bookConfigs, shelfConfigs, modalConfig } from './assets/js/config/contentConfig.js';
+import { initDebugPanel } from './assets/js/ui/debugPanel.js';
 
 // Initialize modals first
 function initializeModals(interactionManager) {
@@ -275,6 +276,9 @@ function initializeModals(interactionManager) {
 
 // Initialize everything when the window loads
 window.onload = () => {
+    // Seed window.animParams and mount the debug panel (toggle with `)
+    initDebugPanel();
+
     // Set up the scene first so interactionManager exists
     const bookshelfScene = new BookshelfScene();
     bookshelfScene.addBooksFromConfig(bookConfigs, shelfConfigs);

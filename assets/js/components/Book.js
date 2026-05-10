@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOK_DEFAULTS } from '../config/constants.js';
+import { BOOK_DEFAULTS, ANIM_PARAMS } from '../config/constants.js';
 
 export class Book extends THREE.Group {
     constructor(bookId, {
@@ -263,32 +263,19 @@ export class Book extends THREE.Group {
     // ─── Animation Setup ────────────────────────────────────────────────────────
 
     setupAnimations() {
+        // Static values that don't change (ease curves, rotation direction).
+        // Duration/distance params are read fresh from window.animParams at timeline-build
+        // time so the debug panel can update them without recreating books.
         this.animations = {
-            hover: {
-                zOffset:  BOOK_DEFAULTS.HOVER.HEIGHT,
-                duration: BOOK_DEFAULTS.HOVER.DURATION,
-                ease:     BOOK_DEFAULTS.HOVER.EASE
-            },
-            open: {
-                // Camera FOV is 10° (telephoto), placing it ~206 units away.
-                // zOut must be large enough to create a visible size change.
-                zOut:         10,
-
-                // Centers the book vertically on screen when open.
-                // Matches the camera's lookAt Y target in SceneManager.
-                showcaseY:    0,
-
-                // 162° outward: title page inner face ends up ~95% toward viewer.
-                // Negative = away from pages (not through the book body).
-                coverAngle:   -Math.PI * 0.9,
-
-                // Book rotation.y = 0: front cover faces viewer directly
-                bookRotation: 0,
-
-                duration: BOOK_DEFAULTS.OPEN.DURATION,
-                ease:     BOOK_DEFAULTS.OPEN.EASE
-            }
+            bookRotation: 0,              // rotation.y when open — front cover faces viewer
+            openEase:  BOOK_DEFAULTS.OPEN.EASE,
+            hoverEase: BOOK_DEFAULTS.HOVER.EASE,
         };
+    }
+
+    // Returns the live params object (debug panel mutations win over defaults).
+    _params() {
+        return window.animParams || ANIM_PARAMS;
     }
 
     // ─── Hover ──────────────────────────────────────────────────────────────────
@@ -297,12 +284,12 @@ export class Book extends THREE.Group {
         if (this.isHovered === isHovered) return;
         this.isHovered = isHovered;
 
-        // Don't fight the open animation's Z position
         if (!this.isOpen) {
+            const { duration, zOffset } = this._params().hover;
             window.gsap.to(this.position, {
-                z:        isHovered ? this.initialZ + this.animations.hover.zOffset : this.initialZ,
-                duration: this.animations.hover.duration,
-                ease:     this.animations.hover.ease
+                z:        isHovered ? this.initialZ + zOffset : this.initialZ,
+                duration,
+                ease:     this.animations.hoverEase
             });
         }
 
@@ -317,14 +304,25 @@ export class Book extends THREE.Group {
 
     // ─── Open / Close ───────────────────────────────────────────────────────────
 
+    // Returns the playing GSAP timeline so callers can chain .then()
+    open() {
+        this.isOpen = true;
+        return this._buildOpenTimeline();
+    }
+
+    close() {
+        this.isOpen = false;
+        return this._buildCloseTimeline();
+    }
+
     toggleOpen() {
-        this.isOpen = !this.isOpen;
-        const tl = this.isOpen ? this._buildOpenTimeline() : this._buildCloseTimeline();
-        tl.play();
+        return this.isOpen ? this.close() : this.open();
     }
 
     _buildOpenTimeline() {
-        const { zOut, showcaseY, coverAngle, bookRotation, duration, ease } = this.animations.open;
+        const p = this._params();
+        const { duration, zOut, showcaseY, coverAngle } = p.open;
+        const { bookRotation, openEase: ease } = this.animations;
         const tl = window.gsap.timeline();
 
         // 1. Slide out from shelf
@@ -346,14 +344,14 @@ export class Book extends THREE.Group {
         tl.to(this.rotation, {
             y:        bookRotation,
             duration: duration,
-            ease:     ease
+            ease
         }, '>-0.2');
 
         // 4. Open the front cover
         tl.to(this.frontCoverPivot.rotation, {
             y:        coverAngle,
             duration: duration * 1.2,
-            ease:     ease
+            ease
         }, '>-0.1');
 
         // 5. Pages fan out gently as cover opens
@@ -367,9 +365,12 @@ export class Book extends THREE.Group {
     }
 
     _buildCloseTimeline() {
-        const { coverAngle, duration, ease } = this.animations.open;
-        const targetZ = this.isHovered
-            ? this.initialZ + this.animations.hover.zOffset
+        const p = this._params();
+        const duration   = p.close.duration;
+        const coverAngle = p.open.coverAngle;
+        const ease       = this.animations.openEase;
+        const targetZ    = this.isHovered
+            ? this.initialZ + p.hover.zOffset
             : this.initialZ;
         const tl = window.gsap.timeline();
 
@@ -383,17 +384,17 @@ export class Book extends THREE.Group {
         tl.to(this.frontCoverPivot.rotation, {
             y:        0,
             duration: duration * 1.2,
-            ease:     ease
+            ease
         }, '<');
 
-        // 2. Rotate book back to shelf orientation as cover finishes closing
+        // 2. Rotate book back to shelf orientation
         tl.to(this.rotation, {
             y:        this.initialRotationY,
             duration: duration,
-            ease:     ease
+            ease
         }, '>-0.3');
 
-        // 3. Slide back to original shelf position (X, Y, and Z together)
+        // 3. Slide back to original shelf position
         tl.to(this.position, {
             x:        this.initialX,
             y:        this.initialY,

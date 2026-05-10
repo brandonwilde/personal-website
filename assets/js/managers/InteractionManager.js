@@ -29,17 +29,23 @@ export class InteractionManager {
         this.books.delete(id);
     }
 
-    closeOpenBook() {
-        if (!this.openBook) return;
+    // Closes the open book and calls onComplete when the animation finishes.
+    // If nothing is open, onComplete fires immediately.
+    closeOpenBook(onComplete) {
+        if (!this.openBook) {
+            if (onComplete) onComplete();
+            return;
+        }
         const bookData = this.openBook;
         this.openBook = null;
-        bookData.object.toggleOpen();
         if (bookData.modal) bookData.modal.classList.remove('modal-active');
+        const tl = bookData.object.close();
+        if (onComplete) tl.then(onComplete);
     }
 
     openBookEntry(bookData) {
         this.openBook = bookData;
-        bookData.object.toggleOpen();
+        bookData.object.open();
         if (bookData.modal) bookData.modal.classList.add('modal-active');
     }
 
@@ -84,18 +90,15 @@ export class InteractionManager {
             : null;
 
         if (!clickedBook) {
-            // Click on empty space closes the open book
             this.closeOpenBook();
             return;
         }
 
         if (clickedBook === this.openBook) {
-            // Toggle the already-open book closed
             this.closeOpenBook();
         } else {
-            // Close whatever is open, then open the clicked book
-            this.closeOpenBook();
-            this.openBookEntry(clickedBook);
+            // Wait for close animation to finish before opening the new book
+            this.closeOpenBook(() => this.openBookEntry(clickedBook));
         }
     }
 

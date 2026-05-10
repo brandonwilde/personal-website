@@ -75,7 +75,7 @@ export const BOOK_DEFAULTS = {
   },
   OPEN: {
     ANGLE: Math.PI / 6,  // 30 degrees
-    DURATION: 0.5,       // seconds
+    DURATION: 0.8,       // seconds (base — steps are multiples of this)
     EASE: "power2.inOut"
   },
   // Material settings
@@ -86,6 +86,24 @@ export const BOOK_DEFAULTS = {
     METALNESS: 0.1,
     PAGE_COLOR: 0xffffff
   }
+};
+
+// Live-editable animation parameters — mutated by the debug panel at runtime.
+// Book._buildOpenTimeline() reads these fresh each call so changes take effect immediately.
+export const ANIM_PARAMS = {
+    open: {
+        duration:   0.8,          // base seconds; individual steps are fractions/multiples
+        zOut:       10,           // units the book pulls forward from the shelf
+        showcaseY:  0,            // world-Y the book centers on when open
+        coverAngle: -Math.PI * 0.9, // radians the cover swings open (~162°)
+    },
+    close: {
+        duration:   0.7,          // base seconds for close
+    },
+    hover: {
+        duration:   0.3,
+        zOffset:    1,
+    }
 };
 
 // Arrays of varied book dimensions for decorative books
