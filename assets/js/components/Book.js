@@ -144,11 +144,7 @@ export class Book extends THREE.Group {
             lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
         }
 
-        // The -Z face of BoxGeometry has mirrored UV winding; flip the texture to compensate
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.center.set(0.5, 0.5);
-        texture.repeat.set(-1, 1);
-        return texture;
+        return new THREE.CanvasTexture(canvas);
     }
 
     // ─── Geometry ───────────────────────────────────────────────────────────────
