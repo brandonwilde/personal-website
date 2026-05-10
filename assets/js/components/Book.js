@@ -22,24 +22,32 @@ export class Book extends THREE.Group {
         this.setupAnimations();
     }
 
+    // Canvas texture for the spine with vertical text
     createSpineTexture() {
         const { thickness, height } = this.dimensions;
         const PIXELS_PER_UNIT = 50;
-
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(32, Math.round(thickness * PIXELS_PER_UNIT));
         canvas.height = Math.max(64, Math.round(height * PIXELS_PER_UNIT));
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = `rgb(${this.color[0]}, ${this.color[1]}, ${this.color[2]})`;
+        const [r, g, b] = this.color;
+
+        // Slightly darker shade for spine background
+        const darken = 0.8;
+        ctx.fillStyle = `rgb(${Math.round(r*darken)}, ${Math.round(g*darken)}, ${Math.round(b*darken)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        if (this.content) {
-            const [r, g, b] = this.color;
-            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            ctx.fillStyle = luminance > 0.45 ? '#1a1a1a' : '#f0ece4';
+        // Thin decorative border lines
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const lineColor = luminance > 0.45 ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.2)';
+        ctx.fillStyle = lineColor;
+        ctx.fillRect(4, 4, canvas.width - 8, 2);
+        ctx.fillRect(4, canvas.height - 6, canvas.width - 8, 2);
 
-            let fontSize = Math.max(8, Math.floor(canvas.width * 0.78));
+        if (this.content) {
+            ctx.fillStyle = luminance > 0.45 ? '#111111' : '#f0ece4';
+            let fontSize = Math.max(8, Math.floor(canvas.width * 0.72));
             ctx.font = `bold ${fontSize}px Georgia, serif`;
 
             ctx.save();
@@ -48,13 +56,11 @@ export class Book extends THREE.Group {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Shrink font until text fits within the spine height dimension
-            const maxTextWidth = canvas.height * 0.88;
+            const maxTextWidth = canvas.height * 0.85;
             while (ctx.measureText(this.content).width > maxTextWidth && fontSize > 6) {
                 fontSize -= 1;
                 ctx.font = `bold ${fontSize}px Georgia, serif`;
             }
-
             ctx.fillText(this.content, 0, 0);
             ctx.restore();
         }
@@ -62,32 +68,74 @@ export class Book extends THREE.Group {
         return new THREE.CanvasTexture(canvas);
     }
 
-    createGeometry() {
-        const actualWidth = this.dimensions.width;
-        const actualHeight = this.dimensions.height;
-        const actualThickness = this.dimensions.thickness;
+    // Subtle fabric/cloth grain texture for covers
+    createCoverTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
 
-        const coverThickness = BOOK_DEFAULTS.COVER.THICKNESS;
-        const pageInset = BOOK_DEFAULTS.PAGE.INSET;
+        const [r, g, b] = this.color;
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillRect(0, 0, 128, 128);
+
+        // Random grain noise
+        const imageData = ctx.getImageData(0, 0, 128, 128);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const n = (Math.random() - 0.5) * 24;
+            data[i]   = Math.min(255, Math.max(0, data[i]   + n));
+            data[i+1] = Math.min(255, Math.max(0, data[i+1] + n));
+            data[i+2] = Math.min(255, Math.max(0, data[i+2] + n));
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Subtle vertical weave lines
+        ctx.globalAlpha = 0.06;
+        for (let x = 0; x < 128; x += 4) {
+            ctx.fillStyle = x % 8 === 0 ? '#000' : '#fff';
+            ctx.fillRect(x, 0, 1, 128);
+        }
+        ctx.globalAlpha = 1;
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    createGeometry() {
+        const actualWidth     = this.dimensions.width;
+        const actualHeight    = this.dimensions.height;
+        const actualThickness = this.dimensions.thickness;
+        const coverThickness  = BOOK_DEFAULTS.COVER.THICKNESS;
+        const pageInset       = BOOK_DEFAULTS.PAGE.INSET;
+
+        const coverTexture = this.createCoverTexture();
 
         this.materials = {
             cover: new THREE.MeshStandardMaterial({
+                map: coverTexture,
                 color: new THREE.Color(`rgb(${this.color[0]}, ${this.color[1]}, ${this.color[2]})`),
-                roughness: BOOK_DEFAULTS.MATERIAL.ROUGHNESS,
-                metalness: BOOK_DEFAULTS.MATERIAL.METALNESS
+                roughness: 0.85,
+                metalness: 0.0
             }),
             spine: new THREE.MeshStandardMaterial({
                 map: this.createSpineTexture(),
-                roughness: BOOK_DEFAULTS.MATERIAL.ROUGHNESS,
-                metalness: BOOK_DEFAULTS.MATERIAL.METALNESS
+                roughness: 0.85,
+                metalness: 0.0
             }),
             pages: new THREE.MeshStandardMaterial({
-                color: BOOK_DEFAULTS.MATERIAL.PAGE_COLOR,
-                roughness: BOOK_DEFAULTS.MATERIAL.ROUGHNESS,
-                metalness: BOOK_DEFAULTS.MATERIAL.METALNESS
+                color: 0xf5f0e8,
+                roughness: 0.95,
+                metalness: 0.0
+            }),
+            // Gold/cream page-edge strip on the right side (pages visible from top/right)
+            pageEdge: new THREE.MeshStandardMaterial({
+                color: 0xe8dfc0,
+                roughness: 0.9,
+                metalness: 0.05
             })
         };
 
+        // Geometries
         const coverGeometry = new THREE.BoxGeometry(actualWidth, actualHeight, coverThickness);
         const spineGeometry = new THREE.BoxGeometry(coverThickness, actualHeight, actualThickness);
         const pagesGeometry = new THREE.BoxGeometry(
@@ -96,39 +144,60 @@ export class Book extends THREE.Group {
             actualThickness - coverThickness * 2
         );
 
-        // Ry(PI/2) maps local -X → world +Z (toward camera), so the -X face (index 1)
-        // is the viewer-facing face of the spine after the book Group is rotated PI/2 around Y.
+        // Ry(PI/2) maps local -X → world +Z (toward camera) so the -X face (index 1)
+        // of the spine is the viewer-facing face.
         const spineMaterials = [
-            this.materials.cover,  // +X
-            this.materials.spine,  // -X: faces viewer after rotation
-            this.materials.cover,  // +Y top
-            this.materials.cover,  // -Y bottom
-            this.materials.cover,  // +Z
-            this.materials.cover,  // -Z
+            this.materials.cover,   // +X
+            this.materials.spine,   // -X: viewer-facing after rotation
+            this.materials.cover,   // +Y
+            this.materials.cover,   // -Y
+            this.materials.cover,   // +Z
+            this.materials.cover,   // -Z
         ];
 
         this.parts = {
             frontCover: new THREE.Mesh(coverGeometry, this.materials.cover),
             backCover:  new THREE.Mesh(coverGeometry, this.materials.cover),
             spine:      new THREE.Mesh(spineGeometry, spineMaterials),
-            pages:      new THREE.Mesh(pagesGeometry, this.materials.pages)
+            pages:      new THREE.Mesh(pagesGeometry, [
+                this.materials.pageEdge,  // +X: right/page-edge side
+                this.materials.pages,     // -X
+                this.materials.pages,     // +Y top
+                this.materials.pages,     // -Y bottom
+                this.materials.pages,     // +Z front
+                this.materials.pages,     // -Z back
+            ])
         };
 
-        this.parts.frontCover.position.set(0, 0,  actualThickness/2 - coverThickness/2);
-        this.parts.backCover.position.set( 0, 0, -actualThickness/2 + coverThickness/2);
+        // Back cover and spine positions (these don't animate)
+        this.parts.backCover.position.set(0, 0, -actualThickness/2 + coverThickness/2);
         this.parts.spine.position.set(-actualWidth/2 + coverThickness/2, 0, 0);
         this.parts.pages.position.set(0, 0, 0);
 
-        const container = new THREE.Group();
-        Object.values(this.parts).forEach(part => {
-            part.castShadow = true;
-            part.receiveShadow = true;
-            container.add(part);
-        });
-        this.add(container);
+        // Front cover sits in a pivot group so it rotates around the spine edge
+        // Pivot is placed at the spine edge of the front cover in local book space
+        this.frontCoverPivot = new THREE.Group();
+        this.frontCoverPivot.position.set(
+            -actualWidth/2,                      // spine edge (X)
+            0,
+            actualThickness/2 - coverThickness/2 // same Z as the cover center
+        );
+        // Offset cover inside the pivot so its spine edge is at the pivot origin
+        this.parts.frontCover.position.set(actualWidth/2, 0, 0);
+        this.frontCoverPivot.add(this.parts.frontCover);
 
-        this.userData.isBook = true;
-        this.userData.bookId = this.bookId;
+        const container = new THREE.Group();
+        [this.parts.backCover, this.parts.spine, this.parts.pages, this.frontCoverPivot]
+            .forEach(part => {
+                part.castShadow  = true;
+                part.receiveShadow = true;
+                if (part.children) part.children.forEach(c => { c.castShadow = true; c.receiveShadow = true; });
+                container.add(part);
+            });
+
+        this.add(container);
+        this.userData.isBook  = true;
+        this.userData.bookId  = this.bookId;
     }
 
     setupAnimations() {
@@ -139,7 +208,7 @@ export class Book extends THREE.Group {
                 ease:     BOOK_DEFAULTS.HOVER.EASE
             },
             open: {
-                rotateY:  BOOK_DEFAULTS.OPEN.ANGLE,
+                angle:    -Math.PI * 0.82,   // ~148° — wide open but not fully flat
                 duration: BOOK_DEFAULTS.OPEN.DURATION,
                 ease:     BOOK_DEFAULTS.OPEN.EASE
             }
@@ -160,20 +229,27 @@ export class Book extends THREE.Group {
             ? BOOK_DEFAULTS.MATERIAL.HOVER_EMISSIVE
             : BOOK_DEFAULTS.MATERIAL.DEFAULT_EMISSIVE;
 
-        Object.values(this.parts).forEach(part => {
-            const mats = Array.isArray(part.material) ? part.material : [part.material];
-            mats.forEach(mat => {
-                if (mat && mat.emissive) mat.emissive.setHex(emissiveHex);
-            });
+        Object.values(this.materials).forEach(mat => {
+            if (mat && mat.emissive) mat.emissive.setHex(emissiveHex);
         });
     }
 
     toggleOpen() {
         this.isOpen = !this.isOpen;
-        window.gsap.to([this.parts.frontCover.rotation, this.parts.pages.rotation], {
-            y:        this.isOpen ? this.animations.open.rotateY : 0,
+
+        // Rotate the front cover around the spine-edge pivot
+        window.gsap.to(this.frontCoverPivot.rotation, {
+            y:        this.isOpen ? this.animations.open.angle : 0,
             duration: this.animations.open.duration,
             ease:     this.animations.open.ease
+        });
+
+        // Pages fan out slightly as the book opens
+        window.gsap.to(this.parts.pages.rotation, {
+            y:        this.isOpen ? -0.08 : 0,
+            duration: this.animations.open.duration * 0.7,
+            ease:     'power2.out',
+            delay:    this.isOpen ? this.animations.open.duration * 0.3 : 0
         });
     }
 

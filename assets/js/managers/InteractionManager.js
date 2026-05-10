@@ -79,21 +79,16 @@ export class InteractionManager {
             this.findBookFromMesh(intersects[0].object) : null;
 
         if (intersectedBook) {
+            intersectedBook.object.toggleOpen();
             if (intersectedBook.modal) {
-                // First show the modal
                 intersectedBook.modal.classList.add('modal-active');
-                
-                // Then animate the book
-                intersectedBook.object.toggleOpen();
             }
         }
     }
 
     findBookFromMesh(mesh) {
-        // Find the Book instance that contains this mesh
         for (const [bookId, bookData] of this.books.entries()) {
-            const book = bookData.object;
-            if (mesh === book || mesh.parent === book || mesh.parent?.parent === book) {
+            if (this.isChildOfBook(mesh, bookData.object)) {
                 return bookData;
             }
         }
