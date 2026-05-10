@@ -306,13 +306,17 @@ export class Book extends THREE.Group {
 
     // Returns the playing GSAP timeline so callers can chain .then()
     open() {
+        if (this._activeTl) this._activeTl.kill();
         this.isOpen = true;
-        return this._buildOpenTimeline();
+        this._activeTl = this._buildOpenTimeline();
+        return this._activeTl;
     }
 
     close() {
+        if (this._activeTl) this._activeTl.kill();
         this.isOpen = false;
-        return this._buildCloseTimeline();
+        this._activeTl = this._buildCloseTimeline();
+        return this._activeTl;
     }
 
     toggleOpen() {
