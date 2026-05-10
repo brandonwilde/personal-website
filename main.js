@@ -2,7 +2,7 @@ import { BookshelfScene } from './assets/js/BookshelfScene.js';
 import { bookConfigs, shelfConfigs, modalConfig } from './assets/js/config/contentConfig.js';
 
 // Initialize modals first
-function initializeModals() {
+function initializeModals(interactionManager) {
     const modalContainer = document.getElementById('modals');
     
     // Remove existing modals but keep templates
@@ -260,19 +260,13 @@ function initializeModals() {
 
             // Add close button functionality
             closeBtn.onclick = () => {
-                modalElement.classList.remove('modal-active');
-                // Find and close the book
-                const bookData = Array.from(this.books.values()).find(b => b.object.id === bookId);
-                if (bookData) bookData.object.toggleOpen();
+                interactionManager.closeOpenBook();
             };
 
             // Add click outside to close
             modalElement.addEventListener('click', (event) => {
                 if (event.target === modalElement) {
-                    modalElement.classList.remove('modal-active');
-                    // Find and close the book
-                    const bookData = Array.from(this.books.values()).find(b => b.object.id === bookId);
-                    if (bookData) bookData.object.toggleOpen();
+                    interactionManager.closeOpenBook();
                 }
             });
         });
@@ -281,12 +275,11 @@ function initializeModals() {
 
 // Initialize everything when the window loads
 window.onload = () => {
-    // Initialize modals first
-    initializeModals();
-
-    // Set up the scene
+    // Set up the scene first so interactionManager exists
     const bookshelfScene = new BookshelfScene();
-    bookshelfScene.createBookshelf();
     bookshelfScene.addBooksFromConfig(bookConfigs, shelfConfigs);
     bookshelfScene.animate();
+
+    // Now wire up modals with a reference to interactionManager
+    initializeModals(bookshelfScene.interactionManager);
 };

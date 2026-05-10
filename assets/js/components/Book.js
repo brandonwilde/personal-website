@@ -16,14 +16,18 @@ export class Book extends THREE.Group {
         this.content = content;
         this.isHovered = false;
         this.isOpen = false;
+        this.initialX = 0;
         this.initialY = 0;
         this.initialZ = 0;
+        this.initialRotationY = 0;
 
         this.createGeometry();
         this.setupAnimations();
     }
 
-    // Canvas texture for the spine with vertical text
+    // ─── Texture Creators ───────────────────────────────────────────────────────
+
+    // Vertical title text on the spine
     createSpineTexture() {
         const { thickness, height } = this.dimensions;
         const PIXELS_PER_UNIT = 50;
@@ -33,15 +37,12 @@ export class Book extends THREE.Group {
         const ctx = canvas.getContext('2d');
 
         const [r, g, b] = this.color;
-
-        // Slightly darker shade for spine background
         const darken = 0.8;
         ctx.fillStyle = `rgb(${Math.round(r*darken)}, ${Math.round(g*darken)}, ${Math.round(b*darken)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
         if (this.content) {
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
             ctx.fillStyle = luminance > 0.45 ? '#111111' : '#f0ece4';
             let fontSize = Math.max(8, Math.floor(canvas.width * 0.72));
             ctx.font = `bold ${fontSize}px Georgia, serif`;
@@ -64,7 +65,7 @@ export class Book extends THREE.Group {
         return new THREE.CanvasTexture(canvas);
     }
 
-    // Subtle fabric/cloth grain texture for covers
+    // Subtle fabric/cloth grain texture for cover exteriors
     createCoverTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 128;
@@ -75,7 +76,6 @@ export class Book extends THREE.Group {
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         ctx.fillRect(0, 0, 128, 128);
 
-        // Random grain noise
         const imageData = ctx.getImageData(0, 0, 128, 128);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
@@ -88,6 +88,66 @@ export class Book extends THREE.Group {
 
         return new THREE.CanvasTexture(canvas);
     }
+
+    // Title page shown on the inside face of the front cover when open
+    createTitlePageTexture() {
+        const { width, height } = this.dimensions;
+        const PIXELS_PER_UNIT = 42;
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(width  * PIXELS_PER_UNIT);
+        canvas.height = Math.round(height * PIXELS_PER_UNIT);
+        const ctx = canvas.getContext('2d');
+
+        const [r, g, b] = this.color;
+
+        // Cream paper background
+        ctx.fillStyle = '#f8f4ec';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Decorative double border in book color
+        const margin = 14;
+        ctx.strokeStyle = `rgb(${Math.round(r*0.6)}, ${Math.round(g*0.6)}, ${Math.round(b*0.6)})`;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(margin, margin, canvas.width - margin*2, canvas.height - margin*2);
+        ctx.lineWidth = 1;
+        const innerMargin = margin + 7;
+        ctx.strokeRect(innerMargin, innerMargin, canvas.width - innerMargin*2, canvas.height - innerMargin*2);
+
+        // Title text
+        if (this.content) {
+            ctx.fillStyle = '#1a1a1a';
+            const maxTextWidth = canvas.width - (innerMargin + 10) * 2;
+
+            let fontSize = Math.max(16, Math.floor(canvas.width * 0.14));
+            ctx.font = `bold ${fontSize}px Georgia, serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Word-wrap
+            const words = this.content.split(' ');
+            const lines = [];
+            let line = '';
+            for (const word of words) {
+                const test = line ? `${line} ${word}` : word;
+                if (ctx.measureText(test).width > maxTextWidth && line) {
+                    lines.push(line);
+                    line = word;
+                } else {
+                    line = test;
+                }
+            }
+            if (line) lines.push(line);
+
+            const lineHeight = fontSize * 1.5;
+            const textBlockHeight = lines.length * lineHeight;
+            const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
+            lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
+        }
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    // ─── Geometry ───────────────────────────────────────────────────────────────
 
     createGeometry() {
         const actualWidth     = this.dimensions.width;
@@ -111,6 +171,11 @@ export class Book extends THREE.Group {
                 roughness: M.COVER_ROUGHNESS,
                 metalness: M.COVER_METALNESS,
             }),
+            titlePage: new THREE.MeshStandardMaterial({
+                map:       this.createTitlePageTexture(),
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
+            }),
             pages: new THREE.MeshStandardMaterial({
                 color:     M.PAGE_COLOR,
                 roughness: M.PAGE_ROUGHNESS,
@@ -123,135 +188,221 @@ export class Book extends THREE.Group {
             }),
         };
 
-        // Geometries
         const coverGeometry = new THREE.BoxGeometry(actualWidth, actualHeight, coverThickness);
         const spineGeometry = new THREE.BoxGeometry(coverThickness, actualHeight, actualThickness);
         const pagesGeometry = new THREE.BoxGeometry(
-            actualWidth - pageInset * 2,
+            actualWidth  - pageInset * 2,
             actualHeight - pageInset * 2,
             actualThickness - coverThickness * 2
         );
 
-        // Ry(PI/2) maps local -X → world +Z (toward camera) so the -X face (index 1)
+        // Ry(PI/2) maps local -X → world +Z (toward camera), so the -X face (index 1)
         // of the spine is the viewer-facing face.
-        const spineMaterials = [
-            this.materials.cover,   // +X
-            this.materials.spine,   // -X: viewer-facing after rotation
-            this.materials.cover,   // +Y
-            this.materials.cover,   // -Y
-            this.materials.cover,   // +Z
-            this.materials.cover,   // -Z
+        const spineFaceMaterials = [
+            this.materials.cover,  // +X
+            this.materials.spine,  // -X: viewer-facing after rotation
+            this.materials.cover,  // +Y
+            this.materials.cover,  // -Y
+            this.materials.cover,  // +Z
+            this.materials.cover,  // -Z
+        ];
+
+        // Front cover uses per-face materials so the inside (-Z face, index 5) shows
+        // the title page when the cover swings open toward the viewer.
+        const frontCoverFaceMaterials = [
+            this.materials.cover,      // +X
+            this.materials.cover,      // -X (spine edge)
+            this.materials.cover,      // +Y
+            this.materials.cover,      // -Y
+            this.materials.cover,      // +Z outer face
+            this.materials.titlePage,  // -Z inner face — visible when open
         ];
 
         this.parts = {
-            frontCover: new THREE.Mesh(coverGeometry, this.materials.cover),
+            frontCover: new THREE.Mesh(coverGeometry, frontCoverFaceMaterials),
             backCover:  new THREE.Mesh(coverGeometry, this.materials.cover),
-            spine:      new THREE.Mesh(spineGeometry, spineMaterials),
+            spine:      new THREE.Mesh(spineGeometry, spineFaceMaterials),
             pages:      new THREE.Mesh(pagesGeometry, [
-                this.materials.pageEdge,  // +X: right/page-edge side
-                this.materials.pages,     // -X
-                this.materials.pages,     // +Y top
-                this.materials.pages,     // -Y bottom
-                this.materials.pages,     // +Z front
-                this.materials.pages,     // -Z back
+                this.materials.pageEdge, // +X page-edge strip
+                this.materials.pages,    // -X
+                this.materials.pages,    // +Y
+                this.materials.pages,    // -Y
+                this.materials.pages,    // +Z
+                this.materials.pages,    // -Z
             ])
         };
 
-        // Back cover and spine positions (these don't animate)
         this.parts.backCover.position.set(0, 0, -actualThickness/2 + coverThickness/2);
         this.parts.spine.position.set(-actualWidth/2 + coverThickness/2, 0, 0);
         this.parts.pages.position.set(0, 0, 0);
 
-        // Front cover sits in a pivot group so it rotates around the spine edge
-        // Pivot is placed at the spine edge of the front cover in local book space
+        // Front cover pivots around the spine edge so it opens without clipping pages
         this.frontCoverPivot = new THREE.Group();
         this.frontCoverPivot.position.set(
-            -actualWidth/2,                      // spine edge (X)
+            -actualWidth/2,
             0,
-            actualThickness/2 - coverThickness/2 // same Z as the cover center
+            actualThickness/2 - coverThickness/2
         );
-        // Offset cover inside the pivot so its spine edge is at the pivot origin
         this.parts.frontCover.position.set(actualWidth/2, 0, 0);
         this.frontCoverPivot.add(this.parts.frontCover);
 
         const container = new THREE.Group();
         [this.parts.backCover, this.parts.spine, this.parts.pages, this.frontCoverPivot]
             .forEach(part => {
-                part.castShadow  = true;
+                part.castShadow    = true;
                 part.receiveShadow = true;
-                if (part.children) part.children.forEach(c => { c.castShadow = true; c.receiveShadow = true; });
+                if (part.children) part.children.forEach(c => {
+                    c.castShadow    = true;
+                    c.receiveShadow = true;
+                });
                 container.add(part);
             });
 
         this.add(container);
-        this.userData.isBook  = true;
-        this.userData.bookId  = this.bookId;
+        this.userData.isBook = true;
+        this.userData.bookId = this.bookId;
     }
+
+    // ─── Animation Setup ────────────────────────────────────────────────────────
 
     setupAnimations() {
         this.animations = {
             hover: {
-                y:        BOOK_DEFAULTS.HOVER.HEIGHT,
+                zOffset:  BOOK_DEFAULTS.HOVER.HEIGHT,
                 duration: BOOK_DEFAULTS.HOVER.DURATION,
                 ease:     BOOK_DEFAULTS.HOVER.EASE
             },
             open: {
-                angle:    BOOK_DEFAULTS.OPEN.ANGLE,
-                duration: BOOK_DEFAULTS.OPEN.DURATION,
-                ease:     BOOK_DEFAULTS.OPEN.EASE
+                zOut:         BOOK_DEFAULTS.OPEN.Z_OUT,
+                showcaseY:    BOOK_DEFAULTS.OPEN.SHOWCASE_Y,
+                coverAngle:   BOOK_DEFAULTS.OPEN.COVER_ANGLE,
+                bookRotation: BOOK_DEFAULTS.OPEN.BOOK_ROTATION,
+                duration:     BOOK_DEFAULTS.OPEN.DURATION,
+                ease:         BOOK_DEFAULTS.OPEN.EASE,
             }
         };
     }
+
+    // ─── Hover ──────────────────────────────────────────────────────────────────
 
     setHovered(isHovered) {
         if (this.isHovered === isHovered) return;
         this.isHovered = isHovered;
 
-        window.gsap.to(this.position, {
-            z:        isHovered ? this.initialZ + this.animations.hover.y : this.initialZ,
-            duration: this.animations.hover.duration,
-            ease:     this.animations.hover.ease
-        });
+        // Don't fight the open animation's Z position
+        if (!this.isOpen) {
+            window.gsap.to(this.position, {
+                z:        isHovered ? this.initialZ + this.animations.hover.zOffset : this.initialZ,
+                duration: this.animations.hover.duration,
+                ease:     this.animations.hover.ease
+            });
+        }
 
         const emissiveHex = isHovered
             ? BOOK_DEFAULTS.MATERIAL.HOVER_EMISSIVE
             : BOOK_DEFAULTS.MATERIAL.DEFAULT_EMISSIVE;
 
         Object.values(this.materials).forEach(mat => {
-            if (mat && mat.emissive) mat.emissive.setHex(emissiveHex);
+            if (mat?.emissive) mat.emissive.setHex(emissiveHex);
         });
     }
+
+    // ─── Open / Close ───────────────────────────────────────────────────────────
 
     toggleOpen() {
         this.isOpen = !this.isOpen;
+        const tl = this.isOpen ? this._buildOpenTimeline() : this._buildCloseTimeline();
+        tl.play();
+    }
 
-        const targetZ = this.isOpen
-            ? this.initialZ + this.animations.hover.y + 2
-            : (this.isHovered ? this.initialZ + this.animations.hover.y : this.initialZ);
+    _buildOpenTimeline() {
+        const { zOut, showcaseY, coverAngle, bookRotation, duration, ease } = this.animations.open;
+        const tl = window.gsap.timeline();
 
-        // Pop book further out from shelf so the cover swings in clear space
-        window.gsap.to(this.position, {
-            z:        targetZ,
-            duration: this.animations.open.duration * 0.4,
+        // 1. Slide out from shelf
+        tl.to(this.position, {
+            z:        this.initialZ + zOut,
+            duration: duration * 0.5,
             ease:     'power2.out'
         });
 
-        // Rotate the front cover around the spine-edge pivot (positive = toward viewer)
-        window.gsap.to(this.frontCoverPivot.rotation, {
-            y:        this.isOpen ? this.animations.open.angle : 0,
-            duration: this.animations.open.duration,
-            ease:     this.animations.open.ease,
-            delay:    this.isOpen ? this.animations.open.duration * 0.2 : 0
+        // 2. Center on screen (X and Y) while still moving forward
+        tl.to(this.position, {
+            x:        0,
+            y:        showcaseY,
+            duration: duration * 0.7,
+            ease:     'power2.inOut'
+        }, '<0.1');
+
+        // 3. Rotate so front cover faces viewer
+        tl.to(this.rotation, {
+            y:        bookRotation,
+            duration: duration,
+            ease:     ease
+        }, '>-0.2');
+
+        // 4. Open the front cover
+        tl.to(this.frontCoverPivot.rotation, {
+            y:        coverAngle,
+            duration: duration * 1.2,
+            ease:     ease
+        }, '>-0.1');
+
+        // 5. Pages fan out gently as cover opens
+        tl.to(this.parts.pages.rotation, {
+            y:        0.08,
+            duration: duration * 0.8,
+            ease:     'power2.out'
+        }, '<0.2');
+
+        return tl;
+    }
+
+    _buildCloseTimeline() {
+        const { coverAngle, duration, ease } = this.animations.open;
+        const targetZ = this.isHovered
+            ? this.initialZ + this.animations.hover.zOffset
+            : this.initialZ;
+        const tl = window.gsap.timeline();
+
+        // 1. Pages settle and cover begins closing
+        tl.to(this.parts.pages.rotation, {
+            y:        0,
+            duration: duration * 0.5,
+            ease:     'power2.in'
         });
 
-        // Pages fan out slightly as the book opens
-        window.gsap.to(this.parts.pages.rotation, {
-            y:        this.isOpen ? 0.08 : 0,
-            duration: this.animations.open.duration * 0.7,
-            ease:     'power2.out',
-            delay:    this.isOpen ? this.animations.open.duration * 0.4 : 0
-        });
+        tl.to(this.frontCoverPivot.rotation, {
+            y:        0,
+            duration: duration * 1.2,
+            ease:     ease
+        }, '<');
+
+        // 2. Rotate book back to shelf orientation as cover finishes closing
+        tl.to(this.rotation, {
+            y:        this.initialRotationY,
+            duration: duration,
+            ease:     ease
+        }, '>-0.3');
+
+        // 3. Slide back to original shelf position (X, Y, and Z together)
+        tl.to(this.position, {
+            x:        this.initialX,
+            y:        this.initialY,
+            duration: duration * 0.7,
+            ease:     'power2.inOut'
+        }, '<');
+
+        tl.to(this.position, {
+            z:        targetZ,
+            duration: duration * 0.5,
+            ease:     'power2.in'
+        }, '>-0.1');
+
+        return tl;
     }
+
+    // ─── Responsive ─────────────────────────────────────────────────────────────
 
     updateScale(screenWidth) {
         const baseScale = Math.min(1, screenWidth / 1200);

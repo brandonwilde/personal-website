@@ -106,9 +106,12 @@ export const BOOK_DEFAULTS = {
     EASE: "power2.out"
   },
   OPEN: {
-    ANGLE:    Math.PI * 0.75,    // ~135° — wide open, cover swings toward viewer
-    DURATION: 0.5,           // seconds
-    EASE:     "power2.inOut"
+    COVER_ANGLE:   -Math.PI * 0.9,  // ~162° — title page faces viewer
+    BOOK_ROTATION: 0,               // rotation.y when open; 0 = front cover faces viewer
+    Z_OUT:         10,              // units pulled forward from shelf
+    SHOWCASE_Y:    0,               // world-Y the book centers on when open
+    DURATION:      0.5,             // seconds (base; steps are multiples of this)
+    EASE:          "power2.inOut"
   },
   // Material settings
   MATERIAL: {
