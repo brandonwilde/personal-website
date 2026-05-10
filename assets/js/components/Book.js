@@ -276,11 +276,11 @@ export class Book extends THREE.Group {
             open: {
                 // Camera FOV is 10° (telephoto), placing it ~206 units away.
                 // zOut must be large enough to create a visible size change.
-                zOut:         120,
+                zOut:         10,
 
                 // Centers the book vertically on screen when open.
                 // Matches the camera's lookAt Y target in SceneManager.
-                showcaseY:    18,
+                showcaseY:    0,
 
                 // 162° outward: title page inner face ends up ~95% toward viewer.
                 // Negative = away from pages (not through the book body).
