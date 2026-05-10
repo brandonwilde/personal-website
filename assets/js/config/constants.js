@@ -25,10 +25,20 @@ export const LIGHTING_SETTINGS = {
   AMBIENT_COLOR:     0xfff0d0,
   AMBIENT_INTENSITY: 0.6,
 
-  // Key light — warm overhead
+  // Key light — centered overhead to avoid diagonal shelf shadows
   KEY_COLOR:         0xfff5e0,
   KEY_INTENSITY:     1.6,
-  KEY_POSITION:      { x: 20, y: 60, z: 40 },
+  KEY_POSITION:      { x: 0, y: 80, z: 30 },
+
+  // Shadow frustum — kept tight around the shelf to maximise shadow resolution
+  SHADOW_MAP_SIZE:   2048,
+  SHADOW_FAR:        300,
+  SHADOW_LEFT:       -40,
+  SHADOW_RIGHT:       40,
+  SHADOW_TOP:         30,
+  SHADOW_BOTTOM:     -30,
+  SHADOW_BIAS:       -0.001,
+  SHADOW_RADIUS:      3,
 
   // Cool fill from opposite side
   FILL_COLOR:        0xd0e8ff,
@@ -43,7 +53,6 @@ export const LIGHTING_SETTINGS = {
   SCONCE_Y:          28,
   SCONCE_Z:          18,
 
-  SHADOW_MAP_SIZE:   2048,
   TONE_MAPPING_EXPOSURE: 1.1,
 };
 

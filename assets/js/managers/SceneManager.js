@@ -56,9 +56,14 @@ export class SceneManager {
         keyLight.castShadow = true;
         keyLight.shadow.mapSize.width  = L.SHADOW_MAP_SIZE;
         keyLight.shadow.mapSize.height = L.SHADOW_MAP_SIZE;
-        keyLight.shadow.camera.near = 1;
-        keyLight.shadow.camera.far  = 200;
-        keyLight.shadow.bias = -0.0005;
+        keyLight.shadow.camera.near   = 1;
+        keyLight.shadow.camera.far    = L.SHADOW_FAR;
+        keyLight.shadow.camera.left   = L.SHADOW_LEFT;
+        keyLight.shadow.camera.right  = L.SHADOW_RIGHT;
+        keyLight.shadow.camera.top    = L.SHADOW_TOP;
+        keyLight.shadow.camera.bottom = L.SHADOW_BOTTOM;
+        keyLight.shadow.bias          = L.SHADOW_BIAS;
+        keyLight.shadow.radius        = L.SHADOW_RADIUS;
         this.scene.add(keyLight);
 
         const fillLight = new THREE.DirectionalLight(L.FILL_COLOR, L.FILL_INTENSITY);
