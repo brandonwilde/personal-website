@@ -59,6 +59,13 @@ export const BOOKSHELF_DIMENSIONS = {
   SECTION_WIDTH: 12,   // 1 foot per section
 };
 
+// Wood material for bookshelf frame and shelves
+export const WOOD_MATERIAL = {
+  COLOR:     0xc8a87a,
+  ROUGHNESS: 0.85,
+  METALNESS: 0.0,
+};
+
 // Camera settings
 export const CAMERA_SETTINGS = {
   FOV: 10,

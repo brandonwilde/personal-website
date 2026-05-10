@@ -3,7 +3,7 @@ import { Book } from './components/Book.js';
 import { Shelf } from './components/Shelf.js';
 import { SceneManager } from './managers/SceneManager.js';
 import { InteractionManager } from './managers/InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS } from './config/constants.js';
+import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL } from './config/constants.js';
 
 export class BookshelfScene {
     constructor() {
@@ -75,10 +75,10 @@ export class BookshelfScene {
 
     createWoodMaterial(texture) {
         return new THREE.MeshStandardMaterial({
-            map: texture,
-            color: new THREE.Color(0xc8a87a),
-            roughness: 0.85,
-            metalness: 0.0
+            map:       texture,
+            color:     new THREE.Color(WOOD_MATERIAL.COLOR),
+            roughness: WOOD_MATERIAL.ROUGHNESS,
+            metalness: WOOD_MATERIAL.METALNESS,
         });
     }
 
