@@ -38,12 +38,7 @@ export class Book extends THREE.Group {
         ctx.fillStyle = `rgb(${Math.round(r*darken)}, ${Math.round(g*darken)}, ${Math.round(b*darken)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Thin decorative border lines
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        const lineColor = luminance > 0.45 ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.2)';
-        ctx.fillStyle = lineColor;
-        ctx.fillRect(4, 4, canvas.width - 8, 2);
-        ctx.fillRect(4, canvas.height - 6, canvas.width - 8, 2);
 
         if (this.content) {
             ctx.fillStyle = luminance > 0.45 ? '#111111' : '#f0ece4';
@@ -89,14 +84,6 @@ export class Book extends THREE.Group {
             data[i+2] = Math.min(255, Math.max(0, data[i+2] + n));
         }
         ctx.putImageData(imageData, 0, 0);
-
-        // Subtle vertical weave lines
-        ctx.globalAlpha = 0.06;
-        for (let x = 0; x < 128; x += 4) {
-            ctx.fillStyle = x % 8 === 0 ? '#000' : '#fff';
-            ctx.fillRect(x, 0, 1, 128);
-        }
-        ctx.globalAlpha = 1;
 
         return new THREE.CanvasTexture(canvas);
     }
