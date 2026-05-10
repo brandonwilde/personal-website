@@ -29,7 +29,8 @@ export class InteractionManager {
         this.books.delete(id);
     }
 
-    // Closes the open book and calls onComplete when the animation finishes.
+    // Closes the open book and calls onComplete after openDelay seconds.
+    // openDelay < close duration = animations overlap; 0 = fully concurrent.
     // If nothing is open, onComplete fires immediately.
     closeOpenBook(onComplete) {
         if (!this.openBook) {
@@ -39,8 +40,11 @@ export class InteractionManager {
         const bookData = this.openBook;
         this.openBook = null;
         if (bookData.modal) bookData.modal.classList.remove('modal-active');
-        const tl = bookData.object.close();
-        if (onComplete) tl.then(onComplete);
+        bookData.object.close();
+        if (onComplete) {
+            const delay = (window.animParams ?? { close: { openDelay: 0.4 } }).close.openDelay;
+            window.gsap.delayedCall(delay, onComplete);
+        }
     }
 
     openBookEntry(bookData) {

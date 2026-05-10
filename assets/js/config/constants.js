@@ -99,6 +99,7 @@ export const ANIM_PARAMS = {
     },
     close: {
         duration:   0.7,          // base seconds for close
+        openDelay:  0.4,          // seconds after close starts before new book begins opening
     },
     hover: {
         duration:   0.3,
