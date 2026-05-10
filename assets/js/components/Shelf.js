@@ -74,6 +74,7 @@ export class Shelf {
             book.position.x = bookX;
             book.position.y = this.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS/2 + book.dimensions.height/2;
             book.position.z = 0;
+            book.initialX = book.position.x;
             book.initialY = book.position.y;
             book.initialZ = book.position.z;
 
