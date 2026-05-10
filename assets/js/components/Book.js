@@ -196,7 +196,7 @@ export class Book extends THREE.Group {
                 ease:     BOOK_DEFAULTS.HOVER.EASE
             },
             open: {
-                angle:    -Math.PI * 0.82,   // ~148° — wide open but not fully flat
+                angle:    Math.PI * 0.75,    // ~135° — wide open, cover swings toward viewer
                 duration: BOOK_DEFAULTS.OPEN.DURATION,
                 ease:     BOOK_DEFAULTS.OPEN.EASE
             }
@@ -225,19 +225,31 @@ export class Book extends THREE.Group {
     toggleOpen() {
         this.isOpen = !this.isOpen;
 
-        // Rotate the front cover around the spine-edge pivot
+        const targetZ = this.isOpen
+            ? this.initialZ + this.animations.hover.y + 2
+            : (this.isHovered ? this.initialZ + this.animations.hover.y : this.initialZ);
+
+        // Pop book further out from shelf so the cover swings in clear space
+        window.gsap.to(this.position, {
+            z:        targetZ,
+            duration: this.animations.open.duration * 0.4,
+            ease:     'power2.out'
+        });
+
+        // Rotate the front cover around the spine-edge pivot (positive = toward viewer)
         window.gsap.to(this.frontCoverPivot.rotation, {
             y:        this.isOpen ? this.animations.open.angle : 0,
             duration: this.animations.open.duration,
-            ease:     this.animations.open.ease
+            ease:     this.animations.open.ease,
+            delay:    this.isOpen ? this.animations.open.duration * 0.2 : 0
         });
 
         // Pages fan out slightly as the book opens
         window.gsap.to(this.parts.pages.rotation, {
-            y:        this.isOpen ? -0.08 : 0,
+            y:        this.isOpen ? 0.08 : 0,
             duration: this.animations.open.duration * 0.7,
             ease:     'power2.out',
-            delay:    this.isOpen ? this.animations.open.duration * 0.3 : 0
+            delay:    this.isOpen ? this.animations.open.duration * 0.4 : 0
         });
     }
 
