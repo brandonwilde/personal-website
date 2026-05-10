@@ -97,9 +97,9 @@ export const BOOK_DEFAULTS = {
     EASE: "power2.out"
   },
   OPEN: {
-    ANGLE: -Math.PI * 0.82,  // ~148° outward — wide open without clipping pages
+    ANGLE:    Math.PI * 0.75,    // ~135° — wide open, cover swings toward viewer
     DURATION: 0.5,           // seconds
-    EASE: "power2.inOut"
+    EASE:     "power2.inOut"
   },
   // Material settings
   MATERIAL: {
