@@ -99,20 +99,6 @@ export const BOOK_DEFAULTS = {
     INSET: 0.18,    // How far pages are inset from cover edge
   },
   
-  // Animation settings
-  HOVER: {
-    HEIGHT: 1,       // 1 inch up
-    DURATION: 0.3,   // seconds
-    EASE: "power2.out"
-  },
-  OPEN: {
-    COVER_ANGLE:   -Math.PI * 0.9,  // ~162° — title page faces viewer
-    BOOK_ROTATION: 0,               // rotation.y when open; 0 = front cover faces viewer
-    Z_OUT:         10,              // units pulled forward from shelf
-    SHOWCASE_Y:    0,               // world-Y the book centers on when open
-    DURATION:      0.5,             // seconds (base; steps are multiples of this)
-    EASE:          "power2.inOut"
-  },
   // Material settings
   MATERIAL: {
     HOVER_EMISSIVE:   0x333333,
@@ -126,6 +112,28 @@ export const BOOK_DEFAULTS = {
     PAGE_EDGE_ROUGHNESS: 0.9,
     PAGE_EDGE_METALNESS: 0.05,
   }
+};
+
+// All animation parameters — the single source of truth for book animations.
+// Mutated at runtime by the debug panel; Book reads via _params() each timeline build.
+export const ANIM_PARAMS = {
+    open: {
+        duration:     0.8,            // base seconds; individual steps are multiples of this
+        zOut:         10,             // units pulled forward from the shelf
+        showcaseY:    0,              // world-Y the book centers on when open
+        coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
+        bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
+        ease:         "power2.inOut",
+    },
+    close: {
+        duration:  0.7,   // base seconds for close
+        openDelay: 0.4,   // seconds after close starts before new book begins opening
+    },
+    hover: {
+        duration: 0.3,
+        zOffset:  1,
+        ease:     "power2.out",
+    },
 };
 
 // Arrays of varied book dimensions for decorative books
