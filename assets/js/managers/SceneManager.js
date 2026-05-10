@@ -50,15 +50,20 @@ export class SceneManager {
         const ambientLight = new THREE.AmbientLight(0xfff0d0, 0.6);
         this.scene.add(ambientLight);
 
-        // Key light — warm overhead lamp
-        const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.8);
-        keyLight.position.set(20, 60, 40);
+        // Key light — warm overhead, centered to avoid diagonal shelf shadows
+        const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.6);
+        keyLight.position.set(0, 80, 30);
         keyLight.castShadow = true;
         keyLight.shadow.mapSize.width = 2048;
         keyLight.shadow.mapSize.height = 2048;
         keyLight.shadow.camera.near = 1;
-        keyLight.shadow.camera.far = 200;
-        keyLight.shadow.bias = -0.0005;
+        keyLight.shadow.camera.far = 300;
+        keyLight.shadow.camera.left   = -40;
+        keyLight.shadow.camera.right  =  40;
+        keyLight.shadow.camera.top    =  30;
+        keyLight.shadow.camera.bottom = -30;
+        keyLight.shadow.bias = -0.001;
+        keyLight.shadow.radius = 3;
         this.scene.add(keyLight);
 
         // Cool fill from opposite side — subtle contrast
