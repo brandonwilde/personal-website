@@ -110,29 +110,29 @@ export class Book extends THREE.Group {
 
         const coverTexture = this.createCoverTexture();
 
+        const M = BOOK_DEFAULTS.MATERIAL;
         this.materials = {
             cover: new THREE.MeshStandardMaterial({
-                map: coverTexture,
-                color: new THREE.Color(`rgb(${this.color[0]}, ${this.color[1]}, ${this.color[2]})`),
-                roughness: 0.85,
-                metalness: 0.0
+                map:       coverTexture,
+                color:     new THREE.Color(`rgb(${this.color[0]}, ${this.color[1]}, ${this.color[2]})`),
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
             }),
             spine: new THREE.MeshStandardMaterial({
-                map: this.createSpineTexture(),
-                roughness: 0.85,
-                metalness: 0.0
+                map:       this.createSpineTexture(),
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
             }),
             pages: new THREE.MeshStandardMaterial({
-                color: 0xf5f0e8,
-                roughness: 0.95,
-                metalness: 0.0
+                color:     M.PAGE_COLOR,
+                roughness: M.PAGE_ROUGHNESS,
+                metalness: M.PAGE_METALNESS,
             }),
-            // Gold/cream page-edge strip on the right side (pages visible from top/right)
             pageEdge: new THREE.MeshStandardMaterial({
-                color: 0xe8dfc0,
-                roughness: 0.9,
-                metalness: 0.05
-            })
+                color:     M.PAGE_EDGE_COLOR,
+                roughness: M.PAGE_EDGE_ROUGHNESS,
+                metalness: M.PAGE_EDGE_METALNESS,
+            }),
         };
 
         // Geometries
@@ -208,7 +208,7 @@ export class Book extends THREE.Group {
                 ease:     BOOK_DEFAULTS.HOVER.EASE
             },
             open: {
-                angle:    -Math.PI * 0.82,   // ~148° — wide open but not fully flat
+                angle:    BOOK_DEFAULTS.OPEN.ANGLE,
                 duration: BOOK_DEFAULTS.OPEN.DURATION,
                 ease:     BOOK_DEFAULTS.OPEN.EASE
             }
