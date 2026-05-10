@@ -18,6 +18,7 @@ export class Book extends THREE.Group {
         this.isOpen = false;
         this.initialY = 0;
         this.initialZ = 0;
+        this.initialRotationY = 0;
 
         this.createGeometry();
         this.setupAnimations();
@@ -196,7 +197,7 @@ export class Book extends THREE.Group {
                 ease:     BOOK_DEFAULTS.HOVER.EASE
             },
             open: {
-                angle:    Math.PI * 0.75,    // ~135° — wide open, cover swings toward viewer
+                angle:    -Math.PI * 0.5,    // 90° outward — negative opens away from pages, not through them
                 duration: BOOK_DEFAULTS.OPEN.DURATION,
                 ease:     BOOK_DEFAULTS.OPEN.EASE
             }
@@ -226,22 +227,30 @@ export class Book extends THREE.Group {
         this.isOpen = !this.isOpen;
 
         const targetZ = this.isOpen
-            ? this.initialZ + this.animations.hover.y + 2
+            ? this.initialZ + this.animations.hover.y + 0.5
             : (this.isHovered ? this.initialZ + this.animations.hover.y : this.initialZ);
 
-        // Pop book further out from shelf so the cover swings in clear space
+        // Pop book out from shelf
         window.gsap.to(this.position, {
             z:        targetZ,
             duration: this.animations.open.duration * 0.4,
             ease:     'power2.out'
         });
 
-        // Rotate the front cover around the spine-edge pivot (positive = toward viewer)
+        // Rotate whole book to present cover toward viewer (spine at PI/2 → cover at PI/6)
+        window.gsap.to(this.rotation, {
+            y:        this.isOpen ? this.initialRotationY - Math.PI / 3 : this.initialRotationY,
+            duration: this.animations.open.duration,
+            ease:     this.animations.open.ease,
+            delay:    this.isOpen ? this.animations.open.duration * 0.3 : 0
+        });
+
+        // Open front cover outward — negative angle opens away from pages, not through book
         window.gsap.to(this.frontCoverPivot.rotation, {
             y:        this.isOpen ? this.animations.open.angle : 0,
             duration: this.animations.open.duration,
             ease:     this.animations.open.ease,
-            delay:    this.isOpen ? this.animations.open.duration * 0.2 : 0
+            delay:    this.isOpen ? this.animations.open.duration * 0.3 : 0
         });
 
         // Pages fan out slightly as the book opens
@@ -249,7 +258,7 @@ export class Book extends THREE.Group {
             y:        this.isOpen ? 0.08 : 0,
             duration: this.animations.open.duration * 0.7,
             ease:     'power2.out',
-            delay:    this.isOpen ? this.animations.open.duration * 0.4 : 0
+            delay:    this.isOpen ? this.animations.open.duration * 0.5 : 0
         });
     }
 

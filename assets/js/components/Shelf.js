@@ -67,7 +67,8 @@ export class Shelf {
 
             // Set rotation
             book.rotation.y = Math.PI / 2;
-            
+            book.initialRotationY = Math.PI / 2;
+
             // Position book - use book thickness since it's rotated
             const bookX = x + (book.dimensions.thickness / 2);
             book.position.x = bookX;
