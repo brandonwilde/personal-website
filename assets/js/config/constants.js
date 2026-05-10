@@ -99,20 +99,6 @@ export const BOOK_DEFAULTS = {
     INSET: 0.18,    // How far pages are inset from cover edge
   },
   
-  // Animation settings
-  HOVER: {
-    HEIGHT: 1,       // 1 inch up
-    DURATION: 0.3,   // seconds
-    EASE: "power2.out"
-  },
-  OPEN: {
-    COVER_ANGLE:   Math.PI / 6,     // 30 degrees
-    BOOK_ROTATION: 0,               // rotation.y when open; 0 = front cover faces viewer
-    Z_OUT:         10,              // units pulled forward from shelf
-    SHOWCASE_Y:    0,               // world-Y the book centers on when open
-    DURATION:      0.8,             // seconds (base — steps are multiples of this)
-    EASE:          "power2.inOut"
-  },
   // Material settings
   MATERIAL: {
     HOVER_EMISSIVE:   0x333333,
@@ -128,23 +114,26 @@ export const BOOK_DEFAULTS = {
   }
 };
 
-// Live-editable animation parameters — mutated by the debug panel at runtime.
-// Book._buildOpenTimeline() reads these fresh each call so changes take effect immediately.
+// All animation parameters — the single source of truth for book animations.
+// Mutated at runtime by the debug panel; Book reads via _params() each timeline build.
 export const ANIM_PARAMS = {
     open: {
-        duration:   0.8,          // base seconds; individual steps are fractions/multiples
-        zOut:       10,           // units the book pulls forward from the shelf
-        showcaseY:  0,            // world-Y the book centers on when open
-        coverAngle: -Math.PI * 0.9, // radians the cover swings open (~162°)
+        duration:     0.8,            // base seconds; individual steps are multiples of this
+        zOut:         10,             // units pulled forward from the shelf
+        showcaseY:    0,              // world-Y the book centers on when open
+        coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
+        bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
+        ease:         "power2.inOut",
     },
     close: {
-        duration:   0.7,          // base seconds for close
-        openDelay:  0.4,          // seconds after close starts before new book begins opening
+        duration:  0.7,   // base seconds for close
+        openDelay: 0.4,   // seconds after close starts before new book begins opening
     },
     hover: {
-        duration:   0.3,
-        zOffset:    1,
-    }
+        duration: 0.3,
+        zOffset:  1,
+        ease:     "power2.out",
+    },
 };
 
 // Arrays of varied book dimensions for decorative books
