@@ -21,14 +21,39 @@ export const SCENE_BACKGROUND = 0xf7f3e9;
 
 // Lighting settings
 export const LIGHTING_SETTINGS = {
-  AMBIENT_INTENSITY: 0.7,
-  MAIN_LIGHT_INTENSITY: 1.0,
-  FILL_LIGHT_INTENSITY: 0.5,
-  POINT_LIGHT_INTENSITY: 0.5,
-  MAIN_LIGHT_COLOR: 0xffffff,
-  FILL_LIGHT_COLOR: 0xffffff,
-  POINT_LIGHT_COLOR: 0xffcc88,
-  SHADOW_MAP_SIZE: 2048
+  // Warm ambient — simulates bounced room light
+  AMBIENT_COLOR:     0xfff0d0,
+  AMBIENT_INTENSITY: 0.6,
+
+  // Key light — centered overhead to avoid diagonal shelf shadows
+  KEY_COLOR:         0xfff5e0,
+  KEY_INTENSITY:     1.6,
+  KEY_POSITION:      { x: 0, y: 80, z: 30 },
+
+  // Shadow frustum — kept tight around the shelf to maximise shadow resolution
+  SHADOW_MAP_SIZE:   2048,
+  SHADOW_FAR:        300,
+  SHADOW_LEFT:       -40,
+  SHADOW_RIGHT:       40,
+  SHADOW_TOP:         30,
+  SHADOW_BOTTOM:     -30,
+  SHADOW_BIAS:       -0.001,
+  SHADOW_RADIUS:      3,
+
+  // Cool fill from opposite side
+  FILL_COLOR:        0xd0e8ff,
+  FILL_INTENSITY:    0.4,
+  FILL_POSITION:     { x: -40, y: 30, z: -30 },
+
+  // Warm sconce-style point lights flanking the shelf
+  SCONCE_COLOR:      0xffa060,
+  SCONCE_INTENSITY:  2.5,
+  SCONCE_DISTANCE:   80,
+  SCONCE_X:          30,   // mirrored to ±X
+  SCONCE_Y:          28,
+  SCONCE_Z:          18,
+
+  TONE_MAPPING_EXPOSURE: 1.1,
 };
 
 // Bookshelf dimensions in inches
@@ -41,6 +66,13 @@ export const BOOKSHELF_DIMENSIONS = {
   SHELF_THICKNESS: 1,  // 1 inch
   SHELF_SPACING: 12,   // 1 foot between shelves
   SECTION_WIDTH: 12,   // 1 foot per section
+};
+
+// Wood material for bookshelf frame and shelves
+export const WOOD_MATERIAL = {
+  COLOR:     0xc8a87a,
+  ROUGHNESS: 0.85,
+  METALNESS: 0.0,
 };
 
 // Camera settings
@@ -74,17 +106,22 @@ export const BOOK_DEFAULTS = {
     EASE: "power2.out"
   },
   OPEN: {
-    ANGLE: Math.PI / 6,  // 30 degrees
-    DURATION: 0.5,       // seconds
-    EASE: "power2.inOut"
+    ANGLE:    Math.PI * 0.75,    // ~135° — wide open, cover swings toward viewer
+    DURATION: 0.5,           // seconds
+    EASE:     "power2.inOut"
   },
   // Material settings
   MATERIAL: {
-    HOVER_EMISSIVE: 0x333333,
+    HOVER_EMISSIVE:   0x333333,
     DEFAULT_EMISSIVE: 0x000000,
-    ROUGHNESS: 0.8,
-    METALNESS: 0.1,
-    PAGE_COLOR: 0xffffff
+    COVER_ROUGHNESS:  0.85,
+    COVER_METALNESS:  0.0,
+    PAGE_COLOR:       0xf5f0e8,
+    PAGE_ROUGHNESS:   0.95,
+    PAGE_METALNESS:   0.0,
+    PAGE_EDGE_COLOR:  0xe8dfc0,
+    PAGE_EDGE_ROUGHNESS: 0.9,
+    PAGE_EDGE_METALNESS: 0.05,
   }
 };
 

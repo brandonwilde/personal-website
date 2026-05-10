@@ -41,43 +41,41 @@ export class SceneManager {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.1;
+        this.renderer.toneMappingExposure = LIGHTING_SETTINGS.TONE_MAPPING_EXPOSURE;
         document.body.appendChild(this.renderer.domElement);
     }
 
     setupLighting() {
-        // Warm ambient — simulates bounced room light
-        const ambientLight = new THREE.AmbientLight(0xfff0d0, 0.6);
+        const L = LIGHTING_SETTINGS;
+
+        const ambientLight = new THREE.AmbientLight(L.AMBIENT_COLOR, L.AMBIENT_INTENSITY);
         this.scene.add(ambientLight);
 
-        // Key light — warm overhead, centered to avoid diagonal shelf shadows
-        const keyLight = new THREE.DirectionalLight(0xfff5e0, 1.6);
-        keyLight.position.set(0, 80, 30);
+        const keyLight = new THREE.DirectionalLight(L.KEY_COLOR, L.KEY_INTENSITY);
+        keyLight.position.set(L.KEY_POSITION.x, L.KEY_POSITION.y, L.KEY_POSITION.z);
         keyLight.castShadow = true;
-        keyLight.shadow.mapSize.width = 2048;
-        keyLight.shadow.mapSize.height = 2048;
-        keyLight.shadow.camera.near = 1;
-        keyLight.shadow.camera.far = 300;
-        keyLight.shadow.camera.left   = -40;
-        keyLight.shadow.camera.right  =  40;
-        keyLight.shadow.camera.top    =  30;
-        keyLight.shadow.camera.bottom = -30;
-        keyLight.shadow.bias = -0.001;
-        keyLight.shadow.radius = 3;
+        keyLight.shadow.mapSize.width  = L.SHADOW_MAP_SIZE;
+        keyLight.shadow.mapSize.height = L.SHADOW_MAP_SIZE;
+        keyLight.shadow.camera.near   = 1;
+        keyLight.shadow.camera.far    = L.SHADOW_FAR;
+        keyLight.shadow.camera.left   = L.SHADOW_LEFT;
+        keyLight.shadow.camera.right  = L.SHADOW_RIGHT;
+        keyLight.shadow.camera.top    = L.SHADOW_TOP;
+        keyLight.shadow.camera.bottom = L.SHADOW_BOTTOM;
+        keyLight.shadow.bias          = L.SHADOW_BIAS;
+        keyLight.shadow.radius        = L.SHADOW_RADIUS;
         this.scene.add(keyLight);
 
-        // Cool fill from opposite side — subtle contrast
-        const fillLight = new THREE.DirectionalLight(0xd0e8ff, 0.4);
-        fillLight.position.set(-40, 30, -30);
+        const fillLight = new THREE.DirectionalLight(L.FILL_COLOR, L.FILL_INTENSITY);
+        fillLight.position.set(L.FILL_POSITION.x, L.FILL_POSITION.y, L.FILL_POSITION.z);
         this.scene.add(fillLight);
 
-        // Warm sconce-style point lights flanking the bookshelf
-        const sconce1 = new THREE.PointLight(0xffa060, 2.5, 80);
-        sconce1.position.set(30, 28, 18);
+        const sconce1 = new THREE.PointLight(L.SCONCE_COLOR, L.SCONCE_INTENSITY, L.SCONCE_DISTANCE);
+        sconce1.position.set(L.SCONCE_X, L.SCONCE_Y, L.SCONCE_Z);
         this.scene.add(sconce1);
 
-        const sconce2 = new THREE.PointLight(0xffa060, 2.5, 80);
-        sconce2.position.set(-30, 28, 18);
+        const sconce2 = new THREE.PointLight(L.SCONCE_COLOR, L.SCONCE_INTENSITY, L.SCONCE_DISTANCE);
+        sconce2.position.set(-L.SCONCE_X, L.SCONCE_Y, L.SCONCE_Z);
         this.scene.add(sconce2);
     }
 
