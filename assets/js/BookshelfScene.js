@@ -24,11 +24,15 @@ export class BookshelfScene {
 
     setupTextures() {
         this.textureLoader = new THREE.TextureLoader();
-        this.woodTexture = this.textureLoader.load('assets/textures/wood2.png');
-        this.woodTextureHorizontal = this.textureLoader.load('assets/textures/wood2-h-cropped.png');
-        
-        this.woodTexture.wrapS = this.woodTexture.wrapT = THREE.RepeatWrapping;
-        this.woodTextureHorizontal.wrapS = this.woodTextureHorizontal.wrapT = THREE.RepeatWrapping;
+        const woodTex = this.textureLoader.load('assets/textures/wood2.png');
+        const woodTexH = this.textureLoader.load('assets/textures/wood2-h-cropped.png');
+
+        woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping;
+        woodTexH.wrapS = woodTexH.wrapT = THREE.RepeatWrapping;
+
+        // Build materials once; share across all frame/shelf meshes
+        this.frameMaterial = this.createWoodMaterial(woodTex);
+        this.shelfMaterial = this.createWoodMaterial(woodTexH);
     }
 
     createBookshelf() {
@@ -38,7 +42,7 @@ export class BookshelfScene {
             BOOKSHELF_DIMENSIONS.HEIGHT, 
             BOOKSHELF_DIMENSIONS.FRAME_THICKNESS
         );
-        const backPanel = new THREE.Mesh(backPanelGeometry, this.createWoodMaterial(this.woodTexture));
+        const backPanel = new THREE.Mesh(backPanelGeometry, this.frameMaterial);
         backPanel.position.set(0, 0, -BOOKSHELF_DIMENSIONS.DEPTH/2);
         backPanel.castShadow = true;
         backPanel.receiveShadow = true;
@@ -46,18 +50,18 @@ export class BookshelfScene {
 
         // Create side panels
         const sidePanelGeometry = new THREE.BoxGeometry(
-            BOOKSHELF_DIMENSIONS.FRAME_THICKNESS, 
-            BOOKSHELF_DIMENSIONS.HEIGHT, 
+            BOOKSHELF_DIMENSIONS.FRAME_THICKNESS,
+            BOOKSHELF_DIMENSIONS.HEIGHT,
             BOOKSHELF_DIMENSIONS.DEPTH
         );
-        
-        const leftPanel = new THREE.Mesh(sidePanelGeometry, this.createWoodMaterial(this.woodTexture));
+
+        const leftPanel = new THREE.Mesh(sidePanelGeometry, this.frameMaterial);
         leftPanel.position.set(-BOOKSHELF_DIMENSIONS.WIDTH/2, 0, 0);
         leftPanel.castShadow = true;
         leftPanel.receiveShadow = true;
         this.sceneManager.add(leftPanel);
 
-        const rightPanel = new THREE.Mesh(sidePanelGeometry, this.createWoodMaterial(this.woodTexture));
+        const rightPanel = new THREE.Mesh(sidePanelGeometry, this.frameMaterial);
         rightPanel.position.set(BOOKSHELF_DIMENSIONS.WIDTH/2, 0, 0);
         rightPanel.castShadow = true;
         rightPanel.receiveShadow = true;
@@ -67,7 +71,7 @@ export class BookshelfScene {
         const numShelves = Math.floor(BOOKSHELF_DIMENSIONS.HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING);
         for (let i = 0; i <= numShelves; i++) {
             const y = i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - BOOKSHELF_DIMENSIONS.HEIGHT / 2;
-            const shelf = new Shelf(String.fromCharCode(65 + i), y, this.woodTextureHorizontal);
+            const shelf = new Shelf(String.fromCharCode(65 + i), y, this.shelfMaterial);
             this.sceneManager.add(shelf.mesh);
             this.shelves.set(shelf.id, shelf);
         }

@@ -2,21 +2,15 @@ import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS } from '../config/constants.js';
 
 export class Shelf {
-    constructor(id, y, texture) {
+    constructor(id, y, material) {
         this.id = id;
         this.y = y;
-        this.books = new Map(); // Map of bookId -> book
-        this.createGeometry(texture);
+        this.books = new Map();
+        this.createGeometry(material);
     }
 
-    createGeometry(texture) {
-        // Create material with wood texture
-        this.material = new THREE.MeshStandardMaterial({
-            map: texture,
-            color: new THREE.Color(0xc8a87a),
-            roughness: 0.85,
-            metalness: 0.0
-        });
+    createGeometry(material) {
+        this.material = material;
 
         // Create shelf geometry
         this.geometry = new THREE.BoxGeometry(
