@@ -156,33 +156,36 @@ export class Book extends THREE.Group {
         const coverThickness  = BOOK_DEFAULTS.COVER.THICKNESS;
         const pageInset       = BOOK_DEFAULTS.PAGE.INSET;
 
+        const coverTexture = this.createCoverTexture();
+
+        const M = BOOK_DEFAULTS.MATERIAL;
         this.materials = {
             cover: new THREE.MeshStandardMaterial({
-                map:       this.createCoverTexture(),
+                map:       coverTexture,
                 color:     new THREE.Color(`rgb(${this.color[0]}, ${this.color[1]}, ${this.color[2]})`),
-                roughness: 0.85,
-                metalness: 0.0
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
             }),
             spine: new THREE.MeshStandardMaterial({
                 map:       this.createSpineTexture(),
-                roughness: 0.85,
-                metalness: 0.0
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
             }),
             titlePage: new THREE.MeshStandardMaterial({
                 map:       this.createTitlePageTexture(),
-                roughness: 0.9,
-                metalness: 0.0
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
             }),
             pages: new THREE.MeshStandardMaterial({
-                color:     0xf5f0e8,
-                roughness: 0.95,
-                metalness: 0.0
+                color:     M.PAGE_COLOR,
+                roughness: M.PAGE_ROUGHNESS,
+                metalness: M.PAGE_METALNESS,
             }),
             pageEdge: new THREE.MeshStandardMaterial({
-                color:     0xe8dfc0,
-                roughness: 0.9,
-                metalness: 0.05
-            })
+                color:     M.PAGE_EDGE_COLOR,
+                roughness: M.PAGE_EDGE_ROUGHNESS,
+                metalness: M.PAGE_EDGE_METALNESS,
+            }),
         };
 
         const coverGeometry = new THREE.BoxGeometry(actualWidth, actualHeight, coverThickness);
@@ -267,9 +270,19 @@ export class Book extends THREE.Group {
         // Duration/distance params are read fresh from window.animParams at timeline-build
         // time so the debug panel can update them without recreating books.
         this.animations = {
-            bookRotation: 0,              // rotation.y when open — front cover faces viewer
-            openEase:  BOOK_DEFAULTS.OPEN.EASE,
-            hoverEase: BOOK_DEFAULTS.HOVER.EASE,
+            hover: {
+                zOffset:  BOOK_DEFAULTS.HOVER.HEIGHT,
+                duration: BOOK_DEFAULTS.HOVER.DURATION,
+                ease:     BOOK_DEFAULTS.HOVER.EASE
+            },
+            open: {
+                zOut:         BOOK_DEFAULTS.OPEN.Z_OUT,
+                showcaseY:    BOOK_DEFAULTS.OPEN.SHOWCASE_Y,
+                coverAngle:   BOOK_DEFAULTS.OPEN.COVER_ANGLE,
+                bookRotation: BOOK_DEFAULTS.OPEN.BOOK_ROTATION,
+                duration:     BOOK_DEFAULTS.OPEN.DURATION,
+                ease:         BOOK_DEFAULTS.OPEN.EASE,
+            }
         };
     }
 
