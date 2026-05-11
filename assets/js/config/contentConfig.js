@@ -390,20 +390,3 @@ export const bookConfigs = {
     }
 };
 
-// Modal configurations
-export const modalConfig = {
-    templates: {
-        education: 'educationModalTemplate',
-        job: 'jobModalTemplate',
-        businessCard: 'businessCardModalTemplate',
-        bookReviews: 'bookReviewsModalTemplate'
-    },
-    closeOnOutsideClick: true
-};
-
-// Scene configurations
-export const sceneConfig = {
-    // Add any scene-specific configurations here
-    // For example, camera positions, lighting setups, etc.
-    // These can be moved from constants.js if they're more configuration than constant
-};

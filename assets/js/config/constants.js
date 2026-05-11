@@ -218,8 +218,3 @@ export const ANIM_PARAMS = {
     },
 };
 
-// Arrays of varied book dimensions for decorative books
-export const BOOK_VARIATIONS = {
-  HEIGHTS: [185, 191, 194, 200, 203, 205, 211, 219, 230, 250],
-  WIDTHS: [25, 31, 35, 38, 42, 48, 58, 66],
-};
