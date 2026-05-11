@@ -32,6 +32,7 @@ export const LIGHTING_SETTINGS = {
 
   // Shadow frustum — kept tight around the shelf to maximise shadow resolution
   SHADOW_MAP_SIZE:   2048,
+  SHADOW_NEAR:       1,
   SHADOW_FAR:        300,
   SHADOW_LEFT:       -40,
   SHADOW_RIGHT:       40,
@@ -77,9 +78,25 @@ export const WOOD_MATERIAL = {
 
 // Camera settings
 export const CAMERA_SETTINGS = {
-  FOV: 10,
+  FOV:  10,
   NEAR: 1.2,
-  FAR: 12000,
+  FAR:  12000,
+};
+
+// Renderer settings
+export const RENDERER_SETTINGS = {
+  MAX_PIXEL_RATIO: 2,
+};
+
+// OrbitControls settings
+export const CONTROLS_SETTINGS = {
+  DAMPING_FACTOR:        0.05,
+  MAX_POLAR_ANGLE_DENOM: 1.5,   // maxPolarAngle = PI / this
+  MIN_DISTANCE:          12,
+  MAX_DISTANCE:          360,
+  ZOOM_SPEED:            3,
+  ROTATE_SPEED:          0.8,
+  PAN_SPEED:             0.8,
 };
 
 // Book default properties
@@ -93,25 +110,54 @@ export const BOOK_DEFAULTS = {
   COVER: {
     THICKNESS: 0.24,  // Cover thickness in inches
   },
-  
+
   // Page properties
   PAGE: {
     INSET: 0.18,    // How far pages are inset from cover edge
   },
-  
+
   // Material settings
   MATERIAL: {
-    HOVER_EMISSIVE:   0x333333,
-    DEFAULT_EMISSIVE: 0x000000,
-    COVER_ROUGHNESS:  0.85,
-    COVER_METALNESS:  0.0,
-    PAGE_COLOR:       0xf5f0e8,
-    PAGE_ROUGHNESS:   0.95,
-    PAGE_METALNESS:   0.0,
-    PAGE_EDGE_COLOR:  0xe8dfc0,
+    HOVER_EMISSIVE:      0x333333,
+    DEFAULT_EMISSIVE:    0x000000,
+    COVER_ROUGHNESS:     0.85,
+    COVER_METALNESS:     0.0,
+    PAGE_COLOR:          0xf5f0e8,
+    PAGE_ROUGHNESS:      0.95,
+    PAGE_METALNESS:      0.0,
+    PAGE_EDGE_COLOR:     0xe8dfc0,
     PAGE_EDGE_ROUGHNESS: 0.9,
     PAGE_EDGE_METALNESS: 0.05,
-  }
+  },
+
+  // Texture generation settings
+  TEXTURE: {
+    // Spine texture
+    SPINE_PIXELS_PER_UNIT:      50,    // canvas pixels per scene unit
+    SPINE_DARKEN:               0.8,   // spine color darkened slightly vs cover
+    SPINE_LUMINANCE_THRESHOLD:  0.45,  // below = light text, above = dark text
+    SPINE_FONT_SIZE_RATIO:      0.72,  // font size as fraction of canvas width
+    SPINE_MAX_TEXT_WIDTH_RATIO: 0.85,  // max text width as fraction of canvas height
+
+    // Cover texture
+    COVER_CANVAS_SIZE:    128,  // square canvas dimension for cover fabric
+    COVER_NOISE_AMPLITUDE: 24,  // ±noise added per channel for fabric grain
+
+    // Title page texture
+    TITLE_PIXELS_PER_UNIT:      42,
+    TITLE_BG_COLOR:             '#f8f4ec',
+    TITLE_TEXT_COLOR:           '#1a1a1a',
+    TITLE_BORDER_COLOR_FACTOR:  0.6,   // multiplier to darken book color for borders
+    TITLE_OUTER_MARGIN:         14,    // px from canvas edge to outer border
+    TITLE_OUTER_LINE_WIDTH:     4,     // px width of outer border stroke
+    TITLE_INNER_MARGIN_OFFSET:  7,     // px gap between outer and inner border
+    TITLE_FONT_SIZE_RATIO:      0.14,  // initial font size as fraction of canvas width
+    TITLE_LINE_HEIGHT_RATIO:    1.5,   // line height as multiple of font size
+    TITLE_TEXT_PADDING:         10,    // px padding inside inner border for text
+  },
+
+  // Reference screen width for responsive scale calculation
+  SCALE_BASE_WIDTH: 1200,
 };
 
 // All animation parameters — the single source of truth for book animations.
@@ -124,10 +170,35 @@ export const ANIM_PARAMS = {
         coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
         bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
         ease:         "power2.inOut",
+        pageFanAngle: 0.08,           // radians pages fan out as cover opens
+
+        // Step duration multipliers (× base duration)
+        slideOutMult:  0.5,
+        centerMult:    0.7,
+        rotateMult:    1.0,
+        coverOpenMult: 1.2,
+        pageFanMult:   0.8,
+
+        // Timeline overlap/delay offsets (seconds)
+        centerStart:   0.1,   // seconds after slideOut starts that centering begins
+        rotateOverlap: 0.2,   // seconds before centering ends that rotation starts
+        coverDelay:    0.1,   // seconds after rotation ends before cover opens
+        pageFanOffset: 0.2,   // seconds after cover starts that pages fan out
     },
     close: {
         duration:  0.7,   // base seconds for close
         openDelay: 0.4,   // seconds after close starts before new book begins opening
+
+        // Step duration multipliers (× base duration)
+        pageSettleMult: 0.5,
+        coverCloseMult: 1.2,
+        rotateMult:     1.0,
+        slideXYMult:    0.7,
+        slideZMult:     0.5,
+
+        // Timeline overlap offsets (seconds)
+        rotateOverlap: 0.3,   // seconds before cover closes that rotation starts
+        slideZOverlap: 0.1,   // seconds before slide-XY ends that Z slide starts
     },
     hover: {
         duration: 0.3,

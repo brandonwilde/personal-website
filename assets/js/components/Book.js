@@ -29,21 +29,21 @@ export class Book extends THREE.Group {
     // Vertical title text on the spine
     createSpineTexture() {
         const { thickness, height } = this.dimensions;
-        const PIXELS_PER_UNIT = 50;
+        const T = BOOK_DEFAULTS.TEXTURE;
         const canvas = document.createElement('canvas');
-        canvas.width = Math.max(32, Math.round(thickness * PIXELS_PER_UNIT));
-        canvas.height = Math.max(64, Math.round(height * PIXELS_PER_UNIT));
+        canvas.width  = Math.max(32, Math.round(thickness * T.SPINE_PIXELS_PER_UNIT));
+        canvas.height = Math.max(64, Math.round(height    * T.SPINE_PIXELS_PER_UNIT));
         const ctx = canvas.getContext('2d');
 
         const [r, g, b] = this.color;
-        const darken = 0.8;
-        ctx.fillStyle = `rgb(${Math.round(r*darken)}, ${Math.round(g*darken)}, ${Math.round(b*darken)})`;
+        const d = T.SPINE_DARKEN;
+        ctx.fillStyle = `rgb(${Math.round(r*d)}, ${Math.round(g*d)}, ${Math.round(b*d)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         if (this.content) {
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            ctx.fillStyle = luminance > 0.45 ? '#111111' : '#f0ece4';
-            let fontSize = Math.max(8, Math.floor(canvas.width * 0.72));
+            ctx.fillStyle = luminance > T.SPINE_LUMINANCE_THRESHOLD ? '#111111' : '#f0ece4';
+            let fontSize = Math.max(8, Math.floor(canvas.width * T.SPINE_FONT_SIZE_RATIO));
             ctx.font = `bold ${fontSize}px Georgia, serif`;
 
             ctx.save();
@@ -52,7 +52,7 @@ export class Book extends THREE.Group {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const maxTextWidth = canvas.height * 0.85;
+            const maxTextWidth = canvas.height * T.SPINE_MAX_TEXT_WIDTH_RATIO;
             while (ctx.measureText(this.content).width > maxTextWidth && fontSize > 6) {
                 fontSize -= 1;
                 ctx.font = `bold ${fontSize}px Georgia, serif`;
@@ -66,19 +66,21 @@ export class Book extends THREE.Group {
 
     // Subtle fabric/cloth grain texture for cover exteriors
     createCoverTexture() {
+        const T = BOOK_DEFAULTS.TEXTURE;
+        const size = T.COVER_CANVAS_SIZE;
         const canvas = document.createElement('canvas');
-        canvas.width = 128;
-        canvas.height = 128;
+        canvas.width  = size;
+        canvas.height = size;
         const ctx = canvas.getContext('2d');
 
         const [r, g, b] = this.color;
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        ctx.fillRect(0, 0, 128, 128);
+        ctx.fillRect(0, 0, size, size);
 
-        const imageData = ctx.getImageData(0, 0, 128, 128);
+        const imageData = ctx.getImageData(0, 0, size, size);
         const data = imageData.data;
         for (let i = 0; i < data.length; i += 4) {
-            const n = (Math.random() - 0.5) * 24;
+            const n = (Math.random() - 0.5) * T.COVER_NOISE_AMPLITUDE;
             data[i]   = Math.min(255, Math.max(0, data[i]   + n));
             data[i+1] = Math.min(255, Math.max(0, data[i+1] + n));
             data[i+2] = Math.min(255, Math.max(0, data[i+2] + n));
@@ -91,33 +93,33 @@ export class Book extends THREE.Group {
     // Title page shown on the inside face of the front cover when open
     createTitlePageTexture() {
         const { width, height } = this.dimensions;
-        const PIXELS_PER_UNIT = 42;
+        const T = BOOK_DEFAULTS.TEXTURE;
         const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(width  * PIXELS_PER_UNIT);
-        canvas.height = Math.round(height * PIXELS_PER_UNIT);
+        canvas.width  = Math.round(width  * T.TITLE_PIXELS_PER_UNIT);
+        canvas.height = Math.round(height * T.TITLE_PIXELS_PER_UNIT);
         const ctx = canvas.getContext('2d');
 
         const [r, g, b] = this.color;
+        const f = T.TITLE_BORDER_COLOR_FACTOR;
 
-        // Cream paper background
-        ctx.fillStyle = '#f8f4ec';
+        ctx.fillStyle = T.TITLE_BG_COLOR;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Decorative double border in book color
-        const margin = 14;
-        ctx.strokeStyle = `rgb(${Math.round(r*0.6)}, ${Math.round(g*0.6)}, ${Math.round(b*0.6)})`;
-        ctx.lineWidth = 4;
-        ctx.strokeRect(margin, margin, canvas.width - margin*2, canvas.height - margin*2);
+        const outerMargin = T.TITLE_OUTER_MARGIN;
+        ctx.strokeStyle = `rgb(${Math.round(r*f)}, ${Math.round(g*f)}, ${Math.round(b*f)})`;
+        ctx.lineWidth = T.TITLE_OUTER_LINE_WIDTH;
+        ctx.strokeRect(outerMargin, outerMargin, canvas.width - outerMargin*2, canvas.height - outerMargin*2);
         ctx.lineWidth = 1;
-        const innerMargin = margin + 7;
+        const innerMargin = outerMargin + T.TITLE_INNER_MARGIN_OFFSET;
         ctx.strokeRect(innerMargin, innerMargin, canvas.width - innerMargin*2, canvas.height - innerMargin*2);
 
         // Title text
         if (this.content) {
-            ctx.fillStyle = '#1a1a1a';
-            const maxTextWidth = canvas.width - (innerMargin + 10) * 2;
+            ctx.fillStyle = T.TITLE_TEXT_COLOR;
+            const maxTextWidth = canvas.width - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
 
-            let fontSize = Math.max(16, Math.floor(canvas.width * 0.14));
+            let fontSize = Math.max(16, Math.floor(canvas.width * T.TITLE_FONT_SIZE_RATIO));
             ctx.font = `bold ${fontSize}px Georgia, serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -137,7 +139,7 @@ export class Book extends THREE.Group {
             }
             if (line) lines.push(line);
 
-            const lineHeight = fontSize * 1.5;
+            const lineHeight = fontSize * T.TITLE_LINE_HEIGHT_RATIO;
             const textBlockHeight = lines.length * lineHeight;
             const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
             lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
@@ -161,7 +163,9 @@ export class Book extends THREE.Group {
         this.materials = {
             cover: new THREE.MeshStandardMaterial({
                 map:       coverTexture,
-                color:     new THREE.Color(`rgb(${this.color[0]}, ${this.color[1]}, ${this.color[2]})`),
+                // No `color` here — the texture already has the book color painted in.
+                // Setting `color` would multiply against the texture, squaring the values
+                // and making the cover significantly darker than the spine.
                 roughness: M.COVER_ROUGHNESS,
                 metalness: M.COVER_METALNESS,
             }),
@@ -314,13 +318,15 @@ export class Book extends THREE.Group {
 
     _buildOpenTimeline() {
         const p = this._params();
-        const { duration, zOut, showcaseY, coverAngle, bookRotation, ease } = p.open;
+        const { duration, zOut, showcaseY, coverAngle, bookRotation, ease,
+                pageFanAngle, slideOutMult, centerMult, rotateMult, coverOpenMult, pageFanMult,
+                centerStart, rotateOverlap, coverDelay, pageFanOffset } = p.open;
         const tl = window.gsap.timeline();
 
         // 1. Slide out from shelf
         tl.to(this.position, {
             z:        this.initialZ + zOut,
-            duration: duration * 0.5,
+            duration: duration * slideOutMult,
             ease:     'power2.out'
         });
 
@@ -328,39 +334,40 @@ export class Book extends THREE.Group {
         tl.to(this.position, {
             x:        0,
             y:        showcaseY,
-            duration: duration * 0.7,
+            duration: duration * centerMult,
             ease:     'power2.inOut'
-        }, '<0.1');
+        }, `<${centerStart}`);
 
         // 3. Rotate so front cover faces viewer
         tl.to(this.rotation, {
             y:        bookRotation,
-            duration: duration,
+            duration: duration * rotateMult,
             ease
-        }, '>-0.2');
+        }, `>-${rotateOverlap}`);
 
         // 4. Open the front cover
         tl.to(this.frontCoverPivot.rotation, {
             y:        coverAngle,
-            duration: duration * 1.2,
+            duration: duration * coverOpenMult,
             ease
-        }, '>-0.1');
+        }, `>-${coverDelay}`);
 
         // 5. Pages fan out gently as cover opens
         tl.to(this.parts.pages.rotation, {
-            y:        0.08,
-            duration: duration * 0.8,
+            y:        pageFanAngle,
+            duration: duration * pageFanMult,
             ease:     'power2.out'
-        }, '<0.2');
+        }, `<${pageFanOffset}`);
 
         return tl;
     }
 
     _buildCloseTimeline() {
         const p = this._params();
-        const { duration } = p.close;
+        const { duration, pageSettleMult, coverCloseMult, rotateMult, slideXYMult, slideZMult,
+                rotateOverlap, slideZOverlap } = p.close;
         const { coverAngle, ease } = p.open;
-        const targetZ    = this.isHovered
+        const targetZ = this.isHovered
             ? this.initialZ + p.hover.zOffset
             : this.initialZ;
         const tl = window.gsap.timeline();
@@ -368,36 +375,36 @@ export class Book extends THREE.Group {
         // 1. Pages settle and cover begins closing
         tl.to(this.parts.pages.rotation, {
             y:        0,
-            duration: duration * 0.5,
+            duration: duration * pageSettleMult,
             ease:     'power2.in'
         });
 
         tl.to(this.frontCoverPivot.rotation, {
             y:        0,
-            duration: duration * 1.2,
+            duration: duration * coverCloseMult,
             ease
         }, '<');
 
         // 2. Rotate book back to shelf orientation
         tl.to(this.rotation, {
             y:        this.initialRotationY,
-            duration: duration,
+            duration: duration * rotateMult,
             ease
-        }, '>-0.3');
+        }, `>-${rotateOverlap}`);
 
         // 3. Slide back to original shelf position
         tl.to(this.position, {
             x:        this.initialX,
             y:        this.initialY,
-            duration: duration * 0.7,
+            duration: duration * slideXYMult,
             ease:     'power2.inOut'
         }, '<');
 
         tl.to(this.position, {
             z:        targetZ,
-            duration: duration * 0.5,
+            duration: duration * slideZMult,
             ease:     'power2.in'
-        }, '>-0.1');
+        }, `>-${slideZOverlap}`);
 
         return tl;
     }
@@ -405,7 +412,7 @@ export class Book extends THREE.Group {
     // ─── Responsive ─────────────────────────────────────────────────────────────
 
     updateScale(screenWidth) {
-        const baseScale = Math.min(1, screenWidth / 1200);
+        const baseScale = Math.min(1, screenWidth / BOOK_DEFAULTS.SCALE_BASE_WIDTH);
         this.scale.set(baseScale, baseScale, baseScale);
     }
 }

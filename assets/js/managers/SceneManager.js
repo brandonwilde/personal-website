@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, SCENE_BACKGROUND, LIGHTING_SETTINGS } from '../config/constants.js';
+import { CAMERA_SETTINGS, SCENE_BACKGROUND, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
 
 export class SceneManager {
     constructor() {
@@ -20,16 +20,15 @@ export class SceneManager {
 
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(
-            CAMERA_SETTINGS.FOV, 
-            window.innerWidth / window.innerHeight, 
-            CAMERA_SETTINGS.NEAR, 
+            CAMERA_SETTINGS.FOV,
+            window.innerWidth / window.innerHeight,
+            CAMERA_SETTINGS.NEAR,
             CAMERA_SETTINGS.FAR
         );
-        
-        // Position camera
-        const vFov = this.camera.fov * Math.PI / 180;
-        const centerY = 18; // Half of bookshelf height
-        const distance = 36 / (2 * Math.tan(vFov / 2)); // Height / (2 * tan(fov/2))
+
+        const vFov    = this.camera.fov * Math.PI / 180;
+        const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
+        const distance = BOOKSHELF_DIMENSIONS.HEIGHT / (2 * Math.tan(vFov / 2));
         this.camera.position.set(0, centerY, distance);
         this.camera.lookAt(0, centerY, 0);
     }
@@ -37,7 +36,7 @@ export class SceneManager {
     setupRenderer() {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_SETTINGS.MAX_PIXEL_RATIO));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -56,7 +55,7 @@ export class SceneManager {
         keyLight.castShadow = true;
         keyLight.shadow.mapSize.width  = L.SHADOW_MAP_SIZE;
         keyLight.shadow.mapSize.height = L.SHADOW_MAP_SIZE;
-        keyLight.shadow.camera.near   = 1;
+        keyLight.shadow.camera.near   = L.SHADOW_NEAR;
         keyLight.shadow.camera.far    = L.SHADOW_FAR;
         keyLight.shadow.camera.left   = L.SHADOW_LEFT;
         keyLight.shadow.camera.right  = L.SHADOW_RIGHT;
@@ -80,16 +79,17 @@ export class SceneManager {
     }
 
     setupControls() {
+        const C = CONTROLS_SETTINGS;
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.05;
-        this.controls.maxPolarAngle = Math.PI / 1.5;
-        this.controls.minDistance = 12;
-        this.controls.maxDistance = 360;
-        this.controls.zoomSpeed = 3;
-        this.controls.rotateSpeed = 0.8;
-        this.controls.enablePan = true;
-        this.controls.panSpeed = 0.8;
+        this.controls.dampingFactor = C.DAMPING_FACTOR;
+        this.controls.maxPolarAngle = Math.PI / C.MAX_POLAR_ANGLE_DENOM;
+        this.controls.minDistance   = C.MIN_DISTANCE;
+        this.controls.maxDistance   = C.MAX_DISTANCE;
+        this.controls.zoomSpeed     = C.ZOOM_SPEED;
+        this.controls.rotateSpeed   = C.ROTATE_SPEED;
+        this.controls.enablePan     = true;
+        this.controls.panSpeed      = C.PAN_SPEED;
         this.controls.screenSpacePanning = true;
     }
 
