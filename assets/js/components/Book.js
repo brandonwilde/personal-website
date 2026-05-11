@@ -454,11 +454,10 @@ export class Book extends THREE.Group {
 
     // ─── Open / Close ───────────────────────────────────────────────────────────
 
-    open(onComplete) {
+    open() {
         if (this._activeTl) this._activeTl.kill();
         this.isOpen = true;
         this._activeTl = this._buildOpenTimeline();
-        if (onComplete) this._activeTl.then(onComplete);
         return this._activeTl;
     }
 
@@ -542,11 +541,9 @@ export class Book extends THREE.Group {
             ease
         }, '<');
 
-        // 2. Rotate book back to shelf orientation (reset all axes in case camera was orbited)
+        // 2. Rotate book back to shelf orientation
         tl.to(this.rotation, {
-            x:        0,
             y:        this.initialRotationY,
-            z:        0,
             duration: duration * rotateMult,
             ease
         }, `>-${rotateOverlap}`);

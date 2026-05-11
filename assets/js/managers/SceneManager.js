@@ -120,6 +120,7 @@ export class SceneManager {
     }
 
     lockCamera() {
+        this._killFlyTweens();
         this.controls.enabled = false;
     }
 
@@ -132,25 +133,38 @@ export class SceneManager {
 
     // Instantly resets camera to the default shelf-facing position.
     snapToDefault() {
+        this._killFlyTweens();
         this.controls.reset(); // restores position0/target0 saved in setupControls
     }
 
     // Smoothly flies camera back to the default position, then fires onComplete.
+    // Cancels any in-flight fly tweens so a rapid open/close/open sequence can't
+    // leave a stale onComplete that would re-enable controls at the wrong time.
     flyToDefault(onComplete) {
+        this._killFlyTweens();
         const { position0, target0 } = this.controls; // saved by saveState()
-        window.gsap.to(this.camera.position, {
-            x: position0.x, y: position0.y, z: position0.z,
-            duration: 0.6,
-            ease: 'power2.inOut',
-        });
-        window.gsap.to(this.controls.target, {
-            x: target0.x, y: target0.y, z: target0.z,
-            duration: 0.6,
-            ease: 'power2.inOut',
-            onComplete: () => {
-                if (onComplete) onComplete();
-            },
-        });
+        this._flyTweens = [
+            window.gsap.to(this.camera.position, {
+                x: position0.x, y: position0.y, z: position0.z,
+                duration: 0.6,
+                ease: 'power2.inOut',
+            }),
+            window.gsap.to(this.controls.target, {
+                x: target0.x, y: target0.y, z: target0.z,
+                duration: 0.6,
+                ease: 'power2.inOut',
+                onComplete: () => {
+                    this._flyTweens = null;
+                    if (onComplete) onComplete();
+                },
+            }),
+        ];
+    }
+
+    _killFlyTweens() {
+        if (!this._flyTweens) return;
+        this._flyTweens.forEach(t => t.kill());
+        this._flyTweens = null;
     }
 
     add(object) {

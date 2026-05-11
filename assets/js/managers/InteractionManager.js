@@ -9,8 +9,9 @@ export class InteractionManager {
         this.hoveredBook    = null;
         this.openBook       = null; // at most one book open at a time
         this.books          = new Map();
-        this._onOpen       = onOpen       ?? null; // fires before open animation
-        this._onCloseStart = onCloseStart ?? null; // fires before close animation
+        this._onOpen        = onOpen       ?? null; // fires before open animation
+        this._onCloseStart  = onCloseStart ?? null; // fires before close animation
+        this._pendingOpen   = null;                 // delayedCall scheduled by closeOpenBook
 
         this.setupEventListeners();
     }
@@ -28,17 +29,26 @@ export class InteractionManager {
     // openDelay < close duration = animations overlap; 0 = fully concurrent.
     // If nothing is open, onComplete fires immediately.
     closeOpenBook(onComplete) {
+        // Cancel any queued open from a prior close so rapid clicks can't
+        // stack multiple openBookEntry calls (which would re-fire onOpen).
+        if (this._pendingOpen) {
+            this._pendingOpen.kill();
+            this._pendingOpen = null;
+        }
         if (!this.openBook) {
             if (onComplete) onComplete();
             return;
         }
         const bookData = this.openBook;
         this.openBook  = null;
-        if (this._onCloseStart) this._onCloseStart(bookData.object);
+        if (this._onCloseStart) this._onCloseStart();
         bookData.object.close();
         if (onComplete) {
             const delay = (window.animParams ?? { close: { openDelay: 0.4 } }).close.openDelay;
-            window.gsap.delayedCall(delay, onComplete);
+            this._pendingOpen = window.gsap.delayedCall(delay, () => {
+                this._pendingOpen = null;
+                onComplete();
+            });
         }
     }
 
