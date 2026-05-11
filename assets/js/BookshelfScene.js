@@ -88,25 +88,15 @@ export class BookshelfScene {
 
     createBook(id, bookProps) {
         const book = new Book(id, bookProps);
-        
-        // Add to scene and set up interactions
         this.sceneManager.add(book);
-        
-        // Get the modal element and register it with the book
-        const modalId = `${id}Modal`;
-        const modalElement = document.getElementById(modalId);
-        if (!modalElement) {
-            console.warn(`Modal not found for book ${id}: #${modalId}`);
-        }
-        
-        this.interactionManager.registerBook(id, book, modalElement);
-        
-        // Store book data
-        this.books.set(id, {
-            object: book,
-            modal: modalElement
+
+        this.interactionManager.registerBook(id, book, {
+            title:     bookProps.content   ?? id,
+            modalInfo: bookProps.modalInfo ?? null,
+            color:     bookProps.color,
         });
-        
+
+        this.books.set(id, { object: book });
         return book;
     }
 

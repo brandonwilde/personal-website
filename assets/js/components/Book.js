@@ -7,13 +7,15 @@ export class Book extends THREE.Group {
         height = BOOK_DEFAULTS.HEIGHT,
         thickness = BOOK_DEFAULTS.THICKNESS,
         color,
-        content
+        content,
+        modalInfo = null,
     }) {
         super();
         this.bookId = bookId;
         this.dimensions = { width, height, thickness };
         this.color = color;
         this.content = content;
+        this.modalInfo = modalInfo;
         this.isHovered = false;
         this.isOpen = false;
         this.initialX = 0;
@@ -148,6 +150,156 @@ export class Book extends THREE.Group {
         return new THREE.CanvasTexture(canvas);
     }
 
+    // Content rendered on the pages front face (+Z) — the right-hand page when open.
+    // Baked at construction so the text is visible from the first frame of the
+    // open animation rather than appearing afterward.
+    createContentPageTexture() {
+        const { width, height } = this.dimensions;
+        const T   = BOOK_DEFAULTS.TEXTURE;
+        const PPU = T.CONTENT_PIXELS_PER_UNIT;
+        const pageInset = BOOK_DEFAULTS.PAGE.INSET;
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round((width  - pageInset * 2) * PPU);
+        canvas.height = Math.round((height - pageInset * 2) * PPU);
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+
+        // ── Background ──
+        ctx.fillStyle = T.TITLE_BG_COLOR;
+        ctx.fillRect(0, 0, W, H);
+
+        if (!this.content && !this.modalInfo) return new THREE.CanvasTexture(canvas);
+
+        const [r, g, b] = this.color;
+        const accent = `rgb(${Math.round(r * 0.6)}, ${Math.round(g * 0.6)}, ${Math.round(b * 0.6)})`;
+
+        const mX  = Math.round(W * T.CONTENT_MARGIN_X_RATIO);
+        const textW = W - mX * 2;
+        let y = Math.round(H * T.CONTENT_MARGIN_TOP_RATIO);
+
+        // ── Font size helpers ──
+        const titleFont    = Math.max(20, Math.round(W * T.CONTENT_TITLE_RATIO));
+        const subtitleFont = Math.max(16, Math.round(W * T.CONTENT_SUBTITLE_RATIO));
+        const orgFont      = Math.max(14, Math.round(W * T.CONTENT_ORG_RATIO));
+        const bodyFont     = Math.max(12, Math.round(W * T.CONTENT_BODY_RATIO));
+        const listFont     = Math.max(11, Math.round(W * T.CONTENT_LIST_RATIO));
+
+        // ── Title ──
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle    = '#1a1a1a';
+        ctx.font = `bold ${titleFont}px Georgia, serif`;
+        for (const line of wrapText(ctx, this.content ?? '', textW)) {
+            ctx.fillText(line, W / 2, y);
+            y += Math.round(titleFont * 1.25);
+        }
+        y += Math.round(titleFont * 0.2);
+
+        // ── Subtitle / org ──
+        if (this.modalInfo) {
+            const subtitle = this.modalInfo.degree    ?? this.modalInfo.position ?? '';
+            const org      = this.modalInfo.university ?? this.modalInfo.company  ?? '';
+
+            if (subtitle) {
+                ctx.font      = `italic ${subtitleFont}px Georgia, serif`;
+                ctx.fillStyle = '#444';
+                for (const line of wrapText(ctx, subtitle, textW)) {
+                    ctx.fillText(line, W / 2, y);
+                    y += Math.round(subtitleFont * 1.25);
+                }
+            }
+            if (org) {
+                ctx.font      = `${orgFont}px Georgia, serif`;
+                ctx.fillStyle = '#666';
+                for (const line of wrapText(ctx, org, textW)) {
+                    ctx.fillText(line, W / 2, y);
+                    y += Math.round(orgFont * 1.25);
+                }
+            }
+        }
+
+        // ── Divider ──
+        y += 8;
+        ctx.strokeStyle = accent;
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(mX, y); ctx.lineTo(W - mX, y);
+        ctx.stroke();
+        y += 10;
+
+        if (!this.modalInfo) return new THREE.CanvasTexture(canvas);
+
+        ctx.textAlign = 'left';
+
+        // ── Meta stats (GPA / dates) ──
+        const meta = [];
+        if (this.modalInfo.gpa)           meta.push(['GPA',       this.modalInfo.gpa]);
+        if (this.modalInfo.graduationDate) meta.push(['Graduated', this.modalInfo.graduationDate]);
+        if (this.modalInfo.startDate) {
+            const end = this.modalInfo.endDate ?? 'Present';
+            meta.push(['Dates', `${this.modalInfo.startDate} – ${end}`]);
+        }
+        for (const [label, value] of meta) {
+            ctx.font      = `bold ${bodyFont}px Georgia, serif`;
+            ctx.fillStyle = accent;
+            ctx.fillText(`${label}: `, mX, y);
+            const labelW = ctx.measureText(`${label}: `).width;
+            ctx.font      = `${bodyFont}px Georgia, serif`;
+            ctx.fillStyle = '#222';
+            ctx.fillText(value, mX + labelW, y);
+            y += Math.round(bodyFont * 1.5);
+        }
+        if (meta.length) y += 6;
+
+        // ── Section list (projects / accomplishments) ──
+        const listItems   = this.modalInfo.projects ?? this.modalInfo.accomplishments ?? [];
+        const sectionLabel = this.modalInfo.projects
+            ? 'Research Projects'
+            : this.modalInfo.accomplishments
+                ? 'Accomplishments'
+                : null;
+
+        if (sectionLabel && listItems.length) {
+            ctx.font      = `bold ${bodyFont}px Georgia, serif`;
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillText(sectionLabel, mX, y);
+            y += Math.round(bodyFont * 1.3);
+
+            ctx.strokeStyle = accent;
+            ctx.lineWidth   = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(mX, y); ctx.lineTo(W - mX, y);
+            ctx.stroke();
+            y += 6;
+
+            const bulletX = mX + 10;
+            const itemX   = mX + 22;
+            const itemW   = W - itemX - mX;
+            const lineH   = Math.round(listFont * 1.55);
+
+            for (const item of listItems) {
+                const lines = wrapText(ctx, item, itemW);
+                ctx.font = `${listFont}px Georgia, serif`;
+
+                // Stop if there's no room for even the first line
+                if (y + lineH > H - 10) break;
+
+                ctx.fillStyle = accent;
+                ctx.fillText('•', bulletX, y);
+                ctx.fillStyle = '#222';
+                for (const line of lines) {
+                    if (y + lineH > H - 10) break;
+                    ctx.fillText(line, itemX, y);
+                    y += lineH;
+                }
+            }
+        }
+
+        return new THREE.CanvasTexture(canvas);
+    }
+
     // ─── Geometry ───────────────────────────────────────────────────────────────
 
     createGeometry() {
@@ -178,6 +330,11 @@ export class Book extends THREE.Group {
                 map:       this.createTitlePageTexture(),
                 roughness: M.COVER_ROUGHNESS,
                 metalness: M.COVER_METALNESS,
+            }),
+            contentPage: new THREE.MeshStandardMaterial({
+                map:       this.createContentPageTexture(),
+                roughness: M.PAGE_ROUGHNESS,
+                metalness: M.PAGE_METALNESS,
             }),
             pages: new THREE.MeshStandardMaterial({
                 color:     M.PAGE_COLOR,
@@ -226,12 +383,12 @@ export class Book extends THREE.Group {
             backCover:  new THREE.Mesh(coverGeometry, this.materials.cover),
             spine:      new THREE.Mesh(spineGeometry, spineFaceMaterials),
             pages:      new THREE.Mesh(pagesGeometry, [
-                this.materials.pageEdge, // +X page-edge strip
-                this.materials.pages,    // -X
-                this.materials.pages,    // +Y
-                this.materials.pages,    // -Y
-                this.materials.pages,    // +Z
-                this.materials.pages,    // -Z
+                this.materials.pageEdge,   // +X page-edge strip
+                this.materials.pages,      // -X
+                this.materials.pages,      // +Y
+                this.materials.pages,      // -Y
+                this.materials.contentPage,// +Z front face — visible as right page when open
+                this.materials.pages,      // -Z
             ])
         };
 
@@ -415,4 +572,24 @@ export class Book extends THREE.Group {
         const baseScale = Math.min(1, screenWidth / BOOK_DEFAULTS.SCALE_BASE_WIDTH);
         this.scale.set(baseScale, baseScale, baseScale);
     }
+}
+
+// ─── Module helpers ──────────────────────────────────────────────────────────
+
+// Breaks `text` into lines no wider than `maxWidth` canvas units.
+function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+        const test = line ? `${line} ${word}` : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = test;
+        }
+    }
+    if (line) lines.push(line);
+    return lines;
 }

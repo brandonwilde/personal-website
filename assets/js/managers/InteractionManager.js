@@ -2,27 +2,20 @@ import * as THREE from 'three';
 
 export class InteractionManager {
     constructor(camera, renderer) {
-        this.camera = camera;
+        this.camera   = camera;
         this.renderer = renderer;
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
+        this.raycaster   = new THREE.Raycaster();
+        this.mouse       = new THREE.Vector2();
         this.hoveredBook = null;
-        this.openBook = null; // at most one book open at a time
-        this.books = new Map();
+        this.openBook    = null; // at most one book open at a time
+        this.books       = new Map();
 
         this.setupEventListeners();
     }
 
-    setupEventListeners() {
-        this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
-        this.renderer.domElement.addEventListener('click', (event) => this.onClick(event));
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') this.closeOpenBook();
-        });
-    }
-
-    registerBook(id, book, modal) {
-        this.books.set(id, { object: book, modal });
+    // bookMeta shape: { title, modalInfo, color }
+    registerBook(id, book, bookMeta) {
+        this.books.set(id, { object: book, ...bookMeta });
     }
 
     unregisterBook(id) {
@@ -38,8 +31,7 @@ export class InteractionManager {
             return;
         }
         const bookData = this.openBook;
-        this.openBook = null;
-        if (bookData.modal) bookData.modal.classList.remove('modal-active');
+        this.openBook  = null;
         bookData.object.close();
         if (onComplete) {
             const delay = (window.animParams ?? { close: { openDelay: 0.4 } }).close.openDelay;
@@ -50,13 +42,12 @@ export class InteractionManager {
     openBookEntry(bookData) {
         this.openBook = bookData;
         bookData.object.open();
-        if (bookData.modal) bookData.modal.classList.add('modal-active');
     }
 
     onMouseMove(event) {
         const rect = this.renderer.domElement.getBoundingClientRect();
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
+        this.mouse.y = -((event.clientY - rect.top)  / rect.height) *  2 + 1;
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
@@ -70,8 +61,8 @@ export class InteractionManager {
             : null;
 
         if (this.hoveredBook !== intersectedBook) {
-            if (this.hoveredBook) this.hoveredBook.object.setHovered(false);
-            if (intersectedBook) intersectedBook.object.setHovered(true);
+            if (this.hoveredBook)  this.hoveredBook.object.setHovered(false);
+            if (intersectedBook)   intersectedBook.object.setHovered(true);
             this.hoveredBook = intersectedBook;
             this.renderer.domElement.style.cursor = intersectedBook ? 'pointer' : 'default';
         }
@@ -79,8 +70,8 @@ export class InteractionManager {
 
     onClick(event) {
         const rect = this.renderer.domElement.getBoundingClientRect();
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
+        this.mouse.y = -((event.clientY - rect.top)  / rect.height) *  2 + 1;
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
@@ -101,9 +92,16 @@ export class InteractionManager {
         if (clickedBook === this.openBook) {
             this.closeOpenBook();
         } else {
-            // Wait for close animation to finish before opening the new book
             this.closeOpenBook(() => this.openBookEntry(clickedBook));
         }
+    }
+
+    setupEventListeners() {
+        this.renderer.domElement.addEventListener('mousemove', e => this.onMouseMove(e));
+        this.renderer.domElement.addEventListener('click',     e => this.onClick(e));
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') this.closeOpenBook();
+        });
     }
 
     findBookFromMesh(mesh) {

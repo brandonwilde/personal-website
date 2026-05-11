@@ -143,7 +143,7 @@ export const BOOK_DEFAULTS = {
     COVER_CANVAS_SIZE:    128,  // square canvas dimension for cover fabric
     COVER_NOISE_AMPLITUDE: 24,  // ±noise added per channel for fabric grain
 
-    // Title page texture
+    // Title page texture (inner cover face — left page when open)
     TITLE_PIXELS_PER_UNIT:      42,
     TITLE_BG_COLOR:             '#f8f4ec',
     TITLE_TEXT_COLOR:           '#1a1a1a',
@@ -154,6 +154,17 @@ export const BOOK_DEFAULTS = {
     TITLE_FONT_SIZE_RATIO:      0.14,  // initial font size as fraction of canvas width
     TITLE_LINE_HEIGHT_RATIO:    1.5,   // line height as multiple of font size
     TITLE_TEXT_PADDING:         10,    // px padding inside inner border for text
+
+    // Content page texture (pages +Z face — right page when open)
+    // Font sizes are ratios of canvas width with px minimums for small books.
+    CONTENT_PIXELS_PER_UNIT:  80,    // high-res so text is sharp at close zoom
+    CONTENT_TITLE_RATIO:      0.055, // bold title; min 20px
+    CONTENT_SUBTITLE_RATIO:   0.040, // italic subtitle; min 16px
+    CONTENT_ORG_RATIO:        0.033, // org / company line; min 14px
+    CONTENT_BODY_RATIO:       0.030, // meta stats + section headers; min 12px
+    CONTENT_LIST_RATIO:       0.027, // bullet-list items; min 11px
+    CONTENT_MARGIN_X_RATIO:   0.07,  // horizontal page margin (fraction of width)
+    CONTENT_MARGIN_TOP_RATIO: 0.04,  // top margin (fraction of height)
   },
 
   // Reference screen width for responsive scale calculation
@@ -165,8 +176,8 @@ export const BOOK_DEFAULTS = {
 export const ANIM_PARAMS = {
     open: {
         duration:     0.8,            // base seconds; individual steps are multiples of this
-        zOut:         10,             // units pulled forward from the shelf
-        showcaseY:    0,              // world-Y the book centers on when open
+        zOut:         120,            // units pulled forward from the shelf
+        showcaseY:    9,             // world-Y the book centers on when open (= camera lookAt Y)
         coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
         bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
         ease:         "power2.inOut",
