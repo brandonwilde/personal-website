@@ -82,7 +82,7 @@ export const bookConfigs = {
         },
         skillsB: {
             id: 'skillsB',
-            width: 3,
+            width: 5,
             height: 7.2,
             thickness: 1.5,
             color: colors.purple,
@@ -90,7 +90,7 @@ export const bookConfigs = {
         },
         skillsC: {
             id: 'skillsC',
-            width: 3.5,
+            width: 6,
             height: 7.2,
             thickness: 1.5,
             color: colors.purple,
@@ -98,7 +98,7 @@ export const bookConfigs = {
         },
         skillsD: {
             id: 'skillsD',
-            width: 5,
+            width: 7,
             height: 8,
             thickness: 2,
             color: colors.yellowGreen,
@@ -110,7 +110,7 @@ export const bookConfigs = {
     experience: {
         translate: {
             id: 'translate',
-            width: 4,
+            width: 6,
             height: 7.8,
             thickness: 2.4,
             color: colors.yellow,
@@ -132,7 +132,7 @@ export const bookConfigs = {
         },
         montco: {
             id: 'montco',
-            width: 4,
+            width: 5.5,
             height: 7.8,
             thickness: 2.4,
             color: colors.purple,
@@ -153,7 +153,7 @@ export const bookConfigs = {
         },
         aei: {
             id: 'aei',
-            width: 3.5,
+            width: 6.5,
             height: 7.2,
             thickness: 2,
             color: colors.gray,
@@ -172,7 +172,7 @@ export const bookConfigs = {
         },
         msu1: {
             id: 'msu1',
-            width: 3,
+            width: 6,
             height: 7.2,
             thickness: 2,
             color: colors.red,
@@ -191,7 +191,7 @@ export const bookConfigs = {
         },
         msu2: {
             id: 'msu2',
-            width: 2.5,
+            width: 5.1,
             height: 8,
             thickness: 2,
             color: colors.red,
@@ -209,7 +209,7 @@ export const bookConfigs = {
         },
         inventives: {
             id: 'inventives',
-            width: 4,
+            width: 6.5,
             height: 9,
             thickness: 2.4,
             color: colors.yellowGreen,
@@ -235,7 +235,7 @@ export const bookConfigs = {
         },
         syera: {
             id: 'syera',
-            width: 3.5,
+            width: 5.5,
             height: 6.5,
             thickness: 2,
             color: colors.blue,
@@ -265,7 +265,7 @@ export const bookConfigs = {
         },
         projectsB: {
             id: 'projectsB',
-            width: 3,
+            width: 5,
             height: 7.5,
             thickness: 1.5,
             color: colors.yellowGreen,
@@ -273,7 +273,7 @@ export const bookConfigs = {
         },
         projectsC: {
             id: 'projectsC',
-            width: 4,
+            width: 6,
             height: 7.3,
             thickness: 1.8,
             color: colors.brown,
@@ -281,7 +281,7 @@ export const bookConfigs = {
         },
         projectsD: {
             id: 'projectsD',
-            width: 3.5,
+            width: 5.5,
             height: 7.0,
             thickness: 1.5,
             color: colors.gray,
@@ -289,7 +289,7 @@ export const bookConfigs = {
         },
         projectsE: {
             id: 'projectsE',
-            width: 2.7,
+            width: 5.7,
             height: 6.5,
             thickness: 1.5,
             color: colors.blue,
@@ -297,7 +297,7 @@ export const bookConfigs = {
         },
         projectsF: {
             id: 'projectsF',
-            width: 4,
+            width: 5.5,
             height: 6.5,
             thickness: 1.8,
             color: colors.red,
@@ -305,7 +305,7 @@ export const bookConfigs = {
         },
         projectsG: {
             id: 'projectsG',
-            width: 3.5,
+            width: 6.5,
             height: 6.5,
             thickness: 1.5,
             color: colors.green,
@@ -325,7 +325,7 @@ export const bookConfigs = {
         },
         reviewsB: {
             id: 'reviewsB',
-            width: 3,
+            width: 5.5,
             height: 6.5,
             thickness: 1.5,
             color: colors.blue,
@@ -333,7 +333,7 @@ export const bookConfigs = {
         },
         bookReviews: {
             id: 'bookReviews',
-            width: 4,
+            width: 4.9,
             height: 6.5,
             thickness: 1.8,
             color: colors.tan,
@@ -341,7 +341,7 @@ export const bookConfigs = {
         },
         recentReads: {
             id: 'recentReads',
-            width: 3.5,
+            width: 5.9,
             height: 6.5,
             thickness: 1.5,
             color: colors.gray,
@@ -361,7 +361,7 @@ export const bookConfigs = {
         },
         misc: {
             id: 'misc',
-            width: 2.5,
+            width: 5.5,
             height: 6.5,
             thickness: 1.2,
             color: colors.blue,
