@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 
 export class InteractionManager {
-    constructor(camera, renderer) {
+    constructor(camera, renderer, { onOpen, onCloseStart } = {}) {
         this.camera   = camera;
         this.renderer = renderer;
-        this.raycaster   = new THREE.Raycaster();
-        this.mouse       = new THREE.Vector2();
-        this.hoveredBook = null;
-        this.openBook    = null; // at most one book open at a time
-        this.books       = new Map();
+        this.raycaster      = new THREE.Raycaster();
+        this.mouse          = new THREE.Vector2();
+        this.hoveredBook    = null;
+        this.openBook       = null; // at most one book open at a time
+        this.books          = new Map();
+        this._onOpen       = onOpen       ?? null; // fires before open animation
+        this._onCloseStart = onCloseStart ?? null; // fires before close animation
 
         this.setupEventListeners();
     }
@@ -32,6 +34,7 @@ export class InteractionManager {
         }
         const bookData = this.openBook;
         this.openBook  = null;
+        if (this._onCloseStart) this._onCloseStart(bookData.object);
         bookData.object.close();
         if (onComplete) {
             const delay = (window.animParams ?? { close: { openDelay: 0.4 } }).close.openDelay;
@@ -41,6 +44,7 @@ export class InteractionManager {
 
     openBookEntry(bookData) {
         this.openBook = bookData;
+        if (this._onOpen) this._onOpen();
         bookData.object.open();
     }
 

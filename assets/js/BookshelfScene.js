@@ -10,8 +10,20 @@ export class BookshelfScene {
         // Initialize managers
         this.sceneManager = new SceneManager();
         this.interactionManager = new InteractionManager(
-            this.sceneManager.camera, 
-            this.sceneManager.renderer
+            this.sceneManager.camera,
+            this.sceneManager.renderer,
+            {
+                onOpen: () => {
+                    // Snap camera to the default shelf view so the book always
+                    // animates into a known, visible position, then lock controls.
+                    this.sceneManager.snapToDefault();
+                    this.sceneManager.lockCamera();
+                },
+                onCloseStart: () => {
+                    // Fly camera back to default and unlock when it arrives.
+                    this.sceneManager.flyToDefault(() => this.sceneManager.unlockCamera());
+                },
+            }
         );
         this.sceneManager.interactionManager = this.interactionManager;
         

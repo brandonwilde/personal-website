@@ -176,8 +176,8 @@ export const BOOK_DEFAULTS = {
 export const ANIM_PARAMS = {
     open: {
         duration:     0.8,            // base seconds; individual steps are multiples of this
-        zOut:         120,            // units pulled forward from the shelf
-        showcaseY:    9,             // world-Y the book centers on when open (= camera lookAt Y)
+        zOut:         150,            // units pulled forward from the shelf
+        showcaseY:    13,             // world-Y the book centers on when open (= camera lookAt Y)
         coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
         bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
         ease:         "power2.inOut",

@@ -26,11 +26,14 @@ export class SceneManager {
             CAMERA_SETTINGS.FAR
         );
 
-        const vFov    = this.camera.fov * Math.PI / 180;
-        const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
+        const vFov     = this.camera.fov * Math.PI / 180;
+        const centerY  = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
         const distance = BOOKSHELF_DIMENSIONS.HEIGHT / (2 * Math.tan(vFov / 2));
         this.camera.position.set(0, centerY, distance);
-        this.camera.lookAt(0, centerY, 0);
+
+        // Camera must be in the scene so objects parented to it are rendered.
+        // (OrbitControls will set lookAt each frame via its target.)
+        this.scene.add(this.camera);
     }
 
     setupRenderer() {
@@ -91,6 +94,10 @@ export class SceneManager {
         this.controls.enablePan     = true;
         this.controls.panSpeed      = C.PAN_SPEED;
         this.controls.screenSpacePanning = true;
+        // target stays at (0,0,0) — the bookshelf center — which is the OrbitControls default.
+        // saveState() records this as the "home" position for reset().
+        this.controls.update();
+        this.controls.saveState();
     }
 
     setupEventListeners() {
@@ -105,8 +112,45 @@ export class SceneManager {
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        this.controls.update();
+        // Only run OrbitControls update when controls are active.
+        // When locked, we drive the camera directly (GSAP tweens or snapToDefault),
+        // and controls.update() would fight those changes by reapplying its stored spherical.
+        if (this.controls.enabled) this.controls.update();
         this.renderer.render(this.scene, this.camera);
+    }
+
+    lockCamera() {
+        this.controls.enabled = false;
+    }
+
+    // Re-enable controls and sync OrbitControls' internal spherical from the
+    // current camera position so there is no snap on the first user interaction.
+    unlockCamera() {
+        this.controls.enabled = true;
+        this.controls.update();
+    }
+
+    // Instantly resets camera to the default shelf-facing position.
+    snapToDefault() {
+        this.controls.reset(); // restores position0/target0 saved in setupControls
+    }
+
+    // Smoothly flies camera back to the default position, then fires onComplete.
+    flyToDefault(onComplete) {
+        const { position0, target0 } = this.controls; // saved by saveState()
+        window.gsap.to(this.camera.position, {
+            x: position0.x, y: position0.y, z: position0.z,
+            duration: 0.6,
+            ease: 'power2.inOut',
+        });
+        window.gsap.to(this.controls.target, {
+            x: target0.x, y: target0.y, z: target0.z,
+            duration: 0.6,
+            ease: 'power2.inOut',
+            onComplete: () => {
+                if (onComplete) onComplete();
+            },
+        });
     }
 
     add(object) {
