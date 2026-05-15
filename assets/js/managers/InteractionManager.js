@@ -64,6 +64,32 @@ export class InteractionManager {
         });
     }
 
+    // Raycast targets: every registered book, plus any meshes the open book
+    // wants treated as part of itself (e.g. BusinessCard's flying card, which
+    // gets reparented out of its group during the open animation).
+    _raycastTargets() {
+        const targets = Array.from(this.books.values()).map(b => b.object);
+        const extras = this.openBook?.object?.getOpenInteractables?.() ?? [];
+        for (const m of extras) if (!targets.includes(m)) targets.push(m);
+        return targets;
+    }
+
+    // True if the topmost intersect belongs to the currently open book — either
+    // as a descendant of its group, or via getOpenInteractables().
+    _intersectIsOnOpenBook(intersects) {
+        if (!this.openBook || !intersects.length) return false;
+        const obj = intersects[0].object;
+        const open = this.openBook.object;
+        const extras = open.getOpenInteractables?.() ?? [];
+        if (extras.includes(obj)) return true;
+        let cur = obj;
+        while (cur) {
+            if (cur === open) return true;
+            cur = cur.parent;
+        }
+        return false;
+    }
+
     onMouseMove(event) {
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
@@ -71,10 +97,7 @@ export class InteractionManager {
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        const intersects = this.raycaster.intersectObjects(
-            Array.from(this.books.values()).map(b => b.object),
-            true
-        );
+        const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
 
         const intersectedBook = intersects.length > 0
             ? this.findBookFromMesh(intersects[0].object)
@@ -95,10 +118,11 @@ export class InteractionManager {
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        const intersects = this.raycaster.intersectObjects(
-            Array.from(this.books.values()).map(b => b.object),
-            true
-        );
+        const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
+
+        // Click on the open book itself — leave it open so users can interact
+        // with the displayed content (text selection, links via the overlay).
+        if (this._intersectIsOnOpenBook(intersects)) return;
 
         const clickedBook = intersects.length > 0
             ? this.findBookFromMesh(intersects[0].object)
@@ -117,11 +141,8 @@ export class InteractionManager {
             return;
         }
 
-        if (clickedBook === this.openBook) {
-            this.closeOpenBook();
-        } else {
-            this.closeOpenBook(() => this.openBookEntry(clickedBook));
-        }
+        // Different book — close current and open the new one.
+        this.closeOpenBook(() => this.openBookEntry(clickedBook));
     }
 
     setupEventListeners() {

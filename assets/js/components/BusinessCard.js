@@ -387,6 +387,13 @@ export class BusinessCard extends THREE.Group {
         };
     }
 
+    // Meshes that should count as "the open object" for click/raycast purposes.
+    // The flying card is reparented out of this group during open(), so the
+    // InteractionManager needs an explicit handle on it.
+    getOpenInteractables() {
+        return this.flyingCard ? [this.flyingCard] : [];
+    }
+
     setHovered(isHovered) {
         if (this.isHovered === isHovered) return;
         this.isHovered = isHovered;
