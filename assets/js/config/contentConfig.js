@@ -20,7 +20,6 @@ export const shelfConfigs = {
             1: ['blog'],
             2: ['misc'],
             3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
-            4: ['contact']
         }
     }
 };
@@ -357,7 +356,8 @@ export const bookConfigs = {
             height: 1,
             thickness: 8,
             color: colors.white,
-            content: 'Blog'
+            content: 'Blog',
+            link: 'https://the.btw.so'
         },
         misc: {
             id: 'misc',
@@ -369,11 +369,7 @@ export const bookConfigs = {
         },
         contact: {
             id: 'contact',
-            width: 2,
-            height: 1,
-            thickness: 3,
             color: colors.white,
-            content: 'Contact Info',
             modalInfo: {
                 name: "Brandon T Wilde",
                 jobTitle1: "Software Engineer",

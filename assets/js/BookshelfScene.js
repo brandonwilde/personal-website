@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Book } from './components/Book.js';
+import { BusinessCard } from './components/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
 import { SceneManager } from './managers/SceneManager.js';
 import { InteractionManager } from './managers/InteractionManager.js';
@@ -106,6 +107,7 @@ export class BookshelfScene {
             title:     bookProps.content   ?? id,
             modalInfo: bookProps.modalInfo ?? null,
             color:     bookProps.color,
+            link:      bookProps.link      ?? null,
         });
 
         this.books.set(id, { object: book });
@@ -145,6 +147,35 @@ export class BookshelfScene {
                 }
             }
         }
+    }
+
+    // Places the contact BusinessCard on shelf C, section 4 (far right).
+    // Positioned manually because BusinessCard faces front (rotation.y=0),
+    // unlike books which use the shelf system with rotation.y=PI/2.
+    addContactCard(contactConfig) {
+        const card = new BusinessCard('contact', contactConfig);
+
+        // Shelf C is at shelf index 2: y = 2 * SHELF_SPACING - HEIGHT/2 = 6
+        const shelfSurfaceY = 6 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
+        // Section 4 center X: 0.75 * (WIDTH/2)
+        const sectionX = 0.75 * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
+        // Angle the holder ~20° so it looks naturally placed on the shelf
+        const shelfAngle = -0.35;
+
+        card.position.set(sectionX, shelfSurfaceY, 0);
+        card.rotation.y = shelfAngle;
+        card.initialX = sectionX;
+        card.initialY = shelfSurfaceY;
+        card.initialZ = 0;
+        card.initialRotationY = shelfAngle;
+
+        this.sceneManager.add(card);
+        this.interactionManager.registerBook('contact', card, {
+            title:     'Contact Info',
+            modalInfo: contactConfig.modalInfo ?? null,
+            color:     contactConfig.color,
+        });
+        this.books.set('contact', { object: card });
     }
 
     animate() {

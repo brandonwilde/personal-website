@@ -7,5 +7,6 @@ window.onload = () => {
 
     const bookshelfScene = new BookshelfScene();
     bookshelfScene.addBooksFromConfig(bookConfigs, shelfConfigs);
+    bookshelfScene.addContactCard(bookConfigs.other.contact);
     bookshelfScene.animate();
 };
