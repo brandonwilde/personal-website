@@ -232,16 +232,20 @@ export class BusinessCard extends THREE.Group {
             ctx.fillText('LinkedIn:', labelX, rowY[1]);
             ctx.fillText('GitHub:',   labelX, rowY[2]);
 
-            // Record link hotspots in canvas coords for UV hit-testing
+            // Record link hotspots in canvas coords. The hotspot covers only
+            // the URL text area (not the label) so the invisible <a> overlay
+            // and selection rectangle line up with what the user sees.
             this._linkHotspots = [];
-            const addHotspot = (url, y) => {
-                if (!url) return;
+            const addHotspot = (url, text, y) => {
+                if (!url || !text) return;
+                const textW = ctx.measureText(text).width;
                 this._linkHotspots.push({
-                    url,
-                    x0: labelX,
-                    x1: W - padX,
-                    y0: y - 6,
-                    y1: y - 6 + rowH,
+                    url, text,
+                    x0: valueX,
+                    x1: Math.min(valueX + textW, W - padX),
+                    y0: y - 4,
+                    y1: y - 4 + rowH,
+                    fontPx: valueFontPx,
                 });
             };
 
@@ -256,13 +260,14 @@ export class BusinessCard extends THREE.Group {
             if (linkedinText) ctx.fillText(linkedinText, valueX, rowY[1]);
             if (githubText)   ctx.fillText(githubText,   valueX, rowY[2]);
 
-            addHotspot(this.modalInfo.linkedinUrl, rowY[1]);
-            addHotspot(this.modalInfo.githubUrl,   rowY[2]);
+            // measureText needs the value font to be active when called
+            addHotspot(this.modalInfo.linkedinUrl, linkedinText, rowY[1]);
+            addHotspot(this.modalInfo.githubUrl,   githubText,   rowY[2]);
 
             tex.needsUpdate = true;
         };
 
-        // Stash canvas dims for UV → pixel conversion in getLinkAtUV
+        // Stash canvas dims for UV → pixel conversion
         this._contactCanvasW = W;
         this._contactCanvasH = H;
 
@@ -284,16 +289,102 @@ export class BusinessCard extends THREE.Group {
         return tex;
     }
 
-    // Given a UV coordinate on the flying card's front face, return the URL
-    // if the hit lies within a link hotspot, else null. UV origin is bottom-left.
-    getLinkAtUV(uv) {
-        if (!this.isOpen || !this._linkHotspots || !uv) return null;
-        const x = uv.x * this._contactCanvasW;
-        const y = (1 - uv.y) * this._contactCanvasH;
+    // ─── HTML link overlay ──────────────────────────────────────────────────
+    // While the card is open and at rest, we render invisible <a> tags on top
+    // of the canvas-painted URLs. This gives real link UX (status-bar URL
+    // preview on hover, right-click "copy link", keyboard focus, text
+    // selection) without any visible DOM that could break the 3D illusion.
+
+    _ensureOverlay() {
+        if (this._overlayEl) return;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;' +
+            'pointer-events:none;z-index:10;display:none;';
+        document.body.appendChild(el);
+        this._overlayEl = el;
+        this._overlayResize = () => this.updateLinkOverlay();
+    }
+
+    showLinkOverlay({ camera, renderer, onLinkClick } = {}) {
+        if (!camera || !renderer || !this._linkHotspots?.length) return;
+        this._ensureOverlay();
+        this._overlayCamera   = camera;
+        this._overlayRenderer = renderer;
+        this._overlayEl.innerHTML = '';
         for (const h of this._linkHotspots) {
-            if (x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) return h.url;
+            const a = document.createElement('a');
+            a.href = h.url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = h.text;
+            a.style.cssText =
+                'position:absolute;display:block;' +
+                'color:transparent;background:transparent;' +
+                'text-decoration:none;white-space:nowrap;' +
+                'font-family:Georgia,serif;font-weight:normal;' +
+                'pointer-events:auto;user-select:text;-webkit-user-select:text;';
+            a.dataset.fontPx = h.fontPx;
+            if (onLinkClick) {
+                a.addEventListener('click', () => onLinkClick());
+            }
+            this._overlayEl.appendChild(a);
         }
-        return null;
+        this._overlayEl.style.display = 'block';
+        window.addEventListener('resize', this._overlayResize);
+        this.updateLinkOverlay();
+    }
+
+    updateLinkOverlay() {
+        if (!this._overlayEl || this._overlayEl.style.display === 'none') return;
+        const camera = this._overlayCamera;
+        const renderer = this._overlayRenderer;
+        if (!camera || !renderer) return;
+        const viewport = renderer.domElement.getBoundingClientRect();
+        const links = this._overlayEl.children;
+        this._linkHotspots.forEach((h, i) => {
+            const tl = this._canvasPxToScreen(h.x0, h.y0, camera, viewport);
+            const br = this._canvasPxToScreen(h.x1, h.y1, camera, viewport);
+            const a = links[i];
+            if (!a) return;
+            const w = br.x - tl.x;
+            const ht = br.y - tl.y;
+            // Canvas font is `fontPx` over a row of height `rowH` (=36) canvas px.
+            // Scale that ratio into the row's screen height so DOM text matches.
+            const fontPx = parseFloat(a.dataset.fontPx) || 20;
+            const screenFontPx = ht * (fontPx / 36);
+            a.style.left = `${tl.x}px`;
+            a.style.top = `${tl.y}px`;
+            a.style.width = `${w}px`;
+            a.style.height = `${ht}px`;
+            a.style.fontSize = `${screenFontPx}px`;
+            a.style.lineHeight = `${ht}px`;
+        });
+    }
+
+    hideLinkOverlay() {
+        if (!this._overlayEl) return;
+        this._overlayEl.style.display = 'none';
+        this._overlayEl.innerHTML = '';
+        window.removeEventListener('resize', this._overlayResize);
+    }
+
+    // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels
+    // by mapping → UV → flyingCard local space → world → camera projection.
+    _canvasPxToScreen(cx, cy, camera, viewport) {
+        const u = cx / this._contactCanvasW;
+        const v = 1 - cy / this._contactCanvasH;
+        const local = new THREE.Vector3(
+            (u - 0.5) * this.cardW,
+            (v - 0.5) * this.cardH,
+            this.cardT / 2,
+        );
+        this.flyingCard.updateWorldMatrix(true, false);
+        const world = local.applyMatrix4(this.flyingCard.matrixWorld);
+        const ndc = world.project(camera);
+        return {
+            x: viewport.left + (ndc.x + 1) * 0.5 * viewport.width,
+            y: viewport.top  + (1 - ndc.y) * 0.5 * viewport.height,
+        };
     }
 
     setHovered(isHovered) {
@@ -311,9 +402,10 @@ export class BusinessCard extends THREE.Group {
         this._allMats.forEach(m => m.emissive?.setHex(hex));
     }
 
-    open() {
+    open(ctx = {}) {
         if (this._activeTl) this._activeTl.kill();
         this.isOpen = true;
+        this._openCtx = ctx;
 
         if (!this._cardInScene) {
             // Capture world transform, then detach card from group → scene
@@ -379,12 +471,19 @@ export class BusinessCard extends THREE.Group {
             this._faceMat.needsUpdate = true;
         });
 
+        // 5. Once at rest, drop the invisible HTML link overlay on top.
+        tl.call(() => this.showLinkOverlay(this._openCtx));
+
         return tl;
     }
 
     _buildCloseTimeline() {
         const { duration } = this._p().close;
         const tl = window.gsap.timeline();
+
+        // Remove HTML overlay immediately so links don't intercept clicks
+        // during the close animation.
+        this.hideLinkOverlay();
 
         // Revert texture as card begins returning
         tl.call(() => {
