@@ -58,6 +58,25 @@ export class InteractionManager {
         bookData.object.open();
     }
 
+    // Targets to raycast against: all registered books, plus the open book's
+    // flying card (which may have been reparented out of its group).
+    _raycastTargets() {
+        const targets = Array.from(this.books.values()).map(b => b.object);
+        const flying = this.openBook?.object?.flyingCard;
+        if (flying && !targets.includes(flying)) targets.push(flying);
+        return targets;
+    }
+
+    // If the topmost hit is on the open BusinessCard's front face and lands
+    // on a link hotspot, returns the URL; otherwise null.
+    _linkHitFromIntersects(intersects) {
+        const obj = this.openBook?.object;
+        if (!obj || !obj.getLinkAtUV) return null;
+        const hit = intersects.find(i => i.object === obj.flyingCard);
+        if (!hit || hit.face?.materialIndex !== 4) return null;
+        return obj.getLinkAtUV(hit.uv);
+    }
+
     onMouseMove(event) {
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
@@ -65,10 +84,7 @@ export class InteractionManager {
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        const intersects = this.raycaster.intersectObjects(
-            Array.from(this.books.values()).map(b => b.object),
-            true
-        );
+        const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
 
         const intersectedBook = intersects.length > 0
             ? this.findBookFromMesh(intersects[0].object)
@@ -78,8 +94,12 @@ export class InteractionManager {
             if (this.hoveredBook)  this.hoveredBook.object.setHovered(false);
             if (intersectedBook)   intersectedBook.object.setHovered(true);
             this.hoveredBook = intersectedBook;
-            this.renderer.domElement.style.cursor = intersectedBook ? 'pointer' : 'default';
         }
+
+        // Cursor: pointer if hovering a book OR a clickable link on the open card
+        const overLink = !!this._linkHitFromIntersects(intersects);
+        this.renderer.domElement.style.cursor =
+            (intersectedBook || overLink) ? 'pointer' : 'default';
     }
 
     onClick(event) {
@@ -89,10 +109,15 @@ export class InteractionManager {
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        const intersects = this.raycaster.intersectObjects(
-            Array.from(this.books.values()).map(b => b.object),
-            true
-        );
+        const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
+
+        // Link on the open business card takes priority — open URL and close card.
+        const linkUrl = this._linkHitFromIntersects(intersects);
+        if (linkUrl) {
+            window.open(linkUrl, '_blank', 'noopener,noreferrer');
+            this.closeOpenBook();
+            return;
+        }
 
         const clickedBook = intersects.length > 0
             ? this.findBookFromMesh(intersects[0].object)

@@ -158,56 +158,142 @@ export class BusinessCard extends THREE.Group {
     }
 
     _buildContactTexture() {
-        const W = 350, H = 200;
+        const W = 700, H = 400;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
         const [r, g, b] = this.color;
         const accent = `rgb(${Math.round(r*0.4)},${Math.round(g*0.4)},${Math.round(b*0.4)})`;
 
-        ctx.fillStyle = '#f8f4ec';
-        ctx.fillRect(0, 0, W, H);
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(7, 7, W - 14, H - 14);
-        ctx.lineWidth = 1;
-        ctx.strokeRect(12, 12, W - 24, H - 24);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.anisotropy = 8;
 
-        if (!this.modalInfo) return new THREE.CanvasTexture(canvas);
-        const { name, jobTitle1, jobTitle2, linkedinText, githubText } = this.modalInfo;
+        const redraw = () => {
+            ctx.fillStyle = '#f8f4ec';
+            ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(14, 14, W - 28, H - 28);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(24, 24, W - 48, H - 48);
 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+            if (!this.modalInfo) { tex.needsUpdate = true; return; }
+            const {
+                name, jobTitle1, jobTitle2,
+                linkedinText, githubText,
+            } = this.modalInfo;
 
-        ctx.font = 'bold 28px Georgia, serif';
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillText(name ?? '', W / 2, 26);
+            // ── Header: name + job titles on left, logo on right ─────────────
+            const padX = 56;
+            const headerTop = 56;
+            const logoSize = 160;
+            const logoX = W - padX - logoSize + 30; // shift slightly toward center
+            const logoY = headerTop - 10;
 
-        ctx.font = 'italic 15px Georgia, serif';
-        ctx.fillStyle = '#555';
-        ctx.fillText([jobTitle1, jobTitle2].filter(Boolean).join(' · '), W / 2, 62);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
 
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 0.75;
-        ctx.beginPath();
-        ctx.moveTo(W * 0.1, 86); ctx.lineTo(W * 0.9, 86);
-        ctx.stroke();
+            ctx.font = 'bold 44px Georgia, serif';
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillText(name ?? '', padX, headerTop);
 
-        ctx.textAlign = 'left';
-        [
-            linkedinText ? ['LinkedIn:', linkedinText] : null,
-            githubText   ? ['GitHub:',   githubText]   : null,
-        ].filter(Boolean).forEach(([label, val], i) => {
-            const y = 98 + i * 26;
-            ctx.font = 'bold 14px Georgia, serif';
+            ctx.font = 'italic 22px Georgia, serif';
+            ctx.fillStyle = '#555';
+            if (jobTitle1) ctx.fillText(jobTitle1, padX, headerTop + 56);
+            if (jobTitle2) ctx.fillText(jobTitle2, padX, headerTop + 86);
+
+            if (this._logoImg && this._logoImg.complete && this._logoImg.naturalWidth) {
+                const img = this._logoImg;
+                const scale = Math.min(logoSize / img.naturalWidth, logoSize / img.naturalHeight);
+                const w = img.naturalWidth * scale;
+                const h = img.naturalHeight * scale;
+                ctx.drawImage(img, logoX + (logoSize - w) / 2, logoY + (logoSize - h) / 2, w, h);
+            }
+
+            // ── Divider ─────────────────────────────────────────────────────
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padX, 210);
+            ctx.lineTo(W - padX, 210);
+            ctx.stroke();
+
+            // ── Footer rows: Email (image), LinkedIn, GitHub ────────────────
+            const labelX = padX;
+            const valueX = padX + 140;
+            const rowY = [238, 286, 334];
+            const valueFontPx = 20;
+            const emailH = 24;
+            const rowH = 36;
+
+            ctx.font = `bold ${valueFontPx}px Georgia, serif`;
             ctx.fillStyle = accent;
-            ctx.fillText(label, 26, y);
-            ctx.font = '14px Georgia, serif';
-            ctx.fillStyle = '#2a2a2a';
-            ctx.fillText(val, 110, y);
-        });
+            ctx.fillText('Email:',    labelX, rowY[0]);
+            ctx.fillText('LinkedIn:', labelX, rowY[1]);
+            ctx.fillText('GitHub:',   labelX, rowY[2]);
 
-        return new THREE.CanvasTexture(canvas);
+            // Record link hotspots in canvas coords for UV hit-testing
+            this._linkHotspots = [];
+            const addHotspot = (url, y) => {
+                if (!url) return;
+                this._linkHotspots.push({
+                    url,
+                    x0: labelX,
+                    x1: W - padX,
+                    y0: y - 6,
+                    y1: y - 6 + rowH,
+                });
+            };
+
+            if (this._emailImg && this._emailImg.complete && this._emailImg.naturalWidth) {
+                const img = this._emailImg;
+                const scale = emailH / img.naturalHeight;
+                ctx.drawImage(img, valueX, rowY[0], img.naturalWidth * scale, emailH);
+            }
+
+            ctx.font = `${valueFontPx}px Georgia, serif`;
+            ctx.fillStyle = '#2a2a2a';
+            if (linkedinText) ctx.fillText(linkedinText, valueX, rowY[1]);
+            if (githubText)   ctx.fillText(githubText,   valueX, rowY[2]);
+
+            addHotspot(this.modalInfo.linkedinUrl, rowY[1]);
+            addHotspot(this.modalInfo.githubUrl,   rowY[2]);
+
+            tex.needsUpdate = true;
+        };
+
+        // Stash canvas dims for UV → pixel conversion in getLinkAtUV
+        this._contactCanvasW = W;
+        this._contactCanvasH = H;
+
+        redraw();
+
+        // Lazy-load images (logo + email) and redraw when ready
+        const loadImg = (src) => {
+            if (!src) return null;
+            const img = new Image();
+            img.onload = redraw;
+            img.src = src;
+            return img;
+        };
+        if (this.modalInfo) {
+            this._logoImg  = loadImg(this.modalInfo.personalLogoSrc);
+            this._emailImg = loadImg(this.modalInfo.emailSrc);
+        }
+
+        return tex;
+    }
+
+    // Given a UV coordinate on the flying card's front face, return the URL
+    // if the hit lies within a link hotspot, else null. UV origin is bottom-left.
+    getLinkAtUV(uv) {
+        if (!this.isOpen || !this._linkHotspots || !uv) return null;
+        const x = uv.x * this._contactCanvasW;
+        const y = (1 - uv.y) * this._contactCanvasH;
+        for (const h of this._linkHotspots) {
+            if (x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) return h.url;
+        }
+        return null;
     }
 
     setHovered(isHovered) {
