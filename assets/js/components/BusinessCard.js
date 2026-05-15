@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ANIM_PARAMS, BOOK_DEFAULTS } from '../config/constants.js';
+import { ANIM_PARAMS, BOOK_DEFAULTS, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
 
 // A business card holder that sits on the shelf.
 // Cards lean back in a dark metal tray. On click, the top card detaches
@@ -17,13 +17,10 @@ export class BusinessCard extends THREE.Group {
         this.initialZ  = 0;
         this.initialRotationY = 0;
 
-        // Real business card: 3.5" × 2" × 0.02" (scene units = inches)
-        this.cardW = 3.5;
-        this.cardH = 2.0;
-        this.cardT = 0.02;
-
-        // Cards lean back ~22° from vertical (face tilts upward toward viewer)
-        this.leanAngle = -0.38;
+        this.cardW     = BUSINESS_CARD_DEFAULTS.WIDTH;
+        this.cardH     = BUSINESS_CARD_DEFAULTS.HEIGHT;
+        this.cardT     = BUSINESS_CARD_DEFAULTS.THICKNESS;
+        this.leanAngle = BUSINESS_CARD_DEFAULTS.LEAN_ANGLE;
 
         // Whether flyingCard has been reparented to the scene
         this._cardInScene = false;
@@ -117,7 +114,7 @@ export class BusinessCard extends THREE.Group {
         );
         // Sit on top of the stack, slightly in front
         const localCenter = this._localCardCenter();
-        localCenter.z += 0.16;
+        localCenter.z += BUSINESS_CARD_DEFAULTS.STACK_Z_OFFSET;
         this.flyingCard.position.copy(localCenter);
         this.flyingCard.rotation.x = this.leanAngle;
         this.flyingCard.castShadow = true;
@@ -314,7 +311,7 @@ export class BusinessCard extends THREE.Group {
             a.rel = 'noopener noreferrer';
             a.style.cssText = 'position:absolute;display:block;' +
                 'pointer-events:auto;cursor:pointer;';
-            if (onLinkClick) a.addEventListener('click', () => onLinkClick());
+            if (onLinkClick) a.addEventListener('click', onLinkClick);
             this._overlayEl.appendChild(a);
         }
         this._overlayEl.style.display = 'block';
@@ -328,6 +325,7 @@ export class BusinessCard extends THREE.Group {
         const renderer = this._overlayRenderer;
         if (!camera || !renderer) return;
         const viewport = renderer.domElement.getBoundingClientRect();
+        this.flyingCard.updateWorldMatrix(true, false);
         const links = this._overlayEl.children;
         this._linkHotspots.forEach((h, i) => {
             const tl = this._canvasPxToScreen(h.x0, h.y0, camera, viewport);
@@ -358,7 +356,6 @@ export class BusinessCard extends THREE.Group {
             (v - 0.5) * this.cardH,
             this.cardT / 2,
         );
-        this.flyingCard.updateWorldMatrix(true, false);
         const world = local.applyMatrix4(this.flyingCard.matrixWorld);
         const ndc = world.project(camera);
         return {
@@ -501,7 +498,7 @@ export class BusinessCard extends THREE.Group {
             if (this._cardInScene) {
                 this.add(this.flyingCard);
                 const localCenter = this._localCardCenter();
-                localCenter.z += 0.16;
+                localCenter.z += BUSINESS_CARD_DEFAULTS.STACK_Z_OFFSET;
                 this.flyingCard.position.copy(localCenter);
                 this.flyingCard.rotation.set(this.leanAngle, 0, 0);
                 this._cardInScene = false;

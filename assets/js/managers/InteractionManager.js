@@ -82,19 +82,17 @@ export class InteractionManager {
         const open = this.openBook.object;
         const extras = open.getOpenInteractables?.() ?? [];
         if (extras.includes(obj)) return true;
-        let cur = obj;
-        while (cur) {
-            if (cur === open) return true;
-            cur = cur.parent;
-        }
-        return false;
+        return this.isChildOfBook(obj, open);
     }
 
-    onMouseMove(event) {
+    _updateMouse(event) {
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
         this.mouse.y = -((event.clientY - rect.top)  / rect.height) *  2 + 1;
+    }
 
+    onMouseMove(event) {
+        this._updateMouse(event);
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
         const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
@@ -112,10 +110,7 @@ export class InteractionManager {
     }
 
     onClick(event) {
-        const rect = this.renderer.domElement.getBoundingClientRect();
-        this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
-        this.mouse.y = -((event.clientY - rect.top)  / rect.height) *  2 + 1;
-
+        this._updateMouse(event);
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
         const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
