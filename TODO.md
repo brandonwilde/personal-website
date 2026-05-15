@@ -2,8 +2,8 @@
 
 ## 🚨 Launch Blockers (Critical UX)
 
-- [ ] **Blog book → external link** — Clicking "Blog" should navigate to `https://the.btw.so` (new tab), not trigger a book-open animation.
-- [ ] **Contact card → distinct behavior** — "Contact Info" is treated as a book but isn't book-shaped. Give it a business-card-style display instead of the standard book open.
+- [x] **Blog book → external link** — Clicking "Blog" should navigate to `https://the.btw.so` (new tab), not trigger a book-open animation.
+- [x] **Contact card → distinct behavior** — "Contact Info" is treated as a book but isn't book-shaped. Give it a business-card-style display instead of the standard book open.
 
 ## 📋 Feature Parity (Pre-launch)
 

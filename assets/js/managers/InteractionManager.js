@@ -103,6 +103,14 @@ export class InteractionManager {
             return;
         }
 
+        if (clickedBook.link) {
+            // Open immediately (must be synchronous with the click to avoid popup blockers).
+            // Close animation plays concurrently on the main tab.
+            window.open(clickedBook.link, '_blank', 'noopener,noreferrer');
+            this.closeOpenBook();
+            return;
+        }
+
         if (clickedBook === this.openBook) {
             this.closeOpenBook();
         } else {
