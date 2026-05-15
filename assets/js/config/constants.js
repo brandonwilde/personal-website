@@ -171,6 +171,20 @@ export const BOOK_DEFAULTS = {
   SCALE_BASE_WIDTH: 1200,
 };
 
+// BusinessCard default properties
+export const BUSINESS_CARD_DEFAULTS = {
+  // Real business card dimensions in inches (scene units = inches)
+  WIDTH:     3.5,
+  HEIGHT:    2.0,
+  THICKNESS: 0.02,
+
+  // How far the top (flying) card sits in front of the stack in the tray
+  STACK_Z_OFFSET: 0.16,
+
+  // Lean angle in radians (~22° back from vertical, face tilts toward viewer)
+  LEAN_ANGLE: -0.38,
+};
+
 // All animation parameters — the single source of truth for book animations.
 // Mutated at runtime by the debug panel; Book reads via _params() each timeline build.
 export const ANIM_PARAMS = {

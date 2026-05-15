@@ -372,15 +372,15 @@ export const bookConfigs = {
             color: colors.white,
             modalInfo: {
                 name: "Brandon T Wilde",
-                jobTitle1: "Software Engineer",
-                jobTitle2: "AI/ML Specialist",
-                personalLogoSrc: "assets/images/wilde_ribbon_purple_tiny_8.png",
+                jobTitle1: "AI Engineer",
+                jobTitle2: "Chemical Engineer",
+                personalLogoSrc: "assets/images/wilde_ribbon_purple_sm_8.png",
                 personalLogoAlt: "Personal Logo",
                 emailSrc: "assets/images/email.png",
-                linkedinUrl: "https://www.linkedin.com/in/brandon-wilde/",
-                linkedinText: "brandon-wilde",
-                githubUrl: "https://github.com/brandonwilde",
-                githubText: "brandonwilde"
+                linkedinUrl: "https://www.linkedin.com/in/brandon-wilde3/",
+                linkedinText: "https://www.linkedin.com/in/brandon-wilde3/",
+                githubUrl: "https://www.github.com/brandonwilde",
+                githubText: "https://www.github.com/brandonwilde"
             }
         }
     }

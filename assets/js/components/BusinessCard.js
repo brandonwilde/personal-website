@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ANIM_PARAMS, BOOK_DEFAULTS } from '../config/constants.js';
+import { ANIM_PARAMS, BOOK_DEFAULTS, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
 
 // A business card holder that sits on the shelf.
 // Cards lean back in a dark metal tray. On click, the top card detaches
@@ -17,13 +17,10 @@ export class BusinessCard extends THREE.Group {
         this.initialZ  = 0;
         this.initialRotationY = 0;
 
-        // Real business card: 3.5" × 2" × 0.02" (scene units = inches)
-        this.cardW = 3.5;
-        this.cardH = 2.0;
-        this.cardT = 0.02;
-
-        // Cards lean back ~22° from vertical (face tilts upward toward viewer)
-        this.leanAngle = -0.38;
+        this.cardW     = BUSINESS_CARD_DEFAULTS.WIDTH;
+        this.cardH     = BUSINESS_CARD_DEFAULTS.HEIGHT;
+        this.cardT     = BUSINESS_CARD_DEFAULTS.THICKNESS;
+        this.leanAngle = BUSINESS_CARD_DEFAULTS.LEAN_ANGLE;
 
         // Whether flyingCard has been reparented to the scene
         this._cardInScene = false;
@@ -117,7 +114,7 @@ export class BusinessCard extends THREE.Group {
         );
         // Sit on top of the stack, slightly in front
         const localCenter = this._localCardCenter();
-        localCenter.z += 0.16;
+        localCenter.z += BUSINESS_CARD_DEFAULTS.STACK_Z_OFFSET;
         this.flyingCard.position.copy(localCenter);
         this.flyingCard.rotation.x = this.leanAngle;
         this.flyingCard.castShadow = true;
@@ -158,56 +155,220 @@ export class BusinessCard extends THREE.Group {
     }
 
     _buildContactTexture() {
-        const W = 350, H = 200;
+        const W = 700, H = 400;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
         const [r, g, b] = this.color;
         const accent = `rgb(${Math.round(r*0.4)},${Math.round(g*0.4)},${Math.round(b*0.4)})`;
 
-        ctx.fillStyle = '#f8f4ec';
-        ctx.fillRect(0, 0, W, H);
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(7, 7, W - 14, H - 14);
-        ctx.lineWidth = 1;
-        ctx.strokeRect(12, 12, W - 24, H - 24);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.anisotropy = 8;
 
-        if (!this.modalInfo) return new THREE.CanvasTexture(canvas);
-        const { name, jobTitle1, jobTitle2, linkedinText, githubText } = this.modalInfo;
+        const redraw = () => {
+            ctx.fillStyle = '#f8f4ec';
+            ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(14, 14, W - 28, H - 28);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(24, 24, W - 48, H - 48);
 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+            if (!this.modalInfo) { tex.needsUpdate = true; return; }
+            const {
+                name, jobTitle1, jobTitle2,
+                linkedinText, githubText,
+            } = this.modalInfo;
 
-        ctx.font = 'bold 28px Georgia, serif';
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillText(name ?? '', W / 2, 26);
+            // ── Header: name + job titles on left, logo on right ─────────────
+            const padX = 56;
+            const headerTop = 56;
+            const logoSize = 160;
+            const logoX = W - padX - logoSize + 30; // shift slightly toward center
+            const logoY = headerTop - 10;
 
-        ctx.font = 'italic 15px Georgia, serif';
-        ctx.fillStyle = '#555';
-        ctx.fillText([jobTitle1, jobTitle2].filter(Boolean).join(' · '), W / 2, 62);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
 
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 0.75;
-        ctx.beginPath();
-        ctx.moveTo(W * 0.1, 86); ctx.lineTo(W * 0.9, 86);
-        ctx.stroke();
+            ctx.font = 'bold 44px Georgia, serif';
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillText(name ?? '', padX, headerTop);
 
-        ctx.textAlign = 'left';
-        [
-            linkedinText ? ['LinkedIn:', linkedinText] : null,
-            githubText   ? ['GitHub:',   githubText]   : null,
-        ].filter(Boolean).forEach(([label, val], i) => {
-            const y = 98 + i * 26;
-            ctx.font = 'bold 14px Georgia, serif';
+            ctx.font = 'italic 22px Georgia, serif';
+            ctx.fillStyle = '#555';
+            if (jobTitle1) ctx.fillText(jobTitle1, padX, headerTop + 56);
+            if (jobTitle2) ctx.fillText(jobTitle2, padX, headerTop + 86);
+
+            if (this._logoImg && this._logoImg.complete && this._logoImg.naturalWidth) {
+                const img = this._logoImg;
+                const scale = Math.min(logoSize / img.naturalWidth, logoSize / img.naturalHeight);
+                const w = img.naturalWidth * scale;
+                const h = img.naturalHeight * scale;
+                ctx.drawImage(img, logoX + (logoSize - w) / 2, logoY + (logoSize - h) / 2, w, h);
+            }
+
+            // ── Divider ─────────────────────────────────────────────────────
+            ctx.strokeStyle = accent;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(padX, 210);
+            ctx.lineTo(W - padX, 210);
+            ctx.stroke();
+
+            // ── Footer rows: Email (image), LinkedIn, GitHub ────────────────
+            const labelX = padX;
+            const valueX = padX + 140;
+            const rowY = [238, 286, 334];
+            const valueFontPx = 20;
+            const emailH = 24;
+            const rowH = 36;
+
+            ctx.font = `bold ${valueFontPx}px Georgia, serif`;
             ctx.fillStyle = accent;
-            ctx.fillText(label, 26, y);
-            ctx.font = '14px Georgia, serif';
-            ctx.fillStyle = '#2a2a2a';
-            ctx.fillText(val, 110, y);
-        });
+            ctx.fillText('Email:',    labelX, rowY[0]);
+            ctx.fillText('LinkedIn:', labelX, rowY[1]);
+            ctx.fillText('GitHub:',   labelX, rowY[2]);
 
-        return new THREE.CanvasTexture(canvas);
+            // Record link hotspots in canvas coords. Whole row is clickable
+            // (label + value) — this is just the invisible link rectangle the
+            // browser uses to show URL previews on hover.
+            this._linkHotspots = [];
+            const addHotspot = (url, y) => {
+                if (!url) return;
+                this._linkHotspots.push({
+                    url,
+                    x0: labelX,
+                    x1: W - padX,
+                    y0: y - 4,
+                    y1: y - 4 + rowH,
+                });
+            };
+
+            if (this._emailImg && this._emailImg.complete && this._emailImg.naturalWidth) {
+                const img = this._emailImg;
+                const scale = emailH / img.naturalHeight;
+                ctx.drawImage(img, valueX, rowY[0], img.naturalWidth * scale, emailH);
+            }
+
+            ctx.font = `${valueFontPx}px Georgia, serif`;
+            ctx.fillStyle = '#2a2a2a';
+            if (linkedinText) ctx.fillText(linkedinText, valueX, rowY[1]);
+            if (githubText)   ctx.fillText(githubText,   valueX, rowY[2]);
+
+            addHotspot(this.modalInfo.linkedinUrl, rowY[1]);
+            addHotspot(this.modalInfo.githubUrl,   rowY[2]);
+
+            tex.needsUpdate = true;
+        };
+
+        // Stash canvas dims for UV → pixel conversion
+        this._contactCanvasW = W;
+        this._contactCanvasH = H;
+
+        redraw();
+
+        // Lazy-load images (logo + email) and redraw when ready
+        const loadImg = (src) => {
+            if (!src) return null;
+            const img = new Image();
+            img.onload = redraw;
+            img.src = src;
+            return img;
+        };
+        if (this.modalInfo) {
+            this._logoImg  = loadImg(this.modalInfo.personalLogoSrc);
+            this._emailImg = loadImg(this.modalInfo.emailSrc);
+        }
+
+        return tex;
+    }
+
+    // ─── HTML link overlay ──────────────────────────────────────────────────
+    // While the card is open and at rest, invisible <a> rectangles sit over
+    // the LinkedIn/GitHub rows so the browser shows its native URL preview
+    // on hover and the click opens the URL in a new tab.
+
+    _ensureOverlay() {
+        if (this._overlayEl) return;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;' +
+            'pointer-events:none;z-index:10;display:none;';
+        document.body.appendChild(el);
+        this._overlayEl = el;
+        this._overlayResize = () => this.updateLinkOverlay();
+    }
+
+    showLinkOverlay({ camera, renderer, onLinkClick } = {}) {
+        if (!camera || !renderer || !this._linkHotspots?.length) return;
+        this._ensureOverlay();
+        this._overlayCamera   = camera;
+        this._overlayRenderer = renderer;
+        this._overlayEl.innerHTML = '';
+        for (const h of this._linkHotspots) {
+            const a = document.createElement('a');
+            a.href = h.url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.cssText = 'position:absolute;display:block;' +
+                'pointer-events:auto;cursor:pointer;';
+            if (onLinkClick) a.addEventListener('click', onLinkClick);
+            this._overlayEl.appendChild(a);
+        }
+        this._overlayEl.style.display = 'block';
+        window.addEventListener('resize', this._overlayResize);
+        this.updateLinkOverlay();
+    }
+
+    updateLinkOverlay() {
+        if (!this._overlayEl || this._overlayEl.style.display === 'none') return;
+        const camera = this._overlayCamera;
+        const renderer = this._overlayRenderer;
+        if (!camera || !renderer) return;
+        const viewport = renderer.domElement.getBoundingClientRect();
+        this.flyingCard.updateWorldMatrix(true, false);
+        const links = this._overlayEl.children;
+        this._linkHotspots.forEach((h, i) => {
+            const tl = this._canvasPxToScreen(h.x0, h.y0, camera, viewport);
+            const br = this._canvasPxToScreen(h.x1, h.y1, camera, viewport);
+            const a = links[i];
+            if (!a) return;
+            a.style.left = `${tl.x}px`;
+            a.style.top = `${tl.y}px`;
+            a.style.width = `${br.x - tl.x}px`;
+            a.style.height = `${br.y - tl.y}px`;
+        });
+    }
+
+    hideLinkOverlay() {
+        if (!this._overlayEl) return;
+        this._overlayEl.style.display = 'none';
+        this._overlayEl.innerHTML = '';
+        window.removeEventListener('resize', this._overlayResize);
+    }
+
+    // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels
+    // by mapping → UV → flyingCard local space → world → camera projection.
+    _canvasPxToScreen(cx, cy, camera, viewport) {
+        const u = cx / this._contactCanvasW;
+        const v = 1 - cy / this._contactCanvasH;
+        const local = new THREE.Vector3(
+            (u - 0.5) * this.cardW,
+            (v - 0.5) * this.cardH,
+            this.cardT / 2,
+        );
+        const world = local.applyMatrix4(this.flyingCard.matrixWorld);
+        const ndc = world.project(camera);
+        return {
+            x: viewport.left + (ndc.x + 1) * 0.5 * viewport.width,
+            y: viewport.top  + (1 - ndc.y) * 0.5 * viewport.height,
+        };
+    }
+
+    // Meshes that should count as "the open object" for click/raycast purposes.
+    // The flying card is reparented out of this group during open(), so the
+    // InteractionManager needs an explicit handle on it.
+    getOpenInteractables() {
+        return this.flyingCard ? [this.flyingCard] : [];
     }
 
     setHovered(isHovered) {
@@ -225,9 +386,10 @@ export class BusinessCard extends THREE.Group {
         this._allMats.forEach(m => m.emissive?.setHex(hex));
     }
 
-    open() {
+    open(ctx = {}) {
         if (this._activeTl) this._activeTl.kill();
         this.isOpen = true;
+        this._openCtx = ctx;
 
         if (!this._cardInScene) {
             // Capture world transform, then detach card from group → scene
@@ -293,12 +455,19 @@ export class BusinessCard extends THREE.Group {
             this._faceMat.needsUpdate = true;
         });
 
+        // 5. Once at rest, drop the invisible HTML link overlay on top.
+        tl.call(() => this.showLinkOverlay(this._openCtx));
+
         return tl;
     }
 
     _buildCloseTimeline() {
         const { duration } = this._p().close;
         const tl = window.gsap.timeline();
+
+        // Remove HTML overlay immediately so links don't intercept clicks
+        // during the close animation.
+        this.hideLinkOverlay();
 
         // Revert texture as card begins returning
         tl.call(() => {
@@ -329,7 +498,7 @@ export class BusinessCard extends THREE.Group {
             if (this._cardInScene) {
                 this.add(this.flyingCard);
                 const localCenter = this._localCardCenter();
-                localCenter.z += 0.16;
+                localCenter.z += BUSINESS_CARD_DEFAULTS.STACK_Z_OFFSET;
                 this.flyingCard.position.copy(localCenter);
                 this.flyingCard.rotation.set(this.leanAngle, 0, 0);
                 this._cardInScene = false;
