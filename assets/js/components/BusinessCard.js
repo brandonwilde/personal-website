@@ -232,20 +232,18 @@ export class BusinessCard extends THREE.Group {
             ctx.fillText('LinkedIn:', labelX, rowY[1]);
             ctx.fillText('GitHub:',   labelX, rowY[2]);
 
-            // Record link hotspots in canvas coords. The hotspot covers only
-            // the URL text area (not the label) so the invisible <a> overlay
-            // and selection rectangle line up with what the user sees.
+            // Record link hotspots in canvas coords. Whole row is clickable
+            // (label + value) — this is just the invisible link rectangle the
+            // browser uses to show URL previews on hover.
             this._linkHotspots = [];
-            const addHotspot = (url, text, y) => {
-                if (!url || !text) return;
-                const textW = ctx.measureText(text).width;
+            const addHotspot = (url, y) => {
+                if (!url) return;
                 this._linkHotspots.push({
-                    url, text,
-                    x0: valueX,
-                    x1: Math.min(valueX + textW, W - padX),
+                    url,
+                    x0: labelX,
+                    x1: W - padX,
                     y0: y - 4,
                     y1: y - 4 + rowH,
-                    fontPx: valueFontPx,
                 });
             };
 
@@ -260,9 +258,8 @@ export class BusinessCard extends THREE.Group {
             if (linkedinText) ctx.fillText(linkedinText, valueX, rowY[1]);
             if (githubText)   ctx.fillText(githubText,   valueX, rowY[2]);
 
-            // measureText needs the value font to be active when called
-            addHotspot(this.modalInfo.linkedinUrl, linkedinText, rowY[1]);
-            addHotspot(this.modalInfo.githubUrl,   githubText,   rowY[2]);
+            addHotspot(this.modalInfo.linkedinUrl, rowY[1]);
+            addHotspot(this.modalInfo.githubUrl,   rowY[2]);
 
             tex.needsUpdate = true;
         };
@@ -290,10 +287,9 @@ export class BusinessCard extends THREE.Group {
     }
 
     // ─── HTML link overlay ──────────────────────────────────────────────────
-    // While the card is open and at rest, we render invisible <a> tags on top
-    // of the canvas-painted URLs. This gives real link UX (status-bar URL
-    // preview on hover, right-click "copy link", keyboard focus, text
-    // selection) without any visible DOM that could break the 3D illusion.
+    // While the card is open and at rest, invisible <a> rectangles sit over
+    // the LinkedIn/GitHub rows so the browser shows its native URL preview
+    // on hover and the click opens the URL in a new tab.
 
     _ensureOverlay() {
         if (this._overlayEl) return;
@@ -316,17 +312,9 @@ export class BusinessCard extends THREE.Group {
             a.href = h.url;
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
-            a.textContent = h.text;
-            a.style.cssText =
-                'position:absolute;display:block;' +
-                'color:transparent;background:transparent;' +
-                'text-decoration:none;white-space:nowrap;' +
-                'font-family:Georgia,serif;font-weight:normal;' +
-                'pointer-events:auto;user-select:text;-webkit-user-select:text;';
-            a.dataset.fontPx = h.fontPx;
-            if (onLinkClick) {
-                a.addEventListener('click', () => onLinkClick());
-            }
+            a.style.cssText = 'position:absolute;display:block;' +
+                'pointer-events:auto;cursor:pointer;';
+            if (onLinkClick) a.addEventListener('click', () => onLinkClick());
             this._overlayEl.appendChild(a);
         }
         this._overlayEl.style.display = 'block';
@@ -346,18 +334,10 @@ export class BusinessCard extends THREE.Group {
             const br = this._canvasPxToScreen(h.x1, h.y1, camera, viewport);
             const a = links[i];
             if (!a) return;
-            const w = br.x - tl.x;
-            const ht = br.y - tl.y;
-            // Canvas font is `fontPx` over a row of height `rowH` (=36) canvas px.
-            // Scale that ratio into the row's screen height so DOM text matches.
-            const fontPx = parseFloat(a.dataset.fontPx) || 20;
-            const screenFontPx = ht * (fontPx / 36);
             a.style.left = `${tl.x}px`;
             a.style.top = `${tl.y}px`;
-            a.style.width = `${w}px`;
-            a.style.height = `${ht}px`;
-            a.style.fontSize = `${screenFontPx}px`;
-            a.style.lineHeight = `${ht}px`;
+            a.style.width = `${br.x - tl.x}px`;
+            a.style.height = `${br.y - tl.y}px`;
         });
     }
 
