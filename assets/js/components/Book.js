@@ -486,7 +486,7 @@ export class Book extends THREE.Group {
             ease:     'power2.out'
         });
 
-        // 2. Center on screen (X and Y) while still moving forward
+        // 2. Center on screen (X and Y) as a closed book while still moving forward
         tl.to(this.position, {
             x:        0,
             y:        showcaseY,
@@ -501,12 +501,21 @@ export class Book extends THREE.Group {
             ease
         }, `>-${rotateOverlap}`);
 
-        // 4. Open the front cover
+        // 4. Open the front cover, and simultaneously drift right so the open spread
+        // stays visually centered. When fully open the cover's free edge lands at
+        // x = -w/2 + w·cos(coverAngle) relative to the book, so the spread midpoint
+        // is w/2·cos(coverAngle) to the left of position — negate to re-center.
+        const centeredX = -this.dimensions.width / 2 * Math.cos(coverAngle);
         tl.to(this.frontCoverPivot.rotation, {
             y:        coverAngle,
             duration: duration * coverOpenMult,
             ease
         }, `>-${coverDelay}`);
+        tl.to(this.position, {
+            x:        centeredX,
+            duration: duration * coverOpenMult,
+            ease
+        }, `<`);
 
         // 5. Pages fan out gently as cover opens
         tl.to(this.parts.pages.rotation, {
