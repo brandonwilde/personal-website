@@ -23,11 +23,11 @@ export const SCENE_BACKGROUND = 0xf7f3e9;
 export const LIGHTING_SETTINGS = {
   // Warm ambient — simulates bounced room light
   AMBIENT_COLOR:     0xfff0d0,
-  AMBIENT_INTENSITY: 0.6,
+  AMBIENT_INTENSITY: 1.0,
 
-  // Key light — centered overhead to avoid diagonal shelf shadows
+  // Key light
   KEY_COLOR:         0xfff5e0,
-  KEY_INTENSITY:     1.6,
+  KEY_INTENSITY:     1.2,
   KEY_POSITION:      { x: 0, y: 80, z: 30 },
 
   // Shadow frustum — kept tight around the shelf to maximise shadow resolution
@@ -39,11 +39,11 @@ export const LIGHTING_SETTINGS = {
   SHADOW_TOP:         30,
   SHADOW_BOTTOM:     -30,
   SHADOW_BIAS:       -0.001,
-  SHADOW_RADIUS:      3,
+  SHADOW_RADIUS:      6,
 
   // Cool fill from opposite side
   FILL_COLOR:        0xd0e8ff,
-  FILL_INTENSITY:    0.4,
+  FILL_INTENSITY:    0.7,
   FILL_POSITION:     { x: -40, y: 30, z: -30 },
 
   // Warm sconce-style point lights flanking the shelf
