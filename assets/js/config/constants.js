@@ -172,6 +172,23 @@ export const BOOK_DEFAULTS = {
   SCALE_BASE_WIDTH: 1200,
 };
 
+// BlogNotebook default properties (spiral-bound notebook on the shelf)
+export const BLOG_NOTEBOOK_DEFAULTS = {
+  // Notebook physical dimensions in inches
+  WIDTH:     7.5,
+  HEIGHT:    9.75,
+  THICKNESS: 0.55,
+
+  // Spiral-binding coils along the top edge
+  NUM_COILS:        16,
+  COIL_RADIUS:      0.34,  // ring radius — slightly bigger than thickness/2 so it clears the body
+  COIL_TUBE_RADIUS: 0.07,  // wire thickness of each ring
+
+  // Hover animation
+  HOVER_Z_OFFSET: 1,    // inches forward when hovered
+  HOVER_DURATION: 0.3,  // seconds
+};
+
 // BusinessCard default properties
 export const BUSINESS_CARD_DEFAULTS = {
   // Real business card dimensions in inches (scene units = inches)

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOK_DEFAULTS } from '../config/constants.js';
+import { BOOK_DEFAULTS, BLOG_NOTEBOOK_DEFAULTS } from '../config/constants.js';
 
 // A spiral-bound notebook representing the blog link.
 // Sits on the shelf leaning at an angle rather than spine-out like books.
@@ -11,7 +11,11 @@ export class BlogNotebook extends THREE.Group {
         this.color  = color ?? [77, 98, 89];
         this.link   = link  ?? null;
 
-        this.dimensions = { width: 7.5, height: 9.75, thickness: 0.55 };
+        this.dimensions = {
+            width:     BLOG_NOTEBOOK_DEFAULTS.WIDTH,
+            height:    BLOG_NOTEBOOK_DEFAULTS.HEIGHT,
+            thickness: BLOG_NOTEBOOK_DEFAULTS.THICKNESS,
+        };
 
         this.isHovered = false;
         this.isOpen    = false;
@@ -76,9 +80,9 @@ export class BlogNotebook extends THREE.Group {
         });
         this._allMats.push(coilMat);
 
-        const numCoils = 16;
-        const coilR    = 0.34; // just bigger than thickness/2 so it clears the body
-        const coilGeo  = new THREE.TorusGeometry(coilR, 0.07, 10, 24);
+        const numCoils = BLOG_NOTEBOOK_DEFAULTS.NUM_COILS;
+        const coilR    = BLOG_NOTEBOOK_DEFAULTS.COIL_RADIUS;
+        const coilGeo  = new THREE.TorusGeometry(coilR, BLOG_NOTEBOOK_DEFAULTS.COIL_TUBE_RADIUS, 10, 24);
 
         for (let i = 0; i < numCoils; i++) {
             const coil = new THREE.Mesh(coilGeo, coilMat);
@@ -258,8 +262,8 @@ export class BlogNotebook extends THREE.Group {
         this.isHovered = isHovered;
 
         window.gsap.to(this.position, {
-            z:        isHovered ? this.initialZ + 1 : this.initialZ,
-            duration: 0.3,
+            z:        isHovered ? this.initialZ + BLOG_NOTEBOOK_DEFAULTS.HOVER_Z_OFFSET : this.initialZ,
+            duration: BLOG_NOTEBOOK_DEFAULTS.HOVER_DURATION,
             ease:     'power2.out',
         });
 

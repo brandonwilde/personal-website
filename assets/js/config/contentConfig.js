@@ -352,7 +352,17 @@ export const bookConfigs = {
         blog: {
             id: 'blog',
             color: colors.green,
-            link: 'https://the.btw.so'
+            link: 'https://the.btw.so',
+            // Placement: tucked into the back-left corner of a shelf.
+            // The notebook leans on three surfaces — shelf, left side wall, back panel.
+            placement: {
+                shelfId:        'C',
+                leanBack:       -0.40, // rotation.x — tip the top back toward the panel (more negative = leans back more)
+                swivel:          0.55, // rotation.y — turn the right side toward the back wall
+                leanLeft:        0.22, // rotation.z — tip the top toward the left side wall
+                offsetFromLeft:  4.2,  // inches inward from the left side wall
+                offsetFromBack:  3.5,  // inches forward from the back panel
+            },
         },
         misc: {
             id: 'misc',
@@ -365,6 +375,12 @@ export const bookConfigs = {
         contact: {
             id: 'contact',
             color: colors.white,
+            // Placement: angled slightly so it looks naturally placed on the shelf
+            placement: {
+                shelfId:    'C',
+                section:    4,
+                shelfAngle: -0.35,  // radians — yaw applied to the holder
+            },
             modalInfo: {
                 name: "Brandon T Wilde",
                 jobTitle1: "AI Engineer",

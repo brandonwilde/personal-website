@@ -150,18 +150,18 @@ export class BookshelfScene {
         }
     }
 
-    // Places the contact BusinessCard on shelf C, section 4 (far right).
-    // Positioned manually because BusinessCard faces front (rotation.y=0),
-    // unlike books which use the shelf system with rotation.y=PI/2.
+    // Places the contact BusinessCard at the position defined in its placement config.
+    // Positioned manually (not through the shelf system) because BusinessCard faces
+    // front (rotation.y=0), unlike books which use rotation.y=PI/2.
     addContactCard(contactConfig) {
         const card = new BusinessCard('contact', contactConfig);
 
-        // Shelf C is at shelf index 2: y = 2 * SHELF_SPACING - HEIGHT/2 = 6
-        const shelfSurfaceY = 6 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
-        // Section 4 center X: 0.75 * (WIDTH/2)
-        const sectionX = 0.75 * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
-        // Angle the holder ~20° so it looks naturally placed on the shelf
-        const shelfAngle = -0.35;
+        const { shelfId, section, shelfAngle } = contactConfig.placement;
+        const shelf = this.shelves.get(shelfId);
+        const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
+        // Section center fractions (matches the map in Shelf.addBookSection)
+        const sectionFraction = { 1: -0.75, 2: -0.25, 3: 0.25, 4: 0.75 }[section];
+        const sectionX = sectionFraction * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
 
         card.position.set(sectionX, shelfSurfaceY, 0);
         card.rotation.y = shelfAngle;
@@ -179,31 +179,25 @@ export class BookshelfScene {
         this.books.set('contact', { object: card });
     }
 
-    // Places the blog as a leaning spiral notebook on shelf C, section 1.
-    // Positioned manually (not through the shelf system) so it can sit at an
-    // angle rather than spine-out like the regular books.
+    // Places the blog as a leaning spiral notebook tucked into the back-left
+    // corner of a shelf — bottom edge on the shelf, top-left corner against the
+    // left side wall, top-right corner against the back panel. Tunable values
+    // live in the blog entry of contentConfig.js.
     addBlogNotebook(config) {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
 
-        // Shelf C surface (same calc as addContactCard)
-        const shelfSurfaceY = 6 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
+        const { shelfId, leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack } = config.placement;
+
+        const shelf = this.shelves.get(shelfId);
+        const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
 
         // Inner faces of the bookcase the notebook leans against
         const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS / 2;
         const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS / 2;
 
-        // ── Tunable lean angles (radians) ──────────────────────────────────────
-        // The notebook is tucked into the back-left corner of the shelf: bottom
-        // edge on the shelf, top-left corner resting on the left side wall, and
-        // top-right corner resting on the back panel.
-        const leanBack = -0.40; // rotation.x — tip the top back toward the panel (more negative = leans back more)
-        const swivel   =  0.55; // rotation.y — turn the right side toward the back wall
-        const leanLeft = 0.22; // rotation.z — tip the top toward the left side wall
-
-        // ── Tunable position (X across, Z depth) ───────────────────────────────
-        const posX = leftInnerX + 4.2; // nudge right, off the left wall
-        const posZ = backInnerZ + 3.5; // nudge forward, off the back panel
+        const posX = leftInnerX + offsetFromLeft;
+        const posZ = backInnerZ + offsetFromBack;
 
         notebook.rotation.set(leanBack, swivel, leanLeft);
 
