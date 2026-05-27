@@ -99,18 +99,18 @@ export class BusinessCard extends THREE.Group {
         this._faceMat = new THREE.MeshStandardMaterial({
             map: this._restingTex, roughness: 0.85, metalness: 0.0,
         });
-        const backMat = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(0.91, 0.87, 0.81), roughness: 0.9,
+        this._backMat = new THREE.MeshStandardMaterial({
+            map: this._contactTex, roughness: 0.85, metalness: 0.0,
         });
         const edgeMat = new THREE.MeshStandardMaterial({
             color: new THREE.Color(0.89, 0.85, 0.79), roughness: 0.95,
         });
-        this._allMats.push(this._faceMat, backMat, edgeMat);
+        this._allMats.push(this._faceMat, this._backMat, edgeMat);
 
         this.flyingCard = new THREE.Mesh(
             new THREE.BoxGeometry(this.cardW, this.cardH, this.cardT),
-            [edgeMat, edgeMat, edgeMat, edgeMat, this._faceMat, backMat]
-            //  +X edge  -X edge  +Y edge  -Y edge  +Z face       -Z back
+            [edgeMat, edgeMat, edgeMat, edgeMat, this._faceMat, this._backMat]
+            //  +X edge  -X edge  +Y edge  -Y edge  +Z front      -Z back (contact)
         );
         // Sit on top of the stack, slightly in front
         const localCenter = this._localCardCenter();
@@ -346,15 +346,17 @@ export class BusinessCard extends THREE.Group {
         window.removeEventListener('resize', this._overlayResize);
     }
 
-    // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels
-    // by mapping → UV → flyingCard local space → world → camera projection.
+    // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels.
+    // The contact texture lives on the -Z back face, whose UV.x is inverted relative
+    // to local X. After the Y-flip (rotation.y = π) the two inversions cancel, so
+    // text is not mirrored on screen.
     _canvasPxToScreen(cx, cy, camera, viewport) {
         const u = cx / this._contactCanvasW;
         const v = 1 - cy / this._contactCanvasH;
         const local = new THREE.Vector3(
-            (u - 0.5) * this.cardW,
+            (0.5 - u) * this.cardW,   // inverted X: back face UV convention
             (v - 0.5) * this.cardH,
-            this.cardT / 2,
+            -this.cardT / 2,           // back face
         );
         const world = local.applyMatrix4(this.flyingCard.matrixWorld);
         const ndc = world.project(camera);
@@ -449,10 +451,11 @@ export class BusinessCard extends THREE.Group {
             ease,
         }, '<0.1');
 
-        // 4. Texture morphs to full contact info
-        tl.call(() => {
-            this._faceMat.map = this._contactTex;
-            this._faceMat.needsUpdate = true;
+        // 4. Card flips 180° to reveal contact details on the back face
+        tl.to(this.flyingCard.rotation, {
+            y: Math.PI,
+            duration: duration * 0.7,
+            ease: 'power2.inOut',
         });
 
         // 5. Once at rest, drop the invisible HTML link overlay on top.
@@ -469,29 +472,36 @@ export class BusinessCard extends THREE.Group {
         // during the close animation.
         this.hideLinkOverlay();
 
-        // Revert texture as card begins returning
-        tl.call(() => {
-            this._faceMat.map = this._restingTex;
-            this._faceMat.needsUpdate = true;
+        // 1. Card flips back to front face
+        tl.to(this.flyingCard.rotation, {
+            y: 0,
+            duration: duration * 0.5,
+            ease: 'power2.inOut',
         });
 
-        // Card tilts back to lean angle
+        // 2. Card flies back to just above the holder, tilting to lean angle en route
+        tl.to(this.flyingCard.position, {
+            x: this._flyWorldRestPos.x,
+            y: this._flyWorldRestPos.y + 0.6,
+            z: this._flyWorldRestPos.z,
+            duration: duration * 0.85,
+            ease: 'power2.inOut',
+        });
+
         tl.to(this.flyingCard.rotation, {
             x: this._flyWorldRestRot.x,
             y: this._flyWorldRestRot.y,
             z: this._flyWorldRestRot.z,
-            duration: duration * 0.5,
-            ease:     'power2.in',
-        });
+            duration: duration * 0.7,
+            ease: 'power2.inOut',
+        }, '<');
 
-        // Card flies back to its resting world position
+        // 3. Card slides down into the holder
         tl.to(this.flyingCard.position, {
-            x: this._flyWorldRestPos.x,
             y: this._flyWorldRestPos.y,
-            z: this._flyWorldRestPos.z,
-            duration: duration * 0.85,
-            ease:     'power2.inOut',
-        }, '<0.1');
+            duration: duration * 0.25,
+            ease: 'power2.in',
+        });
 
         // Reparent card back into the group
         tl.call(() => {
