@@ -67,6 +67,7 @@ export const BOOKSHELF_DIMENSIONS = {
   SHELF_THICKNESS: 1,  // 1 inch
   SHELF_SPACING: 12,   // 1 foot between shelves
   SECTION_WIDTH: 12,   // 1 foot per section
+  BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
 };
 
 // Wood material for bookshelf frame and shelves

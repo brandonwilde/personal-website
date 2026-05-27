@@ -32,7 +32,7 @@ export class Shelf {
             4:  0.75,
         }[section] * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
 
-        const spacing    = 0.3;
+        const spacing    = BOOKSHELF_DIMENSIONS.BOOK_SPACING;
         const totalWidth = books.reduce((sum, book) => sum + book.dimensions.thickness, 0)
             + spacing * (books.length - 1);
 
