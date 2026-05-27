@@ -122,24 +122,20 @@ export class Book extends THREE.Group {
             const maxTextWidth = canvas.width - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
 
             let fontSize = Math.max(16, Math.floor(canvas.width * T.TITLE_FONT_SIZE_RATIO));
-            ctx.font = `bold ${fontSize}px Georgia, serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            // Word-wrap
-            const words = this.content.split(' ');
-            const lines = [];
-            let line = '';
-            for (const word of words) {
-                const test = line ? `${line} ${word}` : word;
-                if (ctx.measureText(test).width > maxTextWidth && line) {
-                    lines.push(line);
-                    line = word;
-                } else {
-                    line = test;
-                }
+            // Shrink-to-fit: wrap text, then shrink font if any line still overflows
+            // (e.g. a single long word that can't be broken).
+            let lines = [];
+            const minFontSize = 10;
+            while (true) {
+                ctx.font = `bold ${fontSize}px Georgia, serif`;
+                lines = wrapText(ctx, this.content, maxTextWidth);
+                const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
+                if (widest <= maxTextWidth || fontSize <= minFontSize) break;
+                fontSize -= 1;
             }
-            if (line) lines.push(line);
 
             const lineHeight = fontSize * T.TITLE_LINE_HEIGHT_RATIO;
             const textBlockHeight = lines.length * lineHeight;

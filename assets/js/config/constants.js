@@ -153,7 +153,7 @@ export const BOOK_DEFAULTS = {
     TITLE_INNER_MARGIN_OFFSET:  7,     // px gap between outer and inner border
     TITLE_FONT_SIZE_RATIO:      0.14,  // initial font size as fraction of canvas width
     TITLE_LINE_HEIGHT_RATIO:    1.5,   // line height as multiple of font size
-    TITLE_TEXT_PADDING:         10,    // px padding inside inner border for text
+    TITLE_TEXT_PADDING:         24,    // px padding inside inner border for text
 
     // Content page texture (pages +Z face — right page when open)
     // Font sizes are ratios of canvas width with px minimums for small books.
