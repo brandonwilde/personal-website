@@ -17,7 +17,6 @@ export const shelfConfigs = {
     },
     C: { // Professional Experience and Contact
         sections: {
-            1: ['blog'],
             2: ['misc'],
             3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
         }
@@ -352,11 +351,7 @@ export const bookConfigs = {
     other: {
         blog: {
             id: 'blog',
-            width: 6,
-            height: 1,
-            thickness: 8,
-            color: colors.white,
-            content: 'Blog',
+            color: colors.green,
             link: 'https://the.btw.so'
         },
         misc: {

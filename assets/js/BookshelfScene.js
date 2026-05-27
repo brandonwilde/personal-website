@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Book } from './components/Book.js';
+import { BlogNotebook } from './components/BlogNotebook.js';
 import { BusinessCard } from './components/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
 import { SceneManager } from './managers/SceneManager.js';
@@ -176,6 +177,62 @@ export class BookshelfScene {
             color:     contactConfig.color,
         });
         this.books.set('contact', { object: card });
+    }
+
+    // Places the blog as a leaning spiral notebook on shelf C, section 1.
+    // Positioned manually (not through the shelf system) so it can sit at an
+    // angle rather than spine-out like the regular books.
+    addBlogNotebook(config) {
+        const notebook = new BlogNotebook('blog', config);
+        notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
+
+        // Shelf C surface (same calc as addContactCard)
+        const shelfSurfaceY = 6 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
+
+        // Inner faces of the bookcase the notebook leans against
+        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS / 2;
+        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS / 2;
+
+        // ── Tunable lean angles (radians) ──────────────────────────────────────
+        // The notebook is tucked into the back-left corner of the shelf: bottom
+        // edge on the shelf, top-left corner resting on the left side wall, and
+        // top-right corner resting on the back panel.
+        const leanBack = -0.40; // rotation.x — tip the top back toward the panel (more negative = leans back more)
+        const swivel   =  0.55; // rotation.y — turn the right side toward the back wall
+        const leanLeft = 0.22; // rotation.z — tip the top toward the left side wall
+
+        // ── Tunable position (X across, Z depth) ───────────────────────────────
+        const posX = leftInnerX + 4.2; // nudge right, off the left wall
+        const posZ = backInnerZ + 3.5; // nudge forward, off the back panel
+
+        notebook.rotation.set(leanBack, swivel, leanLeft);
+
+        // Auto-compute Y so the lowest corner of the rotated body rests flush on
+        // the shelf — keeps the bottom edge planted however the angles are tuned.
+        const { width, height, thickness } = notebook.dimensions;
+        const q = new THREE.Quaternion().setFromEuler(notebook.rotation);
+        let minCornerY = Infinity;
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+            const corner = new THREE.Vector3(sx * width / 2, sy * height / 2, sz * thickness / 2)
+                .applyQuaternion(q);
+            if (corner.y < minCornerY) minCornerY = corner.y;
+        }
+        const posY = shelfSurfaceY - minCornerY;
+
+        notebook.position.set(posX, posY, posZ);
+
+        notebook.initialX         = notebook.position.x;
+        notebook.initialY         = notebook.position.y;
+        notebook.initialZ         = notebook.position.z;
+        notebook.initialRotationY = notebook.rotation.y;
+
+        this.sceneManager.add(notebook);
+        this.interactionManager.registerBook('blog', notebook, {
+            title: 'Blog',
+            link:  config.link ?? null,
+            color: config.color,
+        });
+        this.books.set('blog', { object: notebook });
     }
 
     animate() {
