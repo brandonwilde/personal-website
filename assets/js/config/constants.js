@@ -137,8 +137,12 @@ export const BOOK_DEFAULTS = {
     SPINE_PIXELS_PER_UNIT:      50,    // canvas pixels per scene unit
     SPINE_DARKEN:               0.8,   // spine color darkened slightly vs cover
     SPINE_LUMINANCE_THRESHOLD:  0.45,  // below = light text, above = dark text
-    SPINE_FONT_SIZE_RATIO:      0.72,  // font size as fraction of canvas width
-    SPINE_MAX_TEXT_WIDTH_RATIO: 0.85,  // max text width as fraction of canvas height
+    SPINE_MAX_LINES:            3,     // longest titles may wrap across up to this many columns
+    SPINE_TEXT_WIDTH_FRAC:      0.7,   // fraction of spine thickness the text columns may use (side padding)
+    SPINE_LINE_GAP_RATIO:       0.18,  // gap between columns as a fraction of font size
+    SPINE_LINE_GAIN:            1.08,  // add another line only if it enlarges the font this much
+    SPINE_COMFORT_FONT_PX:      42,    // target spine title size; thin books thicken to reach it
+    SPINE_MAX_TEXT_WIDTH_RATIO: 0.74,  // max text length as fraction of canvas height (end padding)
 
     // Cover texture
     COVER_CANVAS_SIZE:    128,  // square canvas dimension for cover fabric
@@ -157,15 +161,40 @@ export const BOOK_DEFAULTS = {
     TITLE_TEXT_PADDING:         24,    // px padding inside inner border for text
 
     // Content page texture (pages +Z face — right page when open)
-    // Font sizes are ratios of canvas width with px minimums for small books.
-    CONTENT_PIXELS_PER_UNIT:  80,    // high-res so text is sharp at close zoom
-    CONTENT_TITLE_RATIO:      0.055, // bold title; min 20px
-    CONTENT_SUBTITLE_RATIO:   0.040, // italic subtitle; min 16px
-    CONTENT_ORG_RATIO:        0.033, // org / company line; min 14px
-    CONTENT_BODY_RATIO:       0.030, // meta stats + section headers; min 12px
-    CONTENT_LIST_RATIO:       0.027, // bullet-list items; min 11px
-    CONTENT_MARGIN_X_RATIO:   0.07,  // horizontal page margin (fraction of width)
-    CONTENT_MARGIN_TOP_RATIO: 0.04,  // top margin (fraction of height)
+    // Type is sized in physical inches (not ratios of width) so text appears at a
+    // consistent, readable size across every book regardless of trim size — the way
+    // real publishing works. A book's dimensions then follow from its content; see
+    // CONTENT_SIZING below and Book._computeContentSizing().
+    CONTENT_PIXELS_PER_UNIT:  80,    // canvas pixels per inch — high-res for close zoom
+    CONTENT_TITLE_IN:         0.30,  // bold title (~22pt)
+    CONTENT_SUBTITLE_IN:      0.21,  // italic subtitle / position (~15pt)
+    CONTENT_ORG_IN:           0.17,  // org / company line (~12pt)
+    CONTENT_BODY_IN:          0.155, // meta stats + section headers (~11pt)
+    CONTENT_LIST_IN:          0.145, // bullet-list items (~10.5pt)
+    CONTENT_LINE_HEIGHT:      1.45,  // line height as multiple of font size
+    CONTENT_MARGIN_X_IN:      0.45,  // horizontal page margin in inches
+    CONTENT_MARGIN_TOP_IN:    0.4,   // top/bottom margin in inches
+  },
+
+  // Content-driven dimension sizing (inches). When a book has modalInfo and its
+  // dimensions aren't pinned in config, width/height/thickness are derived from the
+  // laid-out content within these realistic bands. See Book._computeContentSizing().
+  CONTENT_SIZING: {
+    MEASURE_WIDTH: 6.0,   // trim width used when first measuring content height
+    WIDTH_MIN:     4.8,
+    WIDTH_MAX:     6.5,
+    HEIGHT_MIN:    7.0,   // floor — low enough that a sparse book fills out at readable type
+    HEIGHT_MAX:   10.2,   // ceiling (also bounded by the ~11" shelf gap)
+    HEIGHT_JITTER: 0.45,  // ± deterministic per-book height variation for a natural shelf
+    RATIO_MIN:     1.28,  // height/width — realistic hardcover proportions (6×9 ≈ 1.5)
+    RATIO_MAX:     1.62,
+    TARGET_FILL:   0.9,   // aim for content to occupy this fraction of usable page height
+    TYPE_SCALE_MIN: 0.7,  // shrink type at most this much to fit a dense book on one page
+    TYPE_SCALE_MAX: 1.5,  // grow type at most this much to fill a sparse book
+    THICKNESS_BASE: 0.8,
+    THICKNESS_PER_IN: 0.24, // thickness added per inch of content height (page-count proxy)
+    THICKNESS_MIN:  1.1,
+    THICKNESS_MAX:  3.0,
   },
 
   // Reference screen width for responsive scale calculation
