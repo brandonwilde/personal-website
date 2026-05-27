@@ -30,7 +30,7 @@ export const bookConfigs = {
         bachelors: {
             id: 'bachelors',
             width: 6,
-            height: 9.6,
+            height: 9,
             thickness: 3,
             color: colors.brown,
             content: 'B.S. Chemical Engineering & German',
@@ -50,7 +50,7 @@ export const bookConfigs = {
         masters: {
             id: 'masters',
             width: 6,
-            height: 9.6,
+            height: 9,
             thickness: 3,
             color: colors.red,
             content: 'M.S. Computational Linguistics',
