@@ -151,6 +151,13 @@ export class Book extends THREE.Group {
             const textBlockHeight = lines.length * lineHeight;
             const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
             lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
+
+            // Review books keep the left page minimal: just title + author byline.
+            if (this.modalInfo?.kind === 'review' && this.modalInfo.author) {
+                ctx.font = `italic ${Math.round(fontSize * 0.5)}px Georgia, serif`;
+                ctx.fillText(`by ${this.modalInfo.author}`,
+                    canvas.width / 2, startY + lines.length * lineHeight + lineHeight * 0.3);
+            }
         }
 
         return new THREE.CanvasTexture(canvas);
@@ -190,6 +197,98 @@ export class Book extends THREE.Group {
                 }});
             }
         };
+
+        // ── Goodreads review variant ──
+        // Right page holds everything substantive: title, author, a large star rating,
+        // genre chips, and the review text when one was written.
+        if (this.modalInfo?.kind === 'review') {
+            const { author, rating = 0, genres = [], review } = this.modalInfo;
+
+            centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
+            gap(titlePx * 0.15);
+            if (author) centered(`by ${author}`, `italic ${subPx}px Georgia, serif`, subPx, '#555');
+            gap(subPx * 0.6);
+
+            // Large star rating (filled vs. outlined star polygons)
+            const starR    = titlePx * 0.62;
+            const starStep = starR * 2.2;
+            const drawStar = (c, cx, cy, filled) => {
+                c.beginPath();
+                for (let i = 0; i < 10; i++) {
+                    const ang = -Math.PI / 2 + i * Math.PI / 5;
+                    const rad = i % 2 === 0 ? starR : starR * 0.42;
+                    const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
+                    i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+                }
+                c.closePath();
+                if (filled) { c.fillStyle = '#d9a520'; c.fill(); }
+                else {
+                    c.fillStyle = '#ece4cf'; c.fill();
+                    c.strokeStyle = '#c9bd96'; c.lineWidth = 1; c.stroke();
+                }
+            };
+            items.push({ advance: starR * 2 + bodyPx * 0.6, draw: (c, y) => {
+                const cy = y + starR;
+                const startX = W / 2 - starStep * 2;   // 5 stars centered
+                for (let i = 0; i < 5; i++) drawStar(c, startX + i * starStep, cy, i < rating);
+            }});
+
+            // Genre chips — rounded pills, centered, wrapping across rows
+            if (genres.length) {
+                const [cr, cg, cb] = this.color;
+                const chipBg   = `rgba(${Math.round(cr*0.55)},${Math.round(cg*0.55)},${Math.round(cb*0.55)},0.16)`;
+                const chipText = `rgb(${Math.round(cr*0.45)},${Math.round(cg*0.45)},${Math.round(cb*0.45)})`;
+                const chipH = listPx * 1.85, padX = listPx * 0.7, gapX = listPx * 0.5, gapY = listPx * 0.45;
+
+                ctx.font = `${listPx}px Georgia, serif`;
+                const chips = genres.map(g => ({ text: g, w: ctx.measureText(g).width + padX * 2 }));
+                const rows = [[]];
+                let rowW = 0;
+                for (const ch of chips) {
+                    const cur = rows[rows.length - 1];
+                    const add = (cur.length ? gapX : 0) + ch.w;
+                    if (rowW + add > textWidthPx && cur.length) { rows.push([ch]); rowW = ch.w; }
+                    else { cur.push(ch); rowW += add; }
+                }
+                const totalH = rows.length * chipH + (rows.length - 1) * gapY;
+                items.push({ advance: totalH + bodyPx * 0.4, draw: (c, y0) => {
+                    c.font = `${listPx}px Georgia, serif`;
+                    c.textAlign = 'center'; c.textBaseline = 'middle';
+                    rows.forEach((row, ri) => {
+                        const rw = row.reduce((s, ch) => s + ch.w, 0) + gapX * (row.length - 1);
+                        let x = W / 2 - rw / 2;
+                        const cy = y0 + ri * (chipH + gapY) + chipH / 2;
+                        for (const ch of row) {
+                            c.beginPath();
+                            c.roundRect(x, cy - chipH / 2, ch.w, chipH, chipH / 2);
+                            c.fillStyle = chipBg; c.fill();
+                            c.fillStyle = chipText; c.fillText(ch.text, x + ch.w / 2, cy);
+                            x += ch.w + gapX;
+                        }
+                    });
+                }});
+            }
+
+            // Review prose (only when the user actually wrote one)
+            if (review) {
+                gap(bodyPx * 0.6);
+                items.push({ advance: 2, draw: (c, y) => {
+                    c.strokeStyle = accent; c.lineWidth = 1;
+                    c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
+                }});
+                gap(bodyPx * 0.7);
+                ctx.font = `${bodyPx}px Georgia, serif`;
+                for (const line of wrapText(ctx, review, textWidthPx)) {
+                    items.push({ advance: bodyPx * lh, draw: (c, y) => {
+                        c.font = `${bodyPx}px Georgia, serif`; c.fillStyle = '#222';
+                        c.textAlign = 'left'; c.textBaseline = 'top';
+                        c.fillText(line, marginXpx, y);
+                    }});
+                }
+            }
+
+            return items;
+        }
 
         // ── Title ──
         centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
@@ -505,6 +604,21 @@ export class Book extends THREE.Group {
             this.materials.cover,  // -Z
         ];
 
+        // Review books show the real Goodreads cover on the front outer face. The
+        // procedural cover texture stands in (hash color) until the image loads, so the
+        // book is never blank; the spine/back stay procedural to keep the hash color
+        // instant and avoid reading pixels off a cross-origin image.
+        let frontOuterMat = this.materials.cover;
+        if (this.modalInfo?.kind === 'review' && this.modalInfo.coverImgSrcFull) {
+            frontOuterMat = new THREE.MeshStandardMaterial({
+                map:       coverTexture,
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
+            });
+            this.materials.frontArt = frontOuterMat;
+            this._loadCoverImage(frontOuterMat, this.modalInfo.coverImgSrcFull, this.modalInfo.coverImgSrc);
+        }
+
         // Front cover uses per-face materials so the inside (-Z face, index 5) shows
         // the title page when the cover swings open toward the viewer.
         const frontCoverFaceMaterials = [
@@ -512,7 +626,7 @@ export class Book extends THREE.Group {
             this.materials.cover,      // -X (spine edge)
             this.materials.cover,      // +Y
             this.materials.cover,      // -Y
-            this.materials.cover,      // +Z outer face
+            frontOuterMat,             // +Z outer face — real cover art for review books
             this.materials.titlePage,  // -Z inner face — visible when open
         ];
 
@@ -559,6 +673,24 @@ export class Book extends THREE.Group {
         this.add(container);
         this.userData.isBook = true;
         this.userData.bookId = this.bookId;
+    }
+
+    // Loads a real book cover into `material` asynchronously, swapping it in once decoded
+    // (the procedural placeholder shows until then). gr-assets serves the image with
+    // `Access-Control-Allow-Origin: *`, so it uploads to WebGL cleanly. Falls back to the
+    // thumbnail URL if the full-resolution variant fails; on total failure the placeholder
+    // stays. Never blocks the first render.
+    _loadCoverImage(material, url, fallbackUrl) {
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+        const apply = (tex) => {
+            tex.colorSpace = THREE.SRGBColorSpace;
+            material.map = tex;
+            material.needsUpdate = true;
+        };
+        loader.load(url, apply, undefined, () => {
+            if (fallbackUrl && fallbackUrl !== url) loader.load(fallbackUrl, apply, undefined, () => {});
+        });
     }
 
     // Returns the live params object (debug panel mutations win over defaults).

@@ -5,7 +5,9 @@ import { BusinessCard } from './components/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
 import { SceneManager } from './managers/SceneManager.js';
 import { InteractionManager } from './managers/InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL } from './config/constants.js';
+import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors } from './config/constants.js';
+import { goodreadsSnapshot } from './data/goodreadsSnapshot.js';
+import { fetchRecentReads } from './data/goodreads.js';
 
 export class BookshelfScene {
     constructor() {
@@ -227,6 +229,95 @@ export class BookshelfScene {
             color: config.color,
         });
         this.books.set('blog', { object: notebook });
+    }
+
+    // Populates a shelf section with one real 3D book per recent Goodreads read. Renders
+    // immediately from the committed snapshot (no network wait → no pop-in), then kicks off
+    // a background refresh that silently swaps in live data if it has changed.
+    addBookReviews(config) {
+        this._goodreadsConfig = config;
+        this._reviewReads = goodreadsSnapshot.slice(0, config.count);
+        this._reviewBooks = this._buildReviewBooks(this._reviewReads, config);
+        this._refreshReviews(config);
+    }
+
+    // Deterministic book color from the title so it's stable across reloads and never waits
+    // on the (cross-origin) cover image to decode.
+    _hashColor(str) {
+        const palette = Object.values(colors);
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+        return palette[Math.abs(h) % palette.length];
+    }
+
+    _buildReviewBooks(reads, config) {
+        const shelf = this.shelves.get(config.shelfId);
+        if (!shelf) return [];
+
+        const books = reads.map(read => this.createBook(read.id, {
+            color:   this._hashColor(read.title),
+            content: read.title,
+            modalInfo: {
+                kind:            'review',
+                author:          read.author,
+                rating:          read.rating,
+                genres:          read.genres,
+                review:          read.review,
+                coverImgSrc:     read.coverImgSrc,
+                coverImgSrcFull: read.coverImgSrcFull,
+            },
+        }));
+
+        shelf.addBookSection(books, config.section);
+        return books;
+    }
+
+    async _refreshReviews(config) {
+        let reads;
+        try {
+            reads = await fetchRecentReads(config);
+        } catch (err) {
+            console.warn('[goodreads] live refresh failed — keeping snapshot', err);
+            return;
+        }
+        if (!reads.length) return;
+
+        const signature = list => list.map(r => `${r.title}|${r.rating}|${r.review ? 1 : 0}`).join('~');
+        if (signature(reads) === signature(this._reviewReads)) return;   // nothing changed
+
+        this._swapReviewBooks(reads, config);
+    }
+
+    // Cross-fades the rendered review books out and the freshly fetched set in. Old books are
+    // detached from interaction/registry immediately (freeing their ids in case any persist)
+    // and removed from the scene once faded out.
+    _swapReviewBooks(reads, config) {
+        const shelf = this.shelves.get(config.shelfId);
+
+        for (const book of this._reviewBooks) {
+            this.interactionManager.unregisterBook(book.bookId);
+            this.books.delete(book.bookId);
+            shelf?.removeBook(book.bookId);
+            this._fadeBook(book, 1, 0, () => this.sceneManager.remove(book));
+        }
+
+        this._reviewReads = reads;
+        const fresh = this._buildReviewBooks(reads, config);
+        fresh.forEach(book => this._fadeBook(book, 0, 1));
+        this._reviewBooks = fresh;
+    }
+
+    _fadeBook(book, from, to, onComplete) {
+        const mats = Object.values(book.materials);
+        mats.forEach(m => { m.transparent = true; m.opacity = from; });
+        const proxy = { o: from };
+        window.gsap.to(proxy, {
+            o: to,
+            duration: 0.5,
+            ease: 'power2.inOut',
+            onUpdate: () => mats.forEach(m => { m.opacity = proxy.o; }),
+            onComplete,
+        });
     }
 
     animate() {

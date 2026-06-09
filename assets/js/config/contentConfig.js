@@ -11,8 +11,8 @@ export const shelfConfigs = {
     B: { // Projects and Reviews
         sections: {
             1: ['projectsA', 'projectsB', 'projectsC', 'projectsD', 'projectsE', 'projectsF', 'projectsG'],
-            3: ['reviewsA', 'reviewsB'],
-            4: ['bookReviews', 'recentReads']
+            3: ['reviewsA', 'reviewsB']
+            // Section 4 is populated at runtime from Goodreads (see other.goodreads).
         }
     },
     C: { // Professional Experience and Contact
@@ -304,22 +304,6 @@ export const bookConfigs = {
             thickness: 1.5,
             color: colors.blue,
             content: 'Reviews B'
-        },
-        bookReviews: {
-            id: 'bookReviews',
-            width: 4.9,
-            height: 6.5,
-            thickness: 1.8,
-            color: colors.tan,
-            content: 'Book Reviews'
-        },
-        recentReads: {
-            id: 'recentReads',
-            width: 5.9,
-            height: 6.5,
-            thickness: 1.5,
-            color: colors.gray,
-            content: 'Recent Reads'
         }
     },
 
@@ -347,6 +331,18 @@ export const bookConfigs = {
             thickness: 1.2,
             color: colors.blue,
             content: 'Miscellaneous'
+        },
+        // Goodreads recent reads — rendered as real 3D books on Shelf B, section 4.
+        // Books appear instantly from the committed snapshot (data/goodreadsSnapshot.js);
+        // the live RSS feed is fetched in the background and silently swapped in if changed.
+        goodreads: {
+            userId:  '7208433',
+            count:   7,
+            shelfId: 'B',
+            section: 4,
+            // CORS proxy that converts the Goodreads RSS feed to JSON. Override if it
+            // becomes rate-limited; the static snapshot is the fallback regardless.
+            proxyBase: 'https://api.rss2json.com/v1/api.json?rss_url=',
         },
         contact: {
             id: 'contact',
