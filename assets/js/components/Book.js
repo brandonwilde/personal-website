@@ -141,34 +141,78 @@ export class Book extends THREE.Group {
         // Title text
         if (this.content) {
             ctx.fillStyle = T.TITLE_TEXT_COLOR;
-            const maxTextWidth = canvas.width - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
-
-            let fontSize = Math.max(16, Math.floor(canvas.width * T.TITLE_FONT_SIZE_RATIO));
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            const maxTextWidth = canvas.width  - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
+            const usableHeight = canvas.height - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
+            const lineHRatio   = T.TITLE_LINE_HEIGHT_RATIO;
+            const minFontSize  = 10;
+            let fontSize = Math.max(16, Math.floor(canvas.width * T.TITLE_FONT_SIZE_RATIO));
 
-            // Shrink-to-fit: wrap text, then shrink font if any line still overflows
-            // (e.g. a single long word that can't be broken).
-            let lines = [];
-            const minFontSize = 10;
-            while (true) {
-                ctx.font = `bold ${fontSize}px Georgia, serif`;
-                lines = wrapText(ctx, this.content, maxTextWidth);
-                const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
-                if (widest <= maxTextWidth || fontSize <= minFontSize) break;
-                fontSize -= 1;
-            }
+            if (this.modalInfo?.kind === 'review') {
+                // Review left page: main title (large) + subtitle (medium) + author (small),
+                // shrunk together until the whole block fits the border, then centered — so a
+                // long title never pushes the byline into the margin.
+                const { main, subtitle } = this._titleParts();
+                const author = this.modalInfo.author;
 
-            const lineHeight = fontSize * T.TITLE_LINE_HEIGHT_RATIO;
-            const textBlockHeight = lines.length * lineHeight;
-            const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
-            lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
+                const layout = (size) => {
+                    const blocks = [];
+                    const add = (text, factor, style, color, gapAfter) => {
+                        if (!text) return;
+                        const fs = size * factor;
+                        ctx.font = `${style} ${fs}px Georgia, serif`;
+                        blocks.push({ lines: wrapText(ctx, text, maxTextWidth), fs, style, color, gapAfter: gapAfter * size });
+                    };
+                    add(main, 1.0, 'bold', '#1a1a1a', 0.35);
+                    add(subtitle, 0.62, '', '#3a3a3a', 0.45);
+                    add(author ? `by ${author}` : '', 0.5, 'italic', '#666', 0);
+                    return blocks;
+                };
 
-            // Review books keep the left page minimal: just title + author byline.
-            if (this.modalInfo?.kind === 'review' && this.modalInfo.author) {
-                ctx.font = `italic ${Math.round(fontSize * 0.5)}px Georgia, serif`;
-                ctx.fillText(`by ${this.modalInfo.author}`,
-                    canvas.width / 2, startY + lines.length * lineHeight + lineHeight * 0.3);
+                let blocks, totalH;
+                while (true) {
+                    blocks = layout(fontSize);
+                    totalH = 0;
+                    let widest = 0;
+                    for (const blk of blocks) {
+                        for (const l of blk.lines) {
+                            ctx.font = `${blk.style} ${blk.fs}px Georgia, serif`;
+                            widest = Math.max(widest, ctx.measureText(l).width);
+                        }
+                        totalH += blk.lines.length * blk.fs * lineHRatio + blk.gapAfter;
+                    }
+                    if ((totalH <= usableHeight && widest <= maxTextWidth) || fontSize <= minFontSize) break;
+                    fontSize -= 1;
+                }
+
+                let y = canvas.height / 2 - totalH / 2;
+                for (const blk of blocks) {
+                    const lh = blk.fs * lineHRatio;
+                    ctx.fillStyle = blk.color;
+                    for (const l of blk.lines) {
+                        ctx.font = `${blk.style} ${blk.fs}px Georgia, serif`;
+                        ctx.fillText(l, canvas.width / 2, y + lh / 2);
+                        y += lh;
+                    }
+                    y += blk.gapAfter;
+                }
+            } else {
+                // Shrink-to-fit: wrap text, then shrink font if any line still overflows
+                // (e.g. a single long word that can't be broken).
+                let lines = [];
+                while (true) {
+                    ctx.font = `bold ${fontSize}px Georgia, serif`;
+                    lines = wrapText(ctx, this.content, maxTextWidth);
+                    const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
+                    if (widest <= maxTextWidth || fontSize <= minFontSize) break;
+                    fontSize -= 1;
+                }
+
+                const lineHeight = fontSize * lineHRatio;
+                const textBlockHeight = lines.length * lineHeight;
+                const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
+                lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
             }
         }
 
