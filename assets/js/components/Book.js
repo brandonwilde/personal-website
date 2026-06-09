@@ -199,15 +199,22 @@ export class Book extends THREE.Group {
         };
 
         // ── Goodreads review variant ──
-        // Right page holds everything substantive: title, author, a large star rating,
-        // genre chips, and the review text when one was written.
+        // Right page holds everything substantive: a title/subtitle/author ladder, a large
+        // star rating, the genres, and the review text when one was written.
         if (this.modalInfo?.kind === 'review') {
             const { author, rating = 0, genres = [], review } = this.modalInfo;
+            const [cr, cg, cb] = this.color;
+            const { main, subtitle } = this._titleParts();
 
-            centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
-            gap(titlePx * 0.15);
-            if (author) centered(`by ${author}`, `italic ${subPx}px Georgia, serif`, subPx, '#555');
-            gap(subPx * 0.6);
+            // Size ladder: bold main title, lighter subtitle, smaller italic byline.
+            centered(main, `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
+            if (subtitle) {
+                gap(titlePx * 0.12);
+                centered(subtitle, `${subPx}px Georgia, serif`, subPx, '#3a3a3a');
+            }
+            gap(titlePx * 0.12);
+            if (author) centered(`by ${author}`, `italic ${orgPx}px Georgia, serif`, orgPx, '#666');
+            gap(subPx * 0.55);
 
             // Large star rating (filled vs. outlined star polygons)
             const starR    = titlePx * 0.62;
@@ -233,40 +240,39 @@ export class Book extends THREE.Group {
                 for (let i = 0; i < 5; i++) drawStar(c, startX + i * starStep, cy, i < rating);
             }});
 
-            // Genre chips — rounded pills, centered, wrapping across rows
+            // Genres — a centered small-caps middot line, wrapped by whole genre so a
+            // separator never orphans at a line start.
             if (genres.length) {
-                const [cr, cg, cb] = this.color;
-                const chipBg   = `rgba(${Math.round(cr*0.55)},${Math.round(cg*0.55)},${Math.round(cb*0.55)},0.16)`;
-                const chipText = `rgb(${Math.round(cr*0.45)},${Math.round(cg*0.45)},${Math.round(cb*0.45)})`;
-                const chipH = listPx * 1.85, padX = listPx * 0.7, gapX = listPx * 0.5, gapY = listPx * 0.45;
+                const muted   = `rgb(${Math.round(cr*0.5)},${Math.round(cg*0.5)},${Math.round(cb*0.5)})`;
+                const gPx     = listPx * 0.95;
+                const sep     = '   ·   ';
+                const spacing = '1px';
+                const labels  = genres.map(g => g.toUpperCase());
 
-                ctx.font = `${listPx}px Georgia, serif`;
-                const chips = genres.map(g => ({ text: g, w: ctx.measureText(g).width + padX * 2 }));
-                const rows = [[]];
-                let rowW = 0;
-                for (const ch of chips) {
-                    const cur = rows[rows.length - 1];
-                    const add = (cur.length ? gapX : 0) + ch.w;
-                    if (rowW + add > textWidthPx && cur.length) { rows.push([ch]); rowW = ch.w; }
-                    else { cur.push(ch); rowW += add; }
+                ctx.font = `${gPx}px Georgia, serif`;
+                if ('letterSpacing' in ctx) ctx.letterSpacing = spacing;
+                const lines = [];
+                let cur = [];
+                for (const lab of labels) {
+                    const test = [...cur, lab].join(sep);
+                    if (ctx.measureText(test).width > textWidthPx && cur.length) { lines.push(cur); cur = [lab]; }
+                    else cur.push(lab);
                 }
-                const totalH = rows.length * chipH + (rows.length - 1) * gapY;
-                items.push({ advance: totalH + bodyPx * 0.4, draw: (c, y0) => {
-                    c.font = `${listPx}px Georgia, serif`;
-                    c.textAlign = 'center'; c.textBaseline = 'middle';
-                    rows.forEach((row, ri) => {
-                        const rw = row.reduce((s, ch) => s + ch.w, 0) + gapX * (row.length - 1);
-                        let x = W / 2 - rw / 2;
-                        const cy = y0 + ri * (chipH + gapY) + chipH / 2;
-                        for (const ch of row) {
-                            c.beginPath();
-                            c.roundRect(x, cy - chipH / 2, ch.w, chipH, chipH / 2);
-                            c.fillStyle = chipBg; c.fill();
-                            c.fillStyle = chipText; c.fillText(ch.text, x + ch.w / 2, cy);
-                            x += ch.w + gapX;
-                        }
-                    });
-                }});
+                if (cur.length) lines.push(cur);
+                if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+                gap(bodyPx * 0.2);
+                for (const lineGenres of lines) {
+                    const lineStr = lineGenres.join(sep);
+                    items.push({ advance: gPx * 1.6, draw: (c, y) => {
+                        c.font = `${gPx}px Georgia, serif`; c.fillStyle = muted;
+                        c.textAlign = 'center'; c.textBaseline = 'top';
+                        if ('letterSpacing' in c) c.letterSpacing = spacing;
+                        c.fillText(lineStr, W / 2, y);
+                        if ('letterSpacing' in c) c.letterSpacing = '0px';
+                    }});
+                }
+                gap(bodyPx * 0.2);
             }
 
             // Review prose (only when the user actually wrote one)
