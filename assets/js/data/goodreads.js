@@ -65,11 +65,11 @@ export function parseReviewItem(item) {
         coverImgSrcFull: upgradeCoverUrl(coverImgSrc),
         rating,
         genres,
-        review:          extractReview(doc, { title, author, genres }),
+        review:          extractReview(doc, { title, author }),
     };
 }
 
-function extractReview(doc, { title, author, genres }) {
+function extractReview(doc, { title, author }) {
     let text = (doc.body.textContent ?? '')
         .replace(/ /g, ' ')
         .replace(/\s+/g, ' ')
@@ -82,9 +82,13 @@ function extractReview(doc, { title, author, genres }) {
     text = text.replace(/^\s*by\s+/i, '');
     if (author) text = text.replace(author, '');
 
-    // Remove the "bookshelves: a, b, c" block.
+    // Remove the "bookshelves: a, b, c" block. Strip *every* shelf link (not just the
+    // display-capped genres) so no shelf name leaks into the review text.
     text = text.replace(/bookshelves:\s*/i, '');
-    for (const g of genres) text = text.replace(new RegExp(`\\b${escapeRegExp(g)}\\b,?`, 'i'), '');
+    for (const a of doc.querySelectorAll('a.actionLinkLite')) {
+        const shelf = a.textContent.trim();
+        if (shelf) text = text.replace(new RegExp(`\\b${escapeRegExp(shelf)}\\b,?`, 'i'), '');
+    }
 
     // Trim stray separators and the "...more" truncation link.
     text = text.replace(/^[\s,]+|[\s,]+$/g, '');
@@ -96,9 +100,15 @@ function extractReview(doc, { title, author, genres }) {
 // the caller can fall back to the committed snapshot.
 export async function fetchRecentReads(config) {
     const items = await fetchFeedItems(config);
-    return items
+    const reads = items
         .filter(it => typeof it.guid === 'string' && it.guid.startsWith('Review'))
-        .slice(0, config.count)
         .map(parseReviewItem)
         .filter(r => r.title);
+
+    // The feed can carry multiple update entries for the same book (e.g. rating + shelving).
+    // Keep the first occurrence of each book so duplicates don't render twice or crowd out
+    // later books, then take the most recent `count`.
+    const seen = new Set();
+    const unique = reads.filter(r => (seen.has(r.id) ? false : seen.add(r.id)));
+    return unique.slice(0, config.count);
 }
