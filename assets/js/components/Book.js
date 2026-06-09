@@ -15,6 +15,9 @@ export class Book extends THREE.Group {
         this.color = color;
         this.content = content;
         this.modalInfo = modalInfo;
+        // Spine text: review books show only the main title (pre-colon) so the spine stays
+        // legible; every other book keeps its full content on the spine.
+        this.spineText = modalInfo?.kind === 'review' ? this._titleParts().main : content;
         this.isHovered = false;
         this.isOpen = false;
         this.initialX = 0;
@@ -40,6 +43,15 @@ export class Book extends THREE.Group {
 
     // ─── Texture Creators ───────────────────────────────────────────────────────
 
+    // Splits the title on the first colon into { main, subtitle }. Books without a colon
+    // return the whole title as `main` and an empty subtitle.
+    _titleParts() {
+        const raw = this.content ?? '';
+        const idx = raw.indexOf(':');
+        if (idx === -1) return { main: raw.trim(), subtitle: '' };
+        return { main: raw.slice(0, idx).trim(), subtitle: raw.slice(idx + 1).trim() };
+    }
+
     // Vertical title text on the spine
     createSpineTexture() {
         const { thickness, height } = this.dimensions;
@@ -54,7 +66,7 @@ export class Book extends THREE.Group {
         ctx.fillStyle = `rgb(${Math.round(r*d)}, ${Math.round(g*d)}, ${Math.round(b*d)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        if (this.content) {
+        if (this.spineText) {
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
             ctx.fillStyle = luminance > T.SPINE_LUMINANCE_THRESHOLD ? '#111111' : '#f0ece4';
 
@@ -496,7 +508,7 @@ export class Book extends THREE.Group {
 
         let best = null;
         for (let n = 1; n <= T.SPINE_MAX_LINES; n++) {
-            const lines = balanceLines(this.content, n);
+            const lines = balanceLines(this.spineText, n);
             if (lines.length !== n) break;                     // fewer words than columns
             const longest   = Math.max(...lines.map(perPx));
             const fontLen   = maxLen / longest;                // limited by spine length
@@ -523,7 +535,7 @@ export class Book extends THREE.Group {
         let need = thickness;
         let bestFont = 0;
         for (let n = 1; n <= T.SPINE_MAX_LINES; n++) {
-            const lines = balanceLines(this.content, n);
+            const lines = balanceLines(this.spineText, n);
             if (lines.length !== n) break;
             const longest   = Math.max(...lines.map(perPx));
             const fontLen   = maxLen / longest;
