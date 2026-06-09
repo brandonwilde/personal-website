@@ -8,7 +8,8 @@
 // This is only used for the *background refresh*; any failure is swallowed by the caller,
 // which keeps the committed snapshot on screen.
 
-const GENRE_LIMIT = 4;   // chips beyond this clutter the spread; keep the first few
+// Goodreads' built-in status shelves aren't genres — drop them from the displayed tags.
+const SYSTEM_SHELVES = new Set(['read', 'currently-reading', 'to-read', 'did-not-finish']);
 
 // Strips the size directive (e.g. `._SY75_`, `._SX50_`, combined forms) from a gr-assets
 // thumbnail URL to request the full-resolution cover. The bare `<id>.jpg` form returns the
@@ -52,8 +53,7 @@ export function parseReviewItem(item) {
 
     const genres = Array.from(doc.querySelectorAll('a.actionLinkLite'))
         .map(a => a.textContent.trim())
-        .filter(Boolean)
-        .slice(0, GENRE_LIMIT);
+        .filter(g => g && !SYSTEM_SHELVES.has(g));
 
     const coverImgSrc = img?.getAttribute('src') ?? '';
 
