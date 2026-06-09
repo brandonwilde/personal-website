@@ -11,6 +11,18 @@
 // Goodreads' built-in status shelves aren't genres — drop them from the displayed tags.
 const SYSTEM_SHELVES = new Set(['read', 'currently-reading', 'to-read', 'did-not-finish']);
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Convert "YYYY-MM-DD HH:MM:SS" string to a "Mon YYYY" label
+export function formatReadDate(pubDate) {
+    if (!pubDate) return '';
+    const m = /^\s*(\d{4})-(\d{2})-(\d{2})/.exec(pubDate);
+    if (!m) return '';
+    const monthIdx = parseInt(m[2], 10) - 1;
+    if (monthIdx < 0 || monthIdx > 11) return '';
+    return `${MONTHS[monthIdx]} ${m[1]}`;
+}
+
 // Strips the size directive (e.g. `._SY75_`, `._SX50_`, combined forms) from a gr-assets
 // thumbnail URL to request the full-resolution cover. The bare `<id>.jpg` form returns the
 // original upload. Returns the input unchanged if it doesn't match the expected pattern.
@@ -51,6 +63,10 @@ export function parseReviewItem(item) {
     const author = (authorEl?.textContent ?? '').trim();
     const rating = ratingMtch ? parseInt(ratingMtch[1], 10) : 0;
 
+    const reviewUrl = item.link ?? '';
+    const bookUrl   = titleEl?.getAttribute('href')  ?? '';
+    const authorUrl = authorEl?.getAttribute('href') ?? '';
+
     const genres = Array.from(doc.querySelectorAll('a.actionLinkLite'))
         .map(a => a.textContent.trim())
         .filter(g => g && !SYSTEM_SHELVES.has(g));
@@ -65,7 +81,11 @@ export function parseReviewItem(item) {
         coverImgSrcFull: upgradeCoverUrl(coverImgSrc),
         rating,
         genres,
+        dateAdded:       (item.pubDate ?? '').trim(),
         review:          extractReview(doc, { title, author }),
+        reviewUrl,
+        bookUrl,
+        authorUrl,
     };
 }
 

@@ -268,9 +268,13 @@ export class BookshelfScene {
                 author:          read.author,
                 rating:          read.rating,
                 genres:          read.genres,
+                dateAdded:       read.dateAdded,
                 review:          read.review,
                 coverImgSrc:     read.coverImgSrc,
                 coverImgSrcFull: read.coverImgSrcFull,
+                reviewUrl:       read.reviewUrl,
+                bookUrl:         read.bookUrl,
+                authorUrl:       read.authorUrl,
             },
         }));
 
@@ -288,7 +292,7 @@ export class BookshelfScene {
         }
         if (!reads.length) return;
 
-        const signature = list => list.map(r => `${r.title}|${r.rating}|${r.review ? 1 : 0}`).join('~');
+        const signature = list => list.map(r => `${r.title}|${r.rating}|${r.dateAdded}|${r.review ? 1 : 0}`).join('~');
         if (signature(reads) === signature(this._reviewReads)) return;   // nothing changed
 
         this._swapReviewBooks(reads, config);

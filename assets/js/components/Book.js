@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BOOK_DEFAULTS, ANIM_PARAMS } from '../config/constants.js';
+import { formatReadDate } from '../data/goodreads.js';
 
 export class Book extends THREE.Group {
     constructor(bookId, {
@@ -258,7 +259,7 @@ export class Book extends THREE.Group {
         // Right page holds everything substantive: a title/subtitle/author ladder, a large
         // star rating, the genres, and the review text when one was written.
         if (this.modalInfo?.kind === 'review') {
-            const { author, rating = 0, genres = [], review } = this.modalInfo;
+            const { author, rating = 0, genres = [], review, dateAdded } = this.modalInfo;
             const [cr, cg, cb] = this.color;
             const { main, subtitle } = this._titleParts();
 
@@ -295,6 +296,14 @@ export class Book extends THREE.Group {
                 const startX = W / 2 - starStep * 2;   // 5 stars centered
                 for (let i = 0; i < 5; i++) drawStar(c, startX + i * starStep, cy, i < rating);
             }});
+
+            // Date read — the feed's raw pubDate, formatted to "Mon YYYY" here so the
+            // display granularity stays in the view layer. Small italic caption under the stars.
+            const readLabel = formatReadDate(dateAdded);
+            if (readLabel) {
+                centered(`Read ${readLabel}`, `italic ${listPx}px Georgia, serif`, listPx, '#8a8170');
+                gap(bodyPx * 0.2);
+            }
 
             // Genres — a centered small-caps middot line, wrapped by whole genre so a
             // separator never orphans at a line start.
