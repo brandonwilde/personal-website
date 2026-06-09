@@ -7,13 +7,13 @@ export const shelfConfigs = {
     A: {
         sections: {
             1: ['bachelors', 'masters'],
-            4: { ref: 'goodreads' },
+            3: { ref: 'goodreads' },
         }
     },
     B: {
         sections: {
             1: ['projectsA', 'projectsB', 'projectsC', 'projectsD', 'projectsE', 'projectsF', 'projectsG'],
-            3: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
+            4: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
         }
     },
     C: {
