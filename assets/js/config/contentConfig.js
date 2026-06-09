@@ -28,8 +28,7 @@ export const bookConfigs = {
     education: {
         bachelors: {
             id: 'bachelors',
-            width: 6,
-            height: 9,
+            height: 8,
             thickness: 3,
             color: colors.brown,
             content: 'B.S. Chemical Engineering & German',
@@ -48,9 +47,7 @@ export const bookConfigs = {
         },
         masters: {
             id: 'masters',
-            width: 6,
-            height: 9,
-            thickness: 3,
+            height: 8,
             color: colors.red,
             content: 'M.S. Computational Linguistics',
             modalInfo: {
@@ -108,9 +105,6 @@ export const bookConfigs = {
     experience: {
         translate: {
             id: 'translate',
-            width: 6,
-            height: 7.8,
-            thickness: 2.4,
             color: colors.yellow,
             content: 'Freelance Translation',
             modalInfo: {
@@ -130,9 +124,6 @@ export const bookConfigs = {
         },
         montco: {
             id: 'montco',
-            width: 5.5,
-            height: 7.8,
-            thickness: 2.4,
             color: colors.purple,
             content: 'Montco Hunger Solutions',
             modalInfo: {
@@ -151,9 +142,6 @@ export const bookConfigs = {
         },
         aei: {
             id: 'aei',
-            width: 6.5,
-            height: 7.2,
-            thickness: 2,
             color: colors.gray,
             content: 'AEI',
             modalInfo: {
@@ -170,9 +158,6 @@ export const bookConfigs = {
         },
         msu1: {
             id: 'msu1',
-            width: 6,
-            height: 7.2,
-            thickness: 2,
             color: colors.red,
             content: 'MSU',
             modalInfo: {
@@ -189,9 +174,6 @@ export const bookConfigs = {
         },
         msu2: {
             id: 'msu2',
-            width: 5.1,
-            height: 8,
-            thickness: 2,
             color: colors.red,
             content: 'MSU',
             modalInfo: {
@@ -207,9 +189,6 @@ export const bookConfigs = {
         },
         inventives: {
             id: 'inventives',
-            width: 6.5,
-            height: 9,
-            thickness: 2.4,
             color: colors.yellowGreen,
             content: 'Inventives',
             modalInfo: {
@@ -233,9 +212,6 @@ export const bookConfigs = {
         },
         syera: {
             id: 'syera',
-            width: 5.5,
-            height: 6.5,
-            thickness: 2,
             color: colors.blue,
             content: 'Syera',
             modalInfo: {

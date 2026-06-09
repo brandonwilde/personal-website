@@ -3,16 +3,15 @@ import { BOOK_DEFAULTS, ANIM_PARAMS } from '../config/constants.js';
 
 export class Book extends THREE.Group {
     constructor(bookId, {
-        width = BOOK_DEFAULTS.WIDTH,
-        height = BOOK_DEFAULTS.HEIGHT,
-        thickness = BOOK_DEFAULTS.THICKNESS,
+        width,
+        height,
+        thickness,
         color,
         content,
         modalInfo = null,
     }) {
         super();
         this.bookId = bookId;
-        this.dimensions = { width, height, thickness };
         this.color = color;
         this.content = content;
         this.modalInfo = modalInfo;
@@ -22,6 +21,19 @@ export class Book extends THREE.Group {
         this.initialY = 0;
         this.initialZ = 0;
         this.initialRotationY = 0;
+        this._typeScale = 1;
+
+        // Books with structured content derive their trim size from how much content
+        // they hold (fixed readable type → dimensions follow the text, like real
+        // publishing). Any dimension pinned in config overrides the computed value.
+        // Title-only books (no modalInfo) keep their hand-set config dimensions.
+        const computed = this.modalInfo ? this._computeContentSizing() : null;
+        this.dimensions = {
+            width:     width     ?? computed?.width     ?? BOOK_DEFAULTS.WIDTH,
+            height:    height    ?? computed?.height    ?? BOOK_DEFAULTS.HEIGHT,
+            thickness: thickness ?? computed?.thickness ?? BOOK_DEFAULTS.THICKNESS,
+        };
+        if (computed) this._typeScale = computed.typeScale;
 
         this.createGeometry();
     }
@@ -45,21 +57,19 @@ export class Book extends THREE.Group {
         if (this.content) {
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
             ctx.fillStyle = luminance > T.SPINE_LUMINANCE_THRESHOLD ? '#111111' : '#f0ece4';
-            let fontSize = Math.max(8, Math.floor(canvas.width * T.SPINE_FONT_SIZE_RATIO));
-            ctx.font = `bold ${fontSize}px Georgia, serif`;
+
+            const { lines, font } = this._spineLayout(ctx, thickness, height);
 
             ctx.save();
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.rotate(-Math.PI / 2);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.font = `bold ${font}px Georgia, serif`;
 
-            const maxTextWidth = canvas.height * T.SPINE_MAX_TEXT_WIDTH_RATIO;
-            while (ctx.measureText(this.content).width > maxTextWidth && fontSize > 6) {
-                fontSize -= 1;
-                ctx.font = `bold ${fontSize}px Georgia, serif`;
-            }
-            ctx.fillText(this.content, 0, 0);
+            const gap = font * (1 + T.SPINE_LINE_GAP_RATIO);
+            const n = lines.length;
+            lines.forEach((line, i) => ctx.fillText(line, 0, (i - (n - 1) / 2) * gap));
             ctx.restore();
         }
 
@@ -146,6 +156,122 @@ export class Book extends THREE.Group {
         return new THREE.CanvasTexture(canvas);
     }
 
+    // Builds the ordered list of drawable items for the content page at a given page
+    // width and type scale. Each item is { advance (px height it consumes), draw? }.
+    // Used both to *measure* content (sum of advances → derive book size) and to
+    // *render* it, so the two never drift apart. Type is sized in physical inches
+    // (× PPU × typeScale) so it reads at a consistent size across every book.
+    _composeContentItems(ctx, { textWidthPx, marginXpx, typeScale }) {
+        const T   = BOOK_DEFAULTS.TEXTURE;
+        const PPU = T.CONTENT_PIXELS_PER_UNIT;
+        const W   = textWidthPx + marginXpx * 2;
+        const lh  = T.CONTENT_LINE_HEIGHT;
+
+        const titlePx = T.CONTENT_TITLE_IN    * PPU * typeScale;
+        const subPx   = T.CONTENT_SUBTITLE_IN * PPU * typeScale;
+        const orgPx   = T.CONTENT_ORG_IN      * PPU * typeScale;
+        const bodyPx  = T.CONTENT_BODY_IN     * PPU * typeScale;
+        const listPx  = T.CONTENT_LIST_IN     * PPU * typeScale;
+
+        const [r, g, b] = this.color;
+        const accent = `rgb(${Math.round(r * 0.6)}, ${Math.round(g * 0.6)}, ${Math.round(b * 0.6)})`;
+
+        const items = [];
+        const gap   = (px) => items.push({ advance: px });
+
+        // Center-aligned wrapped text block (title / subtitle / org)
+        const centered = (text, fontStr, fontPx, color) => {
+            ctx.font = fontStr;
+            for (const line of wrapText(ctx, text, textWidthPx)) {
+                items.push({ advance: fontPx * lh, draw: (c, y) => {
+                    c.font = fontStr; c.fillStyle = color;
+                    c.textAlign = 'center'; c.textBaseline = 'top';
+                    c.fillText(line, W / 2, y);
+                }});
+            }
+        };
+
+        // ── Title ──
+        centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
+        gap(titlePx * 0.2);
+
+        // ── Subtitle / org ──
+        if (this.modalInfo) {
+            const subtitle = this.modalInfo.degree    ?? this.modalInfo.position ?? '';
+            const org      = this.modalInfo.university ?? this.modalInfo.company  ?? '';
+            if (subtitle) centered(subtitle, `italic ${subPx}px Georgia, serif`, subPx, '#444');
+            if (org)      centered(org,      `${orgPx}px Georgia, serif`,        orgPx, '#666');
+        }
+
+        // ── Divider ──
+        gap(bodyPx * 0.5);
+        items.push({ advance: 2, draw: (c, y) => {
+            c.strokeStyle = accent; c.lineWidth = 1;
+            c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
+        }});
+        gap(bodyPx * 0.6);
+
+        if (!this.modalInfo) return items;
+
+        // ── Meta stats (GPA / dates) ──
+        const meta = [];
+        if (this.modalInfo.gpa)            meta.push(['GPA',       this.modalInfo.gpa]);
+        if (this.modalInfo.graduationDate) meta.push(['Graduated', this.modalInfo.graduationDate]);
+        if (this.modalInfo.startDate) {
+            const end = this.modalInfo.endDate ?? 'Present';
+            meta.push(['Dates', `${this.modalInfo.startDate} – ${end}`]);
+        }
+        for (const [label, value] of meta) {
+            items.push({ advance: bodyPx * 1.5, draw: (c, y) => {
+                c.textAlign = 'left'; c.textBaseline = 'top';
+                c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = accent;
+                c.fillText(`${label}: `, marginXpx, y);
+                const labelW = c.measureText(`${label}: `).width;
+                c.font = `${bodyPx}px Georgia, serif`; c.fillStyle = '#222';
+                c.fillText(value, marginXpx + labelW, y);
+            }});
+        }
+        if (meta.length) gap(bodyPx * 0.4);
+
+        // ── Section list (projects / accomplishments) ──
+        const listItems    = this.modalInfo.projects ?? this.modalInfo.accomplishments ?? [];
+        const sectionLabel = this.modalInfo.projects
+            ? 'Research Projects'
+            : this.modalInfo.accomplishments
+                ? 'Accomplishments'
+                : null;
+
+        if (sectionLabel && listItems.length) {
+            items.push({ advance: bodyPx * 1.3, draw: (c, y) => {
+                c.textAlign = 'left'; c.textBaseline = 'top';
+                c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = '#1a1a1a';
+                c.fillText(sectionLabel, marginXpx, y);
+            }});
+            items.push({ advance: 8, draw: (c, y) => {
+                c.strokeStyle = accent; c.lineWidth = 0.5;
+                c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
+            }});
+
+            const bulletX = marginXpx + 10;
+            const itemX   = marginXpx + 22;
+            const itemW   = W - itemX - marginXpx;
+            ctx.font = `${listPx}px Georgia, serif`;
+            for (const item of listItems) {
+                const lines = wrapText(ctx, item, itemW);
+                lines.forEach((line, i) => {
+                    items.push({ advance: listPx * 1.55, draw: (c, y) => {
+                        c.textAlign = 'left'; c.textBaseline = 'top';
+                        c.font = `${listPx}px Georgia, serif`;
+                        if (i === 0) { c.fillStyle = accent; c.fillText('•', bulletX, y); }
+                        c.fillStyle = '#222'; c.fillText(line, itemX, y);
+                    }});
+                });
+            }
+        }
+
+        return items;
+    }
+
     // Content rendered on the pages front face (+Z) — the right-hand page when open.
     // Baked at construction so the text is visible from the first frame of the
     // open animation rather than appearing afterward.
@@ -162,138 +288,154 @@ export class Book extends THREE.Group {
         const W = canvas.width;
         const H = canvas.height;
 
-        // ── Background ──
         ctx.fillStyle = T.TITLE_BG_COLOR;
         ctx.fillRect(0, 0, W, H);
 
         if (!this.content && !this.modalInfo) return new THREE.CanvasTexture(canvas);
 
-        const [r, g, b] = this.color;
-        const accent = `rgb(${Math.round(r * 0.6)}, ${Math.round(g * 0.6)}, ${Math.round(b * 0.6)})`;
+        const marginXpx = T.CONTENT_MARGIN_X_IN  * PPU;
+        const marginYpx = T.CONTENT_MARGIN_TOP_IN * PPU;
+        const textWidthPx = W - marginXpx * 2;
 
-        const mX  = Math.round(W * T.CONTENT_MARGIN_X_RATIO);
-        const textW = W - mX * 2;
-        let y = Math.round(H * T.CONTENT_MARGIN_TOP_RATIO);
+        const items = this._composeContentItems(ctx, { textWidthPx, marginXpx, typeScale: this._typeScale });
+        const totalH = items.reduce((sum, it) => sum + it.advance, 0);
 
-        // ── Font size helpers ──
-        const titleFont    = Math.max(20, Math.round(W * T.CONTENT_TITLE_RATIO));
-        const subtitleFont = Math.max(16, Math.round(W * T.CONTENT_SUBTITLE_RATIO));
-        const orgFont      = Math.max(14, Math.round(W * T.CONTENT_ORG_RATIO));
-        const bodyFont     = Math.max(12, Math.round(W * T.CONTENT_BODY_RATIO));
-        const listFont     = Math.max(11, Math.round(W * T.CONTENT_LIST_RATIO));
+        // Vertically center the content block in the usable area so leftover space is
+        // balanced top-and-bottom rather than pooling at the bottom. If content is
+        // taller than the page (shouldn't happen post-sizing), start at the top margin.
+        const usableH = H - marginYpx * 2;
+        let y = marginYpx + Math.max(0, (usableH - totalH) / 2);
 
-        // ── Title ──
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle    = '#1a1a1a';
-        ctx.font = `bold ${titleFont}px Georgia, serif`;
-        for (const line of wrapText(ctx, this.content ?? '', textW)) {
-            ctx.fillText(line, W / 2, y);
-            y += Math.round(titleFont * 1.25);
-        }
-        y += Math.round(titleFont * 0.2);
-
-        // ── Subtitle / org ──
-        if (this.modalInfo) {
-            const subtitle = this.modalInfo.degree    ?? this.modalInfo.position ?? '';
-            const org      = this.modalInfo.university ?? this.modalInfo.company  ?? '';
-
-            if (subtitle) {
-                ctx.font      = `italic ${subtitleFont}px Georgia, serif`;
-                ctx.fillStyle = '#444';
-                for (const line of wrapText(ctx, subtitle, textW)) {
-                    ctx.fillText(line, W / 2, y);
-                    y += Math.round(subtitleFont * 1.25);
-                }
-            }
-            if (org) {
-                ctx.font      = `${orgFont}px Georgia, serif`;
-                ctx.fillStyle = '#666';
-                for (const line of wrapText(ctx, org, textW)) {
-                    ctx.fillText(line, W / 2, y);
-                    y += Math.round(orgFont * 1.25);
-                }
-            }
-        }
-
-        // ── Divider ──
-        y += 8;
-        ctx.strokeStyle = accent;
-        ctx.lineWidth   = 1;
-        ctx.beginPath();
-        ctx.moveTo(mX, y); ctx.lineTo(W - mX, y);
-        ctx.stroke();
-        y += 10;
-
-        if (!this.modalInfo) return new THREE.CanvasTexture(canvas);
-
-        ctx.textAlign = 'left';
-
-        // ── Meta stats (GPA / dates) ──
-        const meta = [];
-        if (this.modalInfo.gpa)           meta.push(['GPA',       this.modalInfo.gpa]);
-        if (this.modalInfo.graduationDate) meta.push(['Graduated', this.modalInfo.graduationDate]);
-        if (this.modalInfo.startDate) {
-            const end = this.modalInfo.endDate ?? 'Present';
-            meta.push(['Dates', `${this.modalInfo.startDate} – ${end}`]);
-        }
-        for (const [label, value] of meta) {
-            ctx.font      = `bold ${bodyFont}px Georgia, serif`;
-            ctx.fillStyle = accent;
-            ctx.fillText(`${label}: `, mX, y);
-            const labelW = ctx.measureText(`${label}: `).width;
-            ctx.font      = `${bodyFont}px Georgia, serif`;
-            ctx.fillStyle = '#222';
-            ctx.fillText(value, mX + labelW, y);
-            y += Math.round(bodyFont * 1.5);
-        }
-        if (meta.length) y += 6;
-
-        // ── Section list (projects / accomplishments) ──
-        const listItems   = this.modalInfo.projects ?? this.modalInfo.accomplishments ?? [];
-        const sectionLabel = this.modalInfo.projects
-            ? 'Research Projects'
-            : this.modalInfo.accomplishments
-                ? 'Accomplishments'
-                : null;
-
-        if (sectionLabel && listItems.length) {
-            ctx.font      = `bold ${bodyFont}px Georgia, serif`;
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillText(sectionLabel, mX, y);
-            y += Math.round(bodyFont * 1.3);
-
-            ctx.strokeStyle = accent;
-            ctx.lineWidth   = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(mX, y); ctx.lineTo(W - mX, y);
-            ctx.stroke();
-            y += 6;
-
-            const bulletX = mX + 10;
-            const itemX   = mX + 22;
-            const itemW   = W - itemX - mX;
-            const lineH   = Math.round(listFont * 1.55);
-
-            for (const item of listItems) {
-                const lines = wrapText(ctx, item, itemW);
-                ctx.font = `${listFont}px Georgia, serif`;
-
-                // Stop if there's no room for even the first line
-                if (y + lineH > H - 10) break;
-
-                ctx.fillStyle = accent;
-                ctx.fillText('•', bulletX, y);
-                ctx.fillStyle = '#222';
-                for (const line of lines) {
-                    if (y + lineH > H - 10) break;
-                    ctx.fillText(line, itemX, y);
-                    y += lineH;
-                }
-            }
+        for (const it of items) {
+            if (it.draw && y + it.advance <= H) it.draw(ctx, y);
+            y += it.advance;
         }
 
         return new THREE.CanvasTexture(canvas);
+    }
+
+    // Derives realistic trim dimensions from the laid-out content: fixed readable type
+    // size, page height chosen so content fills ~TARGET_FILL of the page, width nudged
+    // to keep a realistic hardcover aspect ratio, and a small type-scale adjustment so
+    // sparse books fill out and dense books fit on one page. Thickness tracks content
+    // volume as a page-count proxy. Returns { width, height, thickness, typeScale }.
+    _computeContentSizing() {
+        const T   = BOOK_DEFAULTS.TEXTURE;
+        const S   = BOOK_DEFAULTS.CONTENT_SIZING;
+        const PPU = T.CONTENT_PIXELS_PER_UNIT;
+        const pageInset = BOOK_DEFAULTS.PAGE.INSET;
+        const marginYIn = T.CONTENT_MARGIN_TOP_IN;
+        const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+        const ctx = document.createElement('canvas').getContext('2d');
+
+        // Total content height (inches) for a given trim width and type scale.
+        const contentHeightIn = (widthIn, typeScale) => {
+            const canvasW   = (widthIn - pageInset * 2) * PPU;
+            const marginXpx = T.CONTENT_MARGIN_X_IN * PPU;
+            const textWidthPx = canvasW - marginXpx * 2;
+            const items = this._composeContentItems(ctx, { textWidthPx, marginXpx, typeScale });
+            return items.reduce((sum, it) => sum + it.advance, 0) / PPU;
+        };
+
+        // 1. Page height so content occupies ~TARGET_FILL of the usable height, plus a
+        //    deterministic per-book nudge so similar-content books still differ on the shelf.
+        const contentH = contentHeightIn(S.MEASURE_WIDTH, 1);
+        let height = clamp(contentH / S.TARGET_FILL + marginYIn * 2, S.HEIGHT_MIN, S.HEIGHT_MAX);
+        height = clamp(height + this._jitter('h') * S.HEIGHT_JITTER, S.HEIGHT_MIN, S.HEIGHT_MAX);
+
+        // 2. Width from a per-book aspect ratio within the realistic hardcover band.
+        const ratio = S.RATIO_MIN + ((this._jitter('r') + 1) / 2) * (S.RATIO_MAX - S.RATIO_MIN);
+        const width = clamp(height / ratio, S.WIDTH_MIN, S.WIDTH_MAX);
+
+        // 3. Fit type to fill ~TARGET_FILL of the usable height. Content height grows
+        //    super-linearly with type scale (bigger type wraps to more lines), so
+        //    binary-search the scale rather than assuming a linear relationship.
+        const usableHIn = height - marginYIn * 2;
+        const targetH = usableHIn * S.TARGET_FILL;
+        let typeScale;
+        if (contentHeightIn(width, S.TYPE_SCALE_MIN) >= targetH) {
+            typeScale = S.TYPE_SCALE_MIN;        // even smallest type overfills — cram at min
+        } else if (contentHeightIn(width, S.TYPE_SCALE_MAX) <= targetH) {
+            typeScale = S.TYPE_SCALE_MAX;        // even largest type underfills — grow to max
+        } else {
+            let lo = S.TYPE_SCALE_MIN, hi = S.TYPE_SCALE_MAX;
+            for (let i = 0; i < 14; i++) {
+                const mid = (lo + hi) / 2;
+                if (contentHeightIn(width, mid) <= targetH) lo = mid; else hi = mid;
+            }
+            typeScale = lo;
+        }
+
+        // 4. Thickness from content volume (page-count proxy), then thickened if a long
+        //    title needs two readable spine lines (see _twoLineThickness).
+        let thickness = clamp(S.THICKNESS_BASE + contentH * S.THICKNESS_PER_IN,
+                              S.THICKNESS_MIN, S.THICKNESS_MAX);
+        thickness = this._spineThickness(ctx, height, thickness);
+
+        return { width, height, thickness, typeScale };
+    }
+
+    // Chooses how to lay out the spine title: tries 1…SPINE_MAX_LINES balanced columns
+    // and picks the option that yields the largest readable font for the given trim. The
+    // font is limited both by title length (along the spine height) and by how many
+    // columns fit across the spine thickness. Returns { lines, font }.
+    _spineLayout(ctx, thicknessIn, heightIn) {
+        const T   = BOOK_DEFAULTS.TEXTURE;
+        const PPU = T.SPINE_PIXELS_PER_UNIT;
+        const maxLen  = heightIn   * PPU * T.SPINE_MAX_TEXT_WIDTH_RATIO;
+        const widthPx = thicknessIn * PPU * T.SPINE_TEXT_WIDTH_FRAC;
+
+        ctx.font = 'bold 100px Georgia, serif';
+        const perPx = (s) => ctx.measureText(s).width / 100;   // text width per 1px of font
+
+        let best = null;
+        for (let n = 1; n <= T.SPINE_MAX_LINES; n++) {
+            const lines = balanceLines(this.content, n);
+            if (lines.length !== n) break;                     // fewer words than columns
+            const longest   = Math.max(...lines.map(perPx));
+            const fontLen   = maxLen / longest;                // limited by spine length
+            const fontThick = widthPx / (n + (n - 1) * T.SPINE_LINE_GAP_RATIO); // by thickness
+            const font = Math.max(6, Math.min(fontLen, fontThick));
+            if (!best || font > best.font * T.SPINE_LINE_GAIN) best = { lines, font };
+        }
+        return best;
+    }
+
+    // Returns a thickness large enough to host the spine title at a comfortable size
+    // (capped by what the title length allows), without shrinking below the input.
+    _spineThickness(ctx, heightIn, thickness) {
+        const T   = BOOK_DEFAULTS.TEXTURE;
+        const S   = BOOK_DEFAULTS.CONTENT_SIZING;
+        const PPU = T.SPINE_PIXELS_PER_UNIT;
+        const maxLen = heightIn * PPU * T.SPINE_MAX_TEXT_WIDTH_RATIO;
+
+        ctx.font = 'bold 100px Georgia, serif';
+        const perPx = (s) => ctx.measureText(s).width / 100;
+
+        // Pick the line count giving the largest comfortable font, then the thickness
+        // needed to host that many columns at that size.
+        let need = thickness;
+        let bestFont = 0;
+        for (let n = 1; n <= T.SPINE_MAX_LINES; n++) {
+            const lines = balanceLines(this.content, n);
+            if (lines.length !== n) break;
+            const longest   = Math.max(...lines.map(perPx));
+            const fontLen   = maxLen / longest;
+            const target    = Math.min(fontLen, T.SPINE_COMFORT_FONT_PX);
+            if (target <= bestFont * T.SPINE_LINE_GAIN) continue;
+            bestFont = target;
+            need = target * (n + (n - 1) * T.SPINE_LINE_GAP_RATIO) / (PPU * T.SPINE_TEXT_WIDTH_FRAC);
+        }
+        return Math.min(Math.max(thickness, need), S.THICKNESS_MAX);
+    }
+
+    // Stable [-1, 1] hash from the book id (+ salt) for deterministic per-book variation.
+    _jitter(salt = '') {
+        const str = this.bookId + salt;
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+        return ((Math.abs(h) % 1000) / 1000) * 2 - 1;
     }
 
     // ─── Geometry ───────────────────────────────────────────────────────────────
@@ -579,6 +721,35 @@ export class Book extends THREE.Group {
 }
 
 // ─── Module helpers ──────────────────────────────────────────────────────────
+
+// Splits `text` into `n` character-balanced lines at word boundaries (greedy: fill to
+// the running target length). Returns fewer than `n` lines when there aren't enough
+// words to fill them.
+function balanceLines(text, n) {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= n) return n === 1 ? [words.join(' ')] : words.slice();
+    if (n === 1) return [words.join(' ')];
+
+    const total  = words.reduce((s, w) => s + w.length, 0) + (words.length - 1);
+    const target = total / n;
+    const lines = [];
+    let line = '', remainingWords = words.length;
+    for (const word of words) {
+        const linesLeft = n - lines.length;
+        const candidate = line ? `${line} ${word}` : word;
+        // Start a new line once this one is near its share — but never strand the
+        // remaining words with fewer lines than they need.
+        if (line && candidate.length > target && linesLeft > 1 && remainingWords >= linesLeft) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = candidate;
+        }
+        remainingWords--;
+    }
+    if (line) lines.push(line);
+    return lines;
+}
 
 // Breaks `text` into lines no wider than `maxWidth` canvas units.
 function wrapText(ctx, text, maxWidth) {
