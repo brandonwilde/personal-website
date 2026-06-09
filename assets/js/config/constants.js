@@ -70,6 +70,16 @@ export const BOOKSHELF_DIMENSIONS = {
   BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
 };
 
+// A shelf is divided into 4 evenly spaced sections (1–4, left→right). These are the
+// center positions of each section as a fraction of the shelf half-width. Single source
+// of truth — used wherever something is placed by section (books, contact card, etc.).
+export const SECTION_FRACTIONS = { 1: -0.75, 2: -0.25, 3: 0.25, 4: 0.75 };
+
+// World-space X of a section's center.
+export function sectionCenterX(section) {
+  return SECTION_FRACTIONS[section] * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
+}
+
 // Wood material for bookshelf frame and shelves
 export const WOOD_MATERIAL = {
   COLOR:     0xc8a87a,

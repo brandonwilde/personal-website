@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, sectionCenterX } from '../config/constants.js';
 
 export class Shelf {
     constructor(id, y, material) {
@@ -25,12 +25,7 @@ export class Shelf {
     }
 
     addBookSection(books, section) {
-        const sectionX = {
-            1: -0.75,
-            2: -0.25,
-            3:  0.25,
-            4:  0.75,
-        }[section] * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
+        const sectionX = sectionCenterX(section);
 
         const spacing    = BOOKSHELF_DIMENSIONS.BOOK_SPACING;
         const totalWidth = books.reduce((sum, book) => sum + book.dimensions.thickness, 0)
