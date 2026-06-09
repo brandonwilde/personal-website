@@ -34,5 +34,6 @@
 
 ## ⚙️ Stability / Code Quality
 
+- [ ] Improve code organization - break up big files, co-locate related code, such as that for displaying an item and its content
 - [ ] **ES module cache-busting** — Requires Ctrl+Shift+R to pick up JS changes in in browser. Add a version query string to module imports or use a bundler.
 - [ ] **Mobile / touch support** — OrbitControls work on desktop; verify and fix touch interaction on mobile.
