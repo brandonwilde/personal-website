@@ -116,7 +116,7 @@ function extractReview(doc, { title, author }) {
     return text;
 }
 
-// Returns up to `config.count` normalized recent reads. Throws on network/parse failure so
+// Returns the normalized recent reads from the feed. Throws on network/parse failure so
 // the caller can fall back to the committed snapshot.
 export async function fetchRecentReads(config) {
     const items = await fetchFeedItems(config);
@@ -126,9 +126,7 @@ export async function fetchRecentReads(config) {
         .filter(r => r.title);
 
     // The feed can carry multiple update entries for the same book (e.g. rating + shelving).
-    // Keep the first occurrence of each book so duplicates don't render twice or crowd out
-    // later books, then take the most recent `count`.
+    // Keep the first occurrence of each book so duplicates don't render twice.
     const seen = new Set();
-    const unique = reads.filter(r => (seen.has(r.id) ? false : seen.add(r.id)));
-    return unique.slice(0, config.count);
+    return reads.filter(r => (seen.has(r.id) ? false : seen.add(r.id)));
 }

@@ -317,7 +317,6 @@ export const bookConfigs = {
         // (data/goodreadsSnapshot.js), with a live RSS refresh swapped in if it differs.
         goodreads: {
             userId:  '7208433',
-            count:   7,
             // CORS proxy converting the Goodreads RSS feed to JSON; snapshot is the fallback.
             proxyBase: 'https://api.rss2json.com/v1/api.json?rss_url=',
         },

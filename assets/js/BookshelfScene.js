@@ -241,7 +241,7 @@ export class BookshelfScene {
     addBookReviews(config) {
         this._goodreadsConfig = config;
         this._goodreadsPlacement = this.placementFor('goodreads');
-        this._reviewReads = goodreadsSnapshot.slice(0, config.count);
+        this._reviewReads = goodreadsSnapshot;
         this._reviewBooks = this._buildReviewBooks(this._reviewReads, config);
         this._refreshReviews(config);
     }

@@ -110,4 +110,18 @@ export const goodreadsSnapshot = [
         bookUrl:   'https://www.goodreads.com/book/show/21977917-understanding-beliefs',
         authorUrl: 'https://www.goodreads.com/author/show/48031.Nils_J_Nilsson',
     },
+    {
+        id: 'gr8629212565',
+        title: 'Still the Mind: An Introduction to Meditation',
+        author: 'Alan W. Watts',
+        coverImgSrc:     'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1388284898l/60548._SX50_.jpg',
+        coverImgSrcFull: 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1388284898l/60548.jpg',
+        rating: 5,
+        genres: ['philosophy', 'self-improvement'],
+        dateAdded: '2026-05-25 04:10:24',
+        review: '',
+        reviewUrl: 'https://www.goodreads.com/review/show/8629212565',
+        bookUrl:   'https://www.goodreads.com/book/show/60548.Still_the_Mind',
+        authorUrl: 'https://www.goodreads.com/author/show/1501668.Alan_W_Watts',
+    },
 ];
