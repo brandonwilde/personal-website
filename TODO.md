@@ -34,6 +34,8 @@
 
 ## ⚙️ Stability / Code Quality
 
+- [ ] **Goodreads via GitHub Action (replace runtime rss2json)** — A scheduled action fetches the `list_rss?shelf=read` feed server-side (no CORS/proxy/10-item cap), parses it, and commits a regenerated `goodreadsSnapshot.js`. Removes the flaky runtime rss2json dependency; data is only as fresh as the cron. Unlocks build-time processing:
+  - Sample each cover's dominant color and bake a spine/back hex into the snapshot, replacing the arbitrary `_hashColor(title)` so spines match the real books.
 - [ ] Improve code organization - break up big files, co-locate related code, such as that for displaying an item and its content
 - [ ] **ES module cache-busting** — Requires Ctrl+Shift+R to pick up JS changes in in browser. Add a version query string to module imports or use a bundler.
 - [ ] **Mobile / touch support** — OrbitControls work on desktop; verify and fix touch interaction on mobile.
