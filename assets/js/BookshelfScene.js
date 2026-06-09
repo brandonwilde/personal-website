@@ -5,7 +5,9 @@ import { BusinessCard } from './components/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
 import { SceneManager } from './managers/SceneManager.js';
 import { InteractionManager } from './managers/InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL } from './config/constants.js';
+import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, sectionCenterX } from './config/constants.js';
+import { goodreadsSnapshot } from './data/goodreadsSnapshot.js';
+import { fetchRecentReads } from './data/goodreads.js';
 
 export class BookshelfScene {
     constructor() {
@@ -116,18 +118,22 @@ export class BookshelfScene {
     }
 
     addBooksFromConfig(bookConfigs, shelfConfigs) {
-        // Process each shelf
+        // Special items (goodreads, contact, blog) record only their location here,
+        // keyed by ref, and are built by their own render methods via placementFor().
+        this._placements = {};
+
         for (const [shelfId, shelfConfig] of Object.entries(shelfConfigs)) {
             const shelf = this.shelves.get(shelfId);
             if (!shelf) continue;
 
-            // Process each section in the shelf
-            for (const [section, bookIds] of Object.entries(shelfConfig.sections)) {
-                // Create all books for this section
+            for (const [section, entry] of Object.entries(shelfConfig.sections ?? {})) {
+                if (!Array.isArray(entry)) {
+                    this._placements[entry.ref] = { shelfId, section: parseInt(section) };
+                    continue;
+                }
+
                 const sectionBooks = [];
-                
-                for (const bookId of bookIds) {
-                    // Find book config
+                for (const bookId of entry) {
                     let bookConfig = null;
                     for (const category of Object.values(bookConfigs)) {
                         if (bookId in category) {
@@ -135,19 +141,21 @@ export class BookshelfScene {
                             break;
                         }
                     }
-                    
+
                     if (bookConfig) {
-                        const book = this.createBook(bookId, bookConfig);
-                        sectionBooks.push(book);
+                        sectionBooks.push(this.createBook(bookId, bookConfig));
                     }
                 }
 
-                // Add all books in this section at once
                 if (sectionBooks.length > 0) {
                     shelf.addBookSection(sectionBooks, parseInt(section));
                 }
             }
         }
+    }
+
+    placementFor(ref) {
+        return this._placements?.[ref] ?? null;
     }
 
     // Places the contact BusinessCard at the position defined in its placement config.
@@ -156,12 +164,11 @@ export class BookshelfScene {
     addContactCard(contactConfig) {
         const card = new BusinessCard('contact', contactConfig);
 
-        const { shelfId, section, shelfAngle } = contactConfig.placement;
+        const { shelfId, section } = this.placementFor('contact');
+        const { shelfAngle } = contactConfig.placement;
         const shelf = this.shelves.get(shelfId);
         const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
-        // Section center fractions (matches the map in Shelf.addBookSection)
-        const sectionFraction = { 1: -0.75, 2: -0.25, 3: 0.25, 4: 0.75 }[section];
-        const sectionX = sectionFraction * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
+        const sectionX = sectionCenterX(section);
 
         card.position.set(sectionX, shelfSurfaceY, 0);
         card.rotation.y = shelfAngle;
@@ -179,15 +186,14 @@ export class BookshelfScene {
         this.books.set('contact', { object: card });
     }
 
-    // Places the blog as a leaning spiral notebook tucked into the back-left
-    // corner of a shelf — bottom edge on the shelf, top-left corner against the
-    // left side wall, top-right corner against the back panel. Tunable values
-    // live in the blog entry of contentConfig.js.
+    // Places the blog as a spiral notebook leaning into a shelf's back-left corner,
+    // resting against the shelf, left side wall, and back panel.
     addBlogNotebook(config) {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
 
-        const { shelfId, leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack } = config.placement;
+        const { shelfId } = this.placementFor('blog');
+        const { leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack } = config.placement;
 
         const shelf = this.shelves.get(shelfId);
         const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
@@ -227,6 +233,101 @@ export class BookshelfScene {
             color: config.color,
         });
         this.books.set('blog', { object: notebook });
+    }
+
+    // Populates a shelf section with one real 3D book per recent Goodreads read. Renders
+    // immediately from the committed snapshot (no network wait → no pop-in), then kicks off
+    // a background refresh that silently swaps in live data if it has changed.
+    addBookReviews(config) {
+        this._goodreadsConfig = config;
+        this._goodreadsPlacement = this.placementFor('goodreads');
+        this._reviewReads = goodreadsSnapshot;
+        this._reviewBooks = this._buildReviewBooks(this._reviewReads, config);
+        this._refreshReviews(config);
+    }
+
+    // Deterministic book color from the title so it's stable across reloads and never waits
+    // on the (cross-origin) cover image to decode.
+    _hashColor(str) {
+        const palette = Object.values(colors);
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+        return palette[Math.abs(h) % palette.length];
+    }
+
+    _buildReviewBooks(reads, config) {
+        const { shelfId, section } = this._goodreadsPlacement;
+        const shelf = this.shelves.get(shelfId);
+        if (!shelf) return [];
+
+        const books = reads.map(read => this.createBook(read.id, {
+            color:   this._hashColor(read.title),
+            content: read.title,
+            modalInfo: {
+                kind:            'review',
+                author:          read.author,
+                rating:          read.rating,
+                genres:          read.genres,
+                dateAdded:       read.dateAdded,
+                review:          read.review,
+                coverImgSrc:     read.coverImgSrc,
+                coverImgSrcFull: read.coverImgSrcFull,
+                reviewUrl:       read.reviewUrl,
+                bookUrl:         read.bookUrl,
+                authorUrl:       read.authorUrl,
+            },
+        }));
+
+        shelf.addBookSection(books, section);
+        return books;
+    }
+
+    async _refreshReviews(config) {
+        let reads;
+        try {
+            reads = await fetchRecentReads(config);
+        } catch (err) {
+            console.warn('[goodreads] live refresh failed — keeping snapshot', err);
+            return;
+        }
+        if (!reads.length) return;
+
+        const signature = list => list.map(r => `${r.title}|${r.rating}|${r.dateAdded}|${r.review ? 1 : 0}`).join('~');
+        if (signature(reads) === signature(this._reviewReads)) return;   // nothing changed
+
+        this._swapReviewBooks(reads, config);
+    }
+
+    // Cross-fades the rendered review books out and the freshly fetched set in. Old books are
+    // detached from interaction/registry immediately (freeing their ids in case any persist)
+    // and removed from the scene once faded out.
+    _swapReviewBooks(reads, config) {
+        const shelf = this.shelves.get(this._goodreadsPlacement.shelfId);
+
+        for (const book of this._reviewBooks) {
+            this.interactionManager.unregisterBook(book.bookId);
+            this.books.delete(book.bookId);
+            shelf?.removeBook(book.bookId);
+            this._fadeBook(book, 1, 0, () => this.sceneManager.remove(book));
+        }
+
+        this._reviewReads = reads;
+        const fresh = this._buildReviewBooks(reads, config);
+        fresh.forEach(book => this._fadeBook(book, 0, 1));
+        this._reviewBooks = fresh;
+    }
+
+    _fadeBook(book, from, to, onComplete) {
+        const mats = Object.values(book.materials);
+        mats.forEach(m => { m.transparent = true; m.opacity = from; });
+        const proxy = { o: from };
+        window.gsap.to(proxy, {
+            o: to,
+            duration: 0.5,
+            ease: 'power2.inOut',
+            onUpdate: () => mats.forEach(m => { m.opacity = proxy.o; }),
+            onComplete,
+        });
     }
 
     animate() {

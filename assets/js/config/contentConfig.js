@@ -1,24 +1,27 @@
 import { colors } from './constants.js';
 
-// Book configurations organized by shelf and section
+// Single source of truth for where everything sits on the bookshelf. Each section
+// value is either an array of book ids (standard books) or { ref: '<key>' } for a
+// special item whose content/tuning lives in bookConfigs.other.<key>.
 export const shelfConfigs = {
-    A: { // Education and Skills
+    A: {
         sections: {
-            1: ['bachelors', 'masters'],  // Education
-            3: ['skillsA', 'skillsB', 'skillsC', 'skillsD']  // Skills/Certifications
+            1: ['bachelors', 'masters'],
+            3: { ref: 'goodreads' },
         }
     },
-    B: { // Projects and Reviews
+    B: {
         sections: {
             1: ['projectsA', 'projectsB', 'projectsC', 'projectsD', 'projectsE', 'projectsF', 'projectsG'],
-            3: ['reviewsA', 'reviewsB'],
-            4: ['bookReviews', 'recentReads']
+            4: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
         }
     },
-    C: { // Professional Experience and Contact
+    C: {
         sections: {
+            1: { ref: 'blog' },
             2: ['misc'],
             3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
+            4: { ref: 'contact' },
         }
     }
 };
@@ -287,52 +290,14 @@ export const bookConfigs = {
         }
     },
 
-    // Review books
-    reviews: {
-        reviewsA: {
-            id: 'reviewsA',
-            width: 5.5,
-            height: 6.5,
-            thickness: 2,
-            color: colors.green,
-            content: 'Reviews A'
-        },
-        reviewsB: {
-            id: 'reviewsB',
-            width: 5.5,
-            height: 6.5,
-            thickness: 1.5,
-            color: colors.blue,
-            content: 'Reviews B'
-        },
-        bookReviews: {
-            id: 'bookReviews',
-            width: 4.9,
-            height: 6.5,
-            thickness: 1.8,
-            color: colors.tan,
-            content: 'Book Reviews'
-        },
-        recentReads: {
-            id: 'recentReads',
-            width: 5.9,
-            height: 6.5,
-            thickness: 1.5,
-            color: colors.gray,
-            content: 'Recent Reads'
-        }
-    },
-
-    // Other books
+    // Other books/items
     other: {
         blog: {
             id: 'blog',
             color: colors.green,
             link: 'https://the.btw.so',
-            // Placement: tucked into the back-left corner of a shelf.
-            // The notebook leans on three surfaces — shelf, left side wall, back panel.
+            // Leans into the back-left corner of its shelf.
             placement: {
-                shelfId:        'C',
                 leanBack:       -0.40, // rotation.x — tip the top back toward the panel (more negative = leans back more)
                 swivel:          0.55, // rotation.y — turn the right side toward the back wall
                 leanLeft:        0.22, // rotation.z — tip the top toward the left side wall
@@ -348,13 +313,17 @@ export const bookConfigs = {
             color: colors.blue,
             content: 'Miscellaneous'
         },
+        // Goodreads recent reads, rendered as real 3D books from the committed snapshot
+        // (data/goodreadsSnapshot.js), with a live RSS refresh swapped in if it differs.
+        goodreads: {
+            userId:  '7208433',
+            // CORS proxy converting the Goodreads RSS feed to JSON; snapshot is the fallback.
+            proxyBase: 'https://api.rss2json.com/v1/api.json?rss_url=',
+        },
         contact: {
             id: 'contact',
             color: colors.white,
-            // Placement: angled slightly so it looks naturally placed on the shelf
             placement: {
-                shelfId:    'C',
-                section:    4,
                 shelfAngle: -0.35,  // radians — yaw applied to the holder
             },
             modalInfo: {

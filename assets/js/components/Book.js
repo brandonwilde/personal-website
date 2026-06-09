@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BOOK_DEFAULTS, ANIM_PARAMS } from '../config/constants.js';
+import { formatReadDate } from '../data/goodreads.js';
 
 export class Book extends THREE.Group {
     constructor(bookId, {
@@ -15,6 +16,9 @@ export class Book extends THREE.Group {
         this.color = color;
         this.content = content;
         this.modalInfo = modalInfo;
+        // Spine text: review books show only the main title (pre-colon) so the spine stays
+        // legible; every other book keeps its full content on the spine.
+        this.spineText = modalInfo?.kind === 'review' ? this._titleParts().main : content;
         this.isHovered = false;
         this.isOpen = false;
         this.initialX = 0;
@@ -40,6 +44,15 @@ export class Book extends THREE.Group {
 
     // ─── Texture Creators ───────────────────────────────────────────────────────
 
+    // Splits the title on the first colon into { main, subtitle }. Books without a colon
+    // return the whole title as `main` and an empty subtitle.
+    _titleParts() {
+        const raw = this.content ?? '';
+        const idx = raw.indexOf(':');
+        if (idx === -1) return { main: raw.trim(), subtitle: '' };
+        return { main: raw.slice(0, idx).trim(), subtitle: raw.slice(idx + 1).trim() };
+    }
+
     // Vertical title text on the spine
     createSpineTexture() {
         const { thickness, height } = this.dimensions;
@@ -54,7 +67,7 @@ export class Book extends THREE.Group {
         ctx.fillStyle = `rgb(${Math.round(r*d)}, ${Math.round(g*d)}, ${Math.round(b*d)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        if (this.content) {
+        if (this.spineText) {
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
             ctx.fillStyle = luminance > T.SPINE_LUMINANCE_THRESHOLD ? '#111111' : '#f0ece4';
 
@@ -129,28 +142,79 @@ export class Book extends THREE.Group {
         // Title text
         if (this.content) {
             ctx.fillStyle = T.TITLE_TEXT_COLOR;
-            const maxTextWidth = canvas.width - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
-
-            let fontSize = Math.max(16, Math.floor(canvas.width * T.TITLE_FONT_SIZE_RATIO));
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            const maxTextWidth = canvas.width  - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
+            const usableHeight = canvas.height - (innerMargin + T.TITLE_TEXT_PADDING) * 2;
+            const lineHRatio   = T.TITLE_LINE_HEIGHT_RATIO;
+            const minFontSize  = 10;
+            let fontSize = Math.max(16, Math.floor(canvas.width * T.TITLE_FONT_SIZE_RATIO));
 
-            // Shrink-to-fit: wrap text, then shrink font if any line still overflows
-            // (e.g. a single long word that can't be broken).
-            let lines = [];
-            const minFontSize = 10;
-            while (true) {
-                ctx.font = `bold ${fontSize}px Georgia, serif`;
-                lines = wrapText(ctx, this.content, maxTextWidth);
-                const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
-                if (widest <= maxTextWidth || fontSize <= minFontSize) break;
-                fontSize -= 1;
+            if (this.modalInfo?.kind === 'review') {
+                // Review left page: main title (large) + subtitle (medium) + author (small),
+                // shrunk together until the whole block fits the border, then centered — so a
+                // long title never pushes the byline into the margin.
+                const { main, subtitle } = this._titleParts();
+                const author = this.modalInfo.author;
+
+                const layout = (size) => {
+                    const blocks = [];
+                    const add = (text, factor, style, color, gapAfter) => {
+                        if (!text) return;
+                        const fs = size * factor;
+                        ctx.font = `${style} ${fs}px Georgia, serif`;
+                        blocks.push({ lines: wrapText(ctx, text, maxTextWidth), fs, style, color, gapAfter: gapAfter * size });
+                    };
+                    add(main, 1.0, 'bold', '#1a1a1a', 0.35);
+                    add(subtitle, 0.62, '', '#3a3a3a', 0.45);
+                    add(author ? `by ${author}` : '', 0.5, 'italic', '#666', 0);
+                    return blocks;
+                };
+
+                let blocks, totalH;
+                while (true) {
+                    blocks = layout(fontSize);
+                    totalH = 0;
+                    let widest = 0;
+                    for (const blk of blocks) {
+                        for (const l of blk.lines) {
+                            ctx.font = `${blk.style} ${blk.fs}px Georgia, serif`;
+                            widest = Math.max(widest, ctx.measureText(l).width);
+                        }
+                        totalH += blk.lines.length * blk.fs * lineHRatio + blk.gapAfter;
+                    }
+                    if ((totalH <= usableHeight && widest <= maxTextWidth) || fontSize <= minFontSize) break;
+                    fontSize -= 1;
+                }
+
+                let y = canvas.height / 2 - totalH / 2;
+                for (const blk of blocks) {
+                    const lh = blk.fs * lineHRatio;
+                    ctx.fillStyle = blk.color;
+                    for (const l of blk.lines) {
+                        ctx.font = `${blk.style} ${blk.fs}px Georgia, serif`;
+                        ctx.fillText(l, canvas.width / 2, y + lh / 2);
+                        y += lh;
+                    }
+                    y += blk.gapAfter;
+                }
+            } else {
+                // Shrink-to-fit: wrap text, then shrink font if any line still overflows
+                // (e.g. a single long word that can't be broken).
+                let lines = [];
+                while (true) {
+                    ctx.font = `bold ${fontSize}px Georgia, serif`;
+                    lines = wrapText(ctx, this.content, maxTextWidth);
+                    const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
+                    if (widest <= maxTextWidth || fontSize <= minFontSize) break;
+                    fontSize -= 1;
+                }
+
+                const lineHeight = fontSize * lineHRatio;
+                const textBlockHeight = lines.length * lineHeight;
+                const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
+                lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
             }
-
-            const lineHeight = fontSize * T.TITLE_LINE_HEIGHT_RATIO;
-            const textBlockHeight = lines.length * lineHeight;
-            const startY = canvas.height / 2 - textBlockHeight / 2 + lineHeight / 2;
-            lines.forEach((l, i) => ctx.fillText(l, canvas.width / 2, startY + i * lineHeight));
         }
 
         return new THREE.CanvasTexture(canvas);
@@ -190,6 +254,112 @@ export class Book extends THREE.Group {
                 }});
             }
         };
+
+        // ── Goodreads review variant ──
+        // Right page holds everything substantive: a title/subtitle/author ladder, a large
+        // star rating, the genres, and the review text when one was written.
+        if (this.modalInfo?.kind === 'review') {
+            const { author, rating = 0, genres = [], review, dateAdded } = this.modalInfo;
+            const [cr, cg, cb] = this.color;
+            const { main, subtitle } = this._titleParts();
+
+            // Size ladder: bold main title, lighter subtitle, smaller italic byline.
+            centered(main, `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
+            if (subtitle) {
+                gap(titlePx * 0.12);
+                centered(subtitle, `${subPx}px Georgia, serif`, subPx, '#3a3a3a');
+            }
+            gap(titlePx * 0.12);
+            if (author) centered(`by ${author}`, `italic ${orgPx}px Georgia, serif`, orgPx, '#666');
+            gap(subPx * 0.55);
+
+            // Large star rating (filled vs. outlined star polygons)
+            const starR    = titlePx * 0.62;
+            const starStep = starR * 2.2;
+            const drawStar = (c, cx, cy, filled) => {
+                c.beginPath();
+                for (let i = 0; i < 10; i++) {
+                    const ang = -Math.PI / 2 + i * Math.PI / 5;
+                    const rad = i % 2 === 0 ? starR : starR * 0.42;
+                    const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
+                    i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+                }
+                c.closePath();
+                if (filled) { c.fillStyle = '#d9a520'; c.fill(); }
+                else {
+                    c.fillStyle = '#ece4cf'; c.fill();
+                    c.strokeStyle = '#c9bd96'; c.lineWidth = 1; c.stroke();
+                }
+            };
+            items.push({ advance: starR * 2 + bodyPx * 0.6, draw: (c, y) => {
+                const cy = y + starR;
+                const startX = W / 2 - starStep * 2;   // 5 stars centered
+                for (let i = 0; i < 5; i++) drawStar(c, startX + i * starStep, cy, i < rating);
+            }});
+
+            // Date read — the feed's raw pubDate, formatted to "Mon YYYY" here so the
+            // display granularity stays in the view layer. Small italic caption under the stars.
+            const readLabel = formatReadDate(dateAdded);
+            if (readLabel) {
+                centered(`Read ${readLabel}`, `italic ${listPx}px Georgia, serif`, listPx, '#8a8170');
+                gap(bodyPx * 0.2);
+            }
+
+            // Genres — a centered small-caps middot line, wrapped by whole genre so a
+            // separator never orphans at a line start.
+            if (genres.length) {
+                const muted   = `rgb(${Math.round(cr*0.5)},${Math.round(cg*0.5)},${Math.round(cb*0.5)})`;
+                const gPx     = listPx * 0.95;
+                const sep     = '   ·   ';
+                const spacing = '1px';
+                const labels  = genres.map(g => g.toUpperCase());
+
+                ctx.font = `${gPx}px Georgia, serif`;
+                if ('letterSpacing' in ctx) ctx.letterSpacing = spacing;
+                const lines = [];
+                let cur = [];
+                for (const lab of labels) {
+                    const test = [...cur, lab].join(sep);
+                    if (ctx.measureText(test).width > textWidthPx && cur.length) { lines.push(cur); cur = [lab]; }
+                    else cur.push(lab);
+                }
+                if (cur.length) lines.push(cur);
+                if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+                gap(bodyPx * 0.2);
+                for (const lineGenres of lines) {
+                    const lineStr = lineGenres.join(sep);
+                    items.push({ advance: gPx * 1.6, draw: (c, y) => {
+                        c.font = `${gPx}px Georgia, serif`; c.fillStyle = muted;
+                        c.textAlign = 'center'; c.textBaseline = 'top';
+                        if ('letterSpacing' in c) c.letterSpacing = spacing;
+                        c.fillText(lineStr, W / 2, y);
+                        if ('letterSpacing' in c) c.letterSpacing = '0px';
+                    }});
+                }
+                gap(bodyPx * 0.2);
+            }
+
+            // Review prose (only when the user actually wrote one)
+            if (review) {
+                gap(bodyPx * 0.6);
+                items.push({ advance: 2, draw: (c, y) => {
+                    c.strokeStyle = accent; c.lineWidth = 1;
+                    c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
+                }});
+                gap(bodyPx * 0.7);
+                ctx.font = `${bodyPx}px Georgia, serif`;
+                for (const line of wrapText(ctx, review, textWidthPx)) {
+                    items.push({ advance: bodyPx * lh, draw: (c, y) => {
+                        c.font = `${bodyPx}px Georgia, serif`; c.fillStyle = '#222';
+                        c.textAlign = 'left'; c.textBaseline = 'top';
+                        c.fillText(line, marginXpx, y);
+                    }});
+                }
+            }
+
+            return items;
+        }
 
         // ── Title ──
         centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
@@ -391,7 +561,7 @@ export class Book extends THREE.Group {
 
         let best = null;
         for (let n = 1; n <= T.SPINE_MAX_LINES; n++) {
-            const lines = balanceLines(this.content, n);
+            const lines = balanceLines(this.spineText, n);
             if (lines.length !== n) break;                     // fewer words than columns
             const longest   = Math.max(...lines.map(perPx));
             const fontLen   = maxLen / longest;                // limited by spine length
@@ -418,7 +588,7 @@ export class Book extends THREE.Group {
         let need = thickness;
         let bestFont = 0;
         for (let n = 1; n <= T.SPINE_MAX_LINES; n++) {
-            const lines = balanceLines(this.content, n);
+            const lines = balanceLines(this.spineText, n);
             if (lines.length !== n) break;
             const longest   = Math.max(...lines.map(perPx));
             const fontLen   = maxLen / longest;
@@ -505,6 +675,21 @@ export class Book extends THREE.Group {
             this.materials.cover,  // -Z
         ];
 
+        // Review books show the real Goodreads cover on the front outer face. The
+        // procedural cover texture stands in (hash color) until the image loads, so the
+        // book is never blank; the spine/back stay procedural to keep the hash color
+        // instant and avoid reading pixels off a cross-origin image.
+        let frontOuterMat = this.materials.cover;
+        if (this.modalInfo?.kind === 'review' && this.modalInfo.coverImgSrcFull) {
+            frontOuterMat = new THREE.MeshStandardMaterial({
+                map:       coverTexture,
+                roughness: M.COVER_ROUGHNESS,
+                metalness: M.COVER_METALNESS,
+            });
+            this.materials.frontArt = frontOuterMat;
+            this._loadCoverImage(frontOuterMat, this.modalInfo.coverImgSrcFull, this.modalInfo.coverImgSrc);
+        }
+
         // Front cover uses per-face materials so the inside (-Z face, index 5) shows
         // the title page when the cover swings open toward the viewer.
         const frontCoverFaceMaterials = [
@@ -512,7 +697,7 @@ export class Book extends THREE.Group {
             this.materials.cover,      // -X (spine edge)
             this.materials.cover,      // +Y
             this.materials.cover,      // -Y
-            this.materials.cover,      // +Z outer face
+            frontOuterMat,             // +Z outer face — real cover art for review books
             this.materials.titlePage,  // -Z inner face — visible when open
         ];
 
@@ -559,6 +744,24 @@ export class Book extends THREE.Group {
         this.add(container);
         this.userData.isBook = true;
         this.userData.bookId = this.bookId;
+    }
+
+    // Loads a real book cover into `material` asynchronously, swapping it in once decoded
+    // (the procedural placeholder shows until then). gr-assets serves the image with
+    // `Access-Control-Allow-Origin: *`, so it uploads to WebGL cleanly. Falls back to the
+    // thumbnail URL if the full-resolution variant fails; on total failure the placeholder
+    // stays. Never blocks the first render.
+    _loadCoverImage(material, url, fallbackUrl) {
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+        const apply = (tex) => {
+            tex.colorSpace = THREE.SRGBColorSpace;
+            material.map = tex;
+            material.needsUpdate = true;
+        };
+        loader.load(url, apply, undefined, () => {
+            if (fallbackUrl && fallbackUrl !== url) loader.load(fallbackUrl, apply, undefined, () => {});
+        });
     }
 
     // Returns the live params object (debug panel mutations win over defaults).

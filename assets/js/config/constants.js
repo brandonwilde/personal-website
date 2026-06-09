@@ -70,6 +70,14 @@ export const BOOKSHELF_DIMENSIONS = {
   BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
 };
 
+// Section centers (1–4, left→right) as a fraction of the shelf half-width.
+export const SECTION_FRACTIONS = { 1: -0.75, 2: -0.25, 3: 0.25, 4: 0.75 };
+
+// World-space X of a section's center.
+export function sectionCenterX(section) {
+  return SECTION_FRACTIONS[section] * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
+}
+
 // Wood material for bookshelf frame and shelves
 export const WOOD_MATERIAL = {
   COLOR:     0xc8a87a,
@@ -149,23 +157,23 @@ export const BOOK_DEFAULTS = {
     COVER_NOISE_AMPLITUDE: 24,  // ±noise added per channel for fabric grain
 
     // Title page texture (inner cover face — left page when open)
-    TITLE_PIXELS_PER_UNIT:      42,
+    TITLE_PIXELS_PER_UNIT:      100,   // canvas pixels per inch — high-res for close zoom
     TITLE_BG_COLOR:             '#f8f4ec',
     TITLE_TEXT_COLOR:           '#1a1a1a',
     TITLE_BORDER_COLOR_FACTOR:  0.6,   // multiplier to darken book color for borders
-    TITLE_OUTER_MARGIN:         14,    // px from canvas edge to outer border
-    TITLE_OUTER_LINE_WIDTH:     4,     // px width of outer border stroke
-    TITLE_INNER_MARGIN_OFFSET:  7,     // px gap between outer and inner border
+    TITLE_OUTER_MARGIN:         33,    // px from canvas edge to outer border (~0.33in)
+    TITLE_OUTER_LINE_WIDTH:     10,    // px width of outer border stroke (~0.10in)
+    TITLE_INNER_MARGIN_OFFSET:  17,    // px gap between outer and inner border (~0.17in)
     TITLE_FONT_SIZE_RATIO:      0.14,  // initial font size as fraction of canvas width
     TITLE_LINE_HEIGHT_RATIO:    1.5,   // line height as multiple of font size
-    TITLE_TEXT_PADDING:         24,    // px padding inside inner border for text
+    TITLE_TEXT_PADDING:         57,    // px padding inside inner border for text (~0.57in)
 
     // Content page texture (pages +Z face — right page when open)
     // Type is sized in physical inches (not ratios of width) so text appears at a
     // consistent, readable size across every book regardless of trim size — the way
     // real publishing works. A book's dimensions then follow from its content; see
     // CONTENT_SIZING below and Book._computeContentSizing().
-    CONTENT_PIXELS_PER_UNIT:  80,    // canvas pixels per inch — high-res for close zoom
+    CONTENT_PIXELS_PER_UNIT:  120,   // canvas pixels per inch — high-res for close zoom
     CONTENT_TITLE_IN:         0.30,  // bold title (~22pt)
     CONTENT_SUBTITLE_IN:      0.21,  // italic subtitle / position (~15pt)
     CONTENT_ORG_IN:           0.17,  // org / company line (~12pt)

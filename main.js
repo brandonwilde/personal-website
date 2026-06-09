@@ -7,6 +7,7 @@ window.onload = () => {
 
     const bookshelfScene = new BookshelfScene();
     bookshelfScene.addBooksFromConfig(bookConfigs, shelfConfigs);
+    bookshelfScene.addBookReviews(bookConfigs.other.goodreads);
     bookshelfScene.addContactCard(bookConfigs.other.contact);
     bookshelfScene.addBlogNotebook(bookConfigs.other.blog);
     bookshelfScene.animate();

@@ -9,7 +9,6 @@
 - [ ] **Shelf labels** — Add visible section labels to each shelf row (like the main version) so visitors understand the categories at a glance without opening books.
 - [ ] **Skills books content** — `skillsA–D` have no `modalInfo`. Add real content: programming languages, tools & frameworks, spoken languages, other skills.
 - [ ] **Projects books content** — `projectsA–G` are placeholders ("Project A"…). Fill in real project data with descriptions, tech stack, links.
-- [ ] **Reviews / Goodreads integration** — `bookReviews` and `recentReads` need the Goodreads RSS widget (was in `componentsOld/bookReviews.js`).
 
 
 ## 🎨 Realism & Polish
@@ -21,6 +20,7 @@
 - [ ] **Better spine texture** — Spines look flat. Add subtle vertical grain lines or an embossed title effect to the spine canvas texture.
 - [ ] **Shadow between books** — Books next to each other should cast soft contact shadows onto neighboring spines.
 - [ ] Fill empty space with more books or decorative objects.
+- [ ] Add a background and surroundings to make the scene feel more like a real room.
 
 ## 🔭 Navigation & Responsive Design
 
@@ -34,5 +34,8 @@
 
 ## ⚙️ Stability / Code Quality
 
+- [ ] **Goodreads via GitHub Action (replace runtime rss2json)** — A scheduled action fetches the `list_rss?shelf=read` feed server-side (no CORS/proxy/10-item cap), parses it, and commits a regenerated `goodreadsSnapshot.js`. Removes the flaky runtime rss2json dependency; data is only as fresh as the cron. Unlocks build-time processing:
+  - Sample each cover's dominant color and bake a spine/back hex into the snapshot, replacing the arbitrary `_hashColor(title)` so spines match the real books.
+- [ ] Improve code organization - break up big files, co-locate related code, such as that for displaying an item and its content
 - [ ] **ES module cache-busting** — Requires Ctrl+Shift+R to pick up JS changes in in browser. Add a version query string to module imports or use a bundler.
 - [ ] **Mobile / touch support** — OrbitControls work on desktop; verify and fix touch interaction on mobile.
