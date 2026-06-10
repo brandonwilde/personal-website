@@ -31,6 +31,7 @@
 - [ ] **Re-center / home button** — If free-roam is kept, provide a button to snap back to the default viewing position.
 - [ ] If panning, rotating perspective and cursor ends on an object, don't consider it clicked.
 - [ ] Let user pull out a book manually rather than (or in addition to) just clicking. Might be more fun
+- [ ] Don't use pointer on open books, unless there's something to click on - there usually isn't.
 
 ## ⚙️ Stability / Code Quality
 

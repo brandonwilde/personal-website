@@ -6,12 +6,11 @@ import { colors } from './constants.js';
 export const shelfConfigs = {
     A: {
         sections: {
-            1: ['bachelors', 'masters'],
-            3: { ref: 'goodreads' },
+            1: { ref: 'blog' },
+            2: { ref: 'goodreads' },
         },
         labels: {
-            1: 'EDUCATION',
-            3: 'RECENT READS',
+            2: 'RECENT READS',
         }
     },
     B: {
@@ -26,11 +25,12 @@ export const shelfConfigs = {
     },
     C: {
         sections: {
-            1: { ref: 'blog' },
+            1: ['bachelors', 'masters'],
             3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
             4: { ref: 'contact' },
         },
         labels: {
+            1: 'EDUCATION',
             3: 'EMPLOYMENT',
         }
     }
