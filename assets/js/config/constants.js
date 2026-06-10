@@ -19,6 +19,26 @@ export const colors = {
 // Scene background color in hex
 export const SCENE_BACKGROUND = 0xf7f3e9;
 
+// Shared "room" reflection map that reflective surfaces mirror (see utils/roomEnvironment.js).
+// A warm ceiling-to-floor gradient with a soft overhead highlight band.
+export const ROOM_ENVIRONMENT = {
+  WIDTH:  512,                 // equirectangular texture size
+  HEIGHT: 256,
+
+  // Vertical gradient: ceiling/lights at top → dark floor at bottom. [stop, color]
+  GRADIENT: [
+    [0.0, '#fff4dc'],          // ceiling / lights
+    [0.4, '#cdb37a'],          // upper wall (warm)
+    [0.6, '#8a7c55'],          // lower wall
+    [1.0, '#211c12'],          // floor
+  ],
+
+  // Soft overhead highlight band → a bright sweep across polished faces.
+  BAND_CENTER_Y: 40,           // px from top; the band's origin/peak
+  BAND_INNER:    'rgba(255, 255, 255, 0.55)',
+  BAND_OUTER:    'rgba(255, 255, 255, 0)',
+};
+
 // Lighting settings
 export const LIGHTING_SETTINGS = {
   // Warm ambient — simulates bounced room light

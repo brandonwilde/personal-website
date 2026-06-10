@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS, SHELF_LABEL, sectionCenterX } from '../config/constants.js';
+import { roomEnvironment } from '../utils/roomEnvironment.js';
 
 // Thin brass nameplate fixed to the front face of a shelf plank
-
-let _brassEnv = null;
 
 function roundedRectShape(w, h, r) {
     const shape = new THREE.Shape();
@@ -18,38 +17,6 @@ function roundedRectShape(w, h, r) {
     shape.lineTo(x, y + r);
     shape.quadraticCurveTo(x, y, x + r, y);
     return shape;
-}
-
-// Equirectangular "room" the brass reflects: warm bright ceiling fading to a dark floor,
-// with a soft overhead band for a polished highlight. Built once and shared.
-function brassEnvironment() {
-    if (_brassEnv) return _brassEnv;
-
-    const canvas = document.createElement('canvas');
-    canvas.width  = 512;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0.0, '#fff4dc');  // ceiling / lights
-    grad.addColorStop(0.4, '#cdb37a');  // upper wall (warm)
-    grad.addColorStop(0.6, '#8a7c55');  // lower wall
-    grad.addColorStop(1.0, '#211c12');  // floor
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Soft overhead highlight band → a bright sweep across the polished face.
-    const band = ctx.createRadialGradient(canvas.width / 2, 40, 0, canvas.width / 2, 40, canvas.width / 2);
-    band.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
-    band.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = band;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.mapping    = THREE.EquirectangularReflectionMapping;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    _brassEnv = tex;
-    return tex;
 }
 
 export class ShelfLabel {
@@ -67,7 +34,7 @@ export class ShelfLabel {
         );
         this.geometry.center();
 
-        const env = brassEnvironment();
+        const env = roomEnvironment();
         const faceMaterial = new THREE.MeshStandardMaterial({
             map:            texture,
             color:          new THREE.Color(SHELF_LABEL.BASE_COLOR),
