@@ -80,39 +80,72 @@ export const bookConfigs = {
         }
     },
 
-    // Skills/Certifications books
+    // Skills books — like the education/experience/project books, these carry
+    // modalInfo (kind:'skills') and auto-size from their content. Each holds one or
+    // more labeled groups rendered as bullet lists on the page.
     skills: {
         skillsA: {
             id: 'skillsA',
-            width: 5.5,
-            height: 7.2,
-            thickness: 2,
             color: colors.gray,
-            content: 'Programming Languages'
+            content: 'Programming Languages',
+            modalInfo: {
+                kind: 'skills',
+                groups: [
+                    { label: 'Primary',    items: ['Python', 'TypeScript / JavaScript', 'SQL', 'Bash'] },
+                    { label: 'Also used',  items: ['MATLAB', 'VBA'] }
+                ]
+            }
         },
         skillsB: {
             id: 'skillsB',
-            width: 5,
-            height: 7.2,
-            thickness: 1.5,
             color: colors.purple,
-            content: 'Tools & Frameworks'
+            content: 'Tools & Frameworks',
+            modalInfo: {
+                kind: 'skills',
+                columns: 2,
+                groups: [
+                    { label: 'AI / ML',          items: ['LangChain', 'LangGraph', 'Hugging Face', 'PyTorch', 'scikit-learn'] },
+                    { label: 'Retrieval & Data', items: ['FAISS', 'Pinecone', 'PostgreSQL', 'Redis', 'MongoDB'] },
+                    { label: 'Web',              items: ['React', 'Node.js', 'Next.js'] },
+                    { label: 'Infrastructure',   items: ['AWS', 'Azure', 'Docker', 'Git', 'GitHub Actions (CI/CD)'] }
+                ]
+            }
         },
         skillsC: {
             id: 'skillsC',
-            width: 6,
-            height: 7.2,
-            thickness: 1.5,
-            color: colors.purple,
-            content: 'Languages'
+            color: colors.blue,
+            content: 'زبان‌ها',
+            modalInfo: {
+                kind: 'skills',
+                title: 'Languages',
+                groups: [
+                    { label: '', items: [
+                        'English — Native',
+                        'German — Fluent',
+                        'Spanish — Working',
+                        'Persian (Farsi) — Limited',
+                        'Egyptian Arabic — Basic',
+                        'Hebrew — Elementary'
+                    ] }
+                ]
+            }
         },
         skillsD: {
             id: 'skillsD',
-            width: 7,
-            height: 8,
-            thickness: 2,
             color: colors.yellowGreen,
-            content: 'Other Skills'
+            content: 'Other Skills',
+            modalInfo: {
+                kind: 'skills',
+                groups: [
+                    { label: 'Beyond code', items: [
+                        'Technical lecturing',
+                        'Technical writing & documentation',
+                        'Prompt engineering & LLM evaluation',
+                        'CAD drafting (AutoCAD)',
+                        'German–English translation'
+                    ] }
+                ]
+            }
         }
     },
     

@@ -264,8 +264,8 @@ export class Book extends THREE.Group {
 
         // Title + optional italic subtitle + org line, closed by a divider.
         // Shared header for the education / experience / project pages.
-        const header = (subtitle, org) => {
-            centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
+        const header = (subtitle, org, title) => {
+            centered(title ?? this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
             gap(titlePx * 0.2);
             if (subtitle) centered(subtitle, `italic ${subPx}px Georgia, serif`, subPx, '#444');
             if (org)      centered(org,      `${orgPx}px Georgia, serif`,        orgPx, '#666');
@@ -317,6 +317,69 @@ export class Book extends THREE.Group {
                     }});
                 });
             }
+        };
+
+        // A single headed group (label + rule + bullets) laid out within a column whose
+        // left edge is `x0` and width is `colW`. Returns the group's items rather than
+        // pushing them, so the caller can place groups in columns. x0 only affects the
+        // draw position (not advances), so the same items measure identically anywhere.
+        const makeGroupItems = (label, listItems, x0, colW) => {
+            const out = [];
+            if (!listItems.length) return out;
+            const colRight = x0 + colW;
+            if (label) {
+                out.push({ advance: bodyPx * 1.3, draw: (c, y) => {
+                    c.textAlign = 'left'; c.textBaseline = 'top';
+                    c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = '#1a1a1a';
+                    c.fillText(label, x0, y);
+                }});
+                out.push({ advance: 8, draw: (c, y) => {
+                    c.strokeStyle = accent; c.lineWidth = 0.5;
+                    c.beginPath(); c.moveTo(x0, y); c.lineTo(colRight, y); c.stroke();
+                }});
+            }
+            const bulletX = x0 + 10;
+            const itemX   = x0 + 22;
+            const itemW   = colRight - itemX;
+            ctx.font = `${listPx}px Georgia, serif`;
+            for (const item of listItems) {
+                wrapText(ctx, item, itemW).forEach((line, i) => {
+                    out.push({ advance: listPx * 1.55, draw: (c, y) => {
+                        c.textAlign = 'left'; c.textBaseline = 'top';
+                        c.font = `${listPx}px Georgia, serif`;
+                        if (i === 0) { c.fillStyle = accent; c.fillText('•', bulletX, y); }
+                        c.fillStyle = '#222'; c.fillText(line, itemX, y);
+                    }});
+                });
+            }
+            return out;
+        };
+
+        // Lays groups across two balanced columns (each new group joins the shorter
+        // column), then emits one item spanning the taller column so the surrounding
+        // single-column flow still measures and centers the block correctly.
+        const twoColumnGroups = (groups) => {
+            const gutter = bodyPx * 1.4;
+            const colW   = (textWidthPx - gutter) / 2;
+            const grpGap = bodyPx * 0.7;
+            const cols = [
+                { x: marginXpx,                 items: [], h: 0 },
+                { x: marginXpx + colW + gutter, items: [], h: 0 },
+            ];
+            for (const group of groups) {
+                const col = cols[0].h <= cols[1].h ? cols[0] : cols[1];
+                const built  = makeGroupItems(group.label, group.items, col.x, colW);
+                const height = built.reduce((s, it) => s + it.advance, 0) + grpGap;
+                col.items.push(...built, { advance: grpGap });
+                col.h += height;
+            }
+            const blockH = Math.max(cols[0].h, cols[1].h);
+            items.push({ advance: blockH, draw: (c, yStart) => {
+                for (const col of cols) {
+                    let y = yStart;
+                    for (const it of col.items) { if (it.draw) it.draw(c, y); y += it.advance; }
+                }
+            }});
         };
 
         // Draws the "Go to Repo" button and records its hotspot for the link overlay.
@@ -481,6 +544,14 @@ export class Book extends THREE.Group {
             header(info.tagline, info.tech);
             bulletList('Highlights', info.highlights ?? []);
             repoButton(info.repoUrl);
+
+        } else if (info.kind === 'skills') {
+            header('', '', info.title);   // title falls back to spine content (e.g. Languages → زبان‌ها)
+            if (info.columns === 2) twoColumnGroups(info.groups ?? []);
+            else for (const group of info.groups ?? []) {
+                if (group.label) bulletList(group.label, group.items);
+                else items.push(...makeGroupItems('', group.items, marginXpx, textWidthPx));
+            }
         }
 
         return items;
