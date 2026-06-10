@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ANIM_PARAMS, BOOK_DEFAULTS, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
+import { LinkOverlay } from '../utils/LinkOverlay.js';
 
 // A business card holder that sits on the shelf.
 // Cards lean back in a dark metal tray. On click, the top card detaches
@@ -284,66 +285,16 @@ export class BusinessCard extends THREE.Group {
     }
 
     // ─── HTML link overlay ──────────────────────────────────────────────────
-    // While the card is open and at rest, invisible <a> rectangles sit over
-    // the LinkedIn/GitHub rows so the browser shows its native URL preview
-    // on hover and the click opens the URL in a new tab.
 
-    _ensureOverlay() {
-        if (this._overlayEl) return;
-        const el = document.createElement('div');
-        el.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;' +
-            'pointer-events:none;z-index:10;display:none;';
-        document.body.appendChild(el);
-        this._overlayEl = el;
-        this._overlayResize = () => this.updateLinkOverlay();
-    }
-
-    showLinkOverlay({ camera, renderer, onLinkClick } = {}) {
-        if (!camera || !renderer || !this._linkHotspots?.length) return;
-        this._ensureOverlay();
-        this._overlayCamera   = camera;
-        this._overlayRenderer = renderer;
-        this._overlayEl.innerHTML = '';
-        for (const h of this._linkHotspots) {
-            const a = document.createElement('a');
-            a.href = h.url;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.style.cssText = 'position:absolute;display:block;' +
-                'pointer-events:auto;cursor:pointer;';
-            if (onLinkClick) a.addEventListener('click', onLinkClick);
-            this._overlayEl.appendChild(a);
+    _showLinkOverlay(ctx) {
+        if (!this._linkHotspots?.length) return;
+        if (!this._linkOverlay) {
+            this._linkOverlay = new LinkOverlay((cx, cy, camera, viewport) => {
+                this.flyingCard.updateWorldMatrix(true, false);
+                return this._canvasPxToScreen(cx, cy, camera, viewport);
+            });
         }
-        this._overlayEl.style.display = 'block';
-        window.addEventListener('resize', this._overlayResize);
-        this.updateLinkOverlay();
-    }
-
-    updateLinkOverlay() {
-        if (!this._overlayEl || this._overlayEl.style.display === 'none') return;
-        const camera = this._overlayCamera;
-        const renderer = this._overlayRenderer;
-        if (!camera || !renderer) return;
-        const viewport = renderer.domElement.getBoundingClientRect();
-        this.flyingCard.updateWorldMatrix(true, false);
-        const links = this._overlayEl.children;
-        this._linkHotspots.forEach((h, i) => {
-            const tl = this._canvasPxToScreen(h.x0, h.y0, camera, viewport);
-            const br = this._canvasPxToScreen(h.x1, h.y1, camera, viewport);
-            const a = links[i];
-            if (!a) return;
-            a.style.left = `${tl.x}px`;
-            a.style.top = `${tl.y}px`;
-            a.style.width = `${br.x - tl.x}px`;
-            a.style.height = `${br.y - tl.y}px`;
-        });
-    }
-
-    hideLinkOverlay() {
-        if (!this._overlayEl) return;
-        this._overlayEl.style.display = 'none';
-        this._overlayEl.innerHTML = '';
-        window.removeEventListener('resize', this._overlayResize);
+        this._linkOverlay.show(this._linkHotspots, ctx);
     }
 
     // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels.
@@ -459,7 +410,7 @@ export class BusinessCard extends THREE.Group {
         });
 
         // 5. Once at rest, drop the invisible HTML link overlay on top.
-        tl.call(() => this.showLinkOverlay(this._openCtx));
+        tl.call(() => this._showLinkOverlay(this._openCtx));
 
         return tl;
     }
@@ -470,7 +421,7 @@ export class BusinessCard extends THREE.Group {
 
         // Remove HTML overlay immediately so links don't intercept clicks
         // during the close animation.
-        this.hideLinkOverlay();
+        this._linkOverlay?.hide();
 
         // 1. Card flips back to front face
         tl.to(this.flyingCard.rotation, {

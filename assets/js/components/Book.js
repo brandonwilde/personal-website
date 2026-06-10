@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BOOK_DEFAULTS, ANIM_PARAMS } from '../config/constants.js';
 import { formatReadDate } from '../data/goodreads.js';
+import { LinkOverlay } from '../utils/LinkOverlay.js';
 
 export class Book extends THREE.Group {
     constructor(bookId, {
@@ -318,9 +319,7 @@ export class Book extends THREE.Group {
             }
         };
 
-        // Pill "Go to Repo" button at the foot of project pages. The canvas can't hold a
-        // real link, so this draws the button and records a hotspot rect (canvas px) that
-        // showLinkOverlay() turns into an HTML <a> positioned over the button on screen.
+        // Draws the "Go to Repo" button and records its hotspot for the link overlay.
         const repoButton = (url) => {
             if (!url) return;
             const label = 'Go to Repo  →';
@@ -343,8 +342,6 @@ export class Book extends THREE.Group {
                 c.fillStyle = '#f8f4ec';
                 c.textAlign = 'center'; c.textBaseline = 'middle';
                 c.fillText(label, W / 2, y + btnH / 2 + 1);
-                // Hotspot consumed by the HTML link overlay (drawn here so it tracks the
-                // button's actual post-centering position).
                 this._linkHotspots = [{ url, x0, y0: y, x1, y1 }];
             }});
         };
@@ -666,8 +663,7 @@ export class Book extends THREE.Group {
         const coverThickness  = BOOK_DEFAULTS.COVER.THICKNESS;
         const pageInset       = BOOK_DEFAULTS.PAGE.INSET;
 
-        // +Z face of the pages mesh (the right-hand content page when open) — used to
-        // project canvas-pixel link hotspots to screen coords for the HTML overlay.
+        // +Z face of the pages mesh, for projecting content-page hotspots to screen.
         this._pageFace = {
             w: actualWidth  - pageInset * 2,
             h: actualHeight - pageInset * 2,
@@ -851,70 +847,19 @@ export class Book extends THREE.Group {
     }
 
     // ─── HTML link overlay ──────────────────────────────────────────────────────
-    // The content page is a baked canvas texture, so it can't hold a clickable link.
-    // While the book is open, an invisible <a> rectangle is positioned over each
-    // recorded hotspot (e.g. the project "Go to Repo" button) so the browser shows its
-    // native URL preview on hover and the click opens the repo in a new tab.
 
-    _ensureOverlay() {
-        if (this._overlayEl) return;
-        const el = document.createElement('div');
-        el.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;' +
-            'pointer-events:none;z-index:10;display:none;';
-        document.body.appendChild(el);
-        this._overlayEl = el;
-        this._overlayResize = () => this.updateLinkOverlay();
-    }
-
-    showLinkOverlay({ camera, renderer, onLinkClick } = {}) {
-        if (!camera || !renderer || !this._linkHotspots?.length) return;
-        this._ensureOverlay();
-        this._overlayCamera   = camera;
-        this._overlayRenderer = renderer;
-        this._overlayEl.innerHTML = '';
-        for (const h of this._linkHotspots) {
-            const a = document.createElement('a');
-            a.href = h.url;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.style.cssText = 'position:absolute;display:block;pointer-events:auto;cursor:pointer;';
-            if (onLinkClick) a.addEventListener('click', onLinkClick);
-            this._overlayEl.appendChild(a);
+    _showLinkOverlay(ctx) {
+        if (!this._linkHotspots?.length) return;
+        if (!this._linkOverlay) {
+            this._linkOverlay = new LinkOverlay((cx, cy, camera, viewport) => {
+                this.parts.pages.updateWorldMatrix(true, false);
+                return this._canvasPxToScreen(cx, cy, camera, viewport);
+            });
         }
-        this._overlayEl.style.display = 'block';
-        window.addEventListener('resize', this._overlayResize);
-        this.updateLinkOverlay();
+        this._linkOverlay.show(this._linkHotspots, ctx);
     }
 
-    updateLinkOverlay() {
-        if (!this._overlayEl || this._overlayEl.style.display === 'none') return;
-        const camera = this._overlayCamera, renderer = this._overlayRenderer;
-        if (!camera || !renderer) return;
-        const viewport = renderer.domElement.getBoundingClientRect();
-        this.parts.pages.updateWorldMatrix(true, false);
-        const links = this._overlayEl.children;
-        this._linkHotspots.forEach((h, i) => {
-            const tl = this._canvasPxToScreen(h.x0, h.y0, camera, viewport);
-            const br = this._canvasPxToScreen(h.x1, h.y1, camera, viewport);
-            const a = links[i];
-            if (!a) return;
-            a.style.left   = `${tl.x}px`;
-            a.style.top    = `${tl.y}px`;
-            a.style.width  = `${br.x - tl.x}px`;
-            a.style.height = `${br.y - tl.y}px`;
-        });
-    }
-
-    hideLinkOverlay() {
-        if (!this._overlayEl) return;
-        this._overlayEl.style.display = 'none';
-        this._overlayEl.innerHTML = '';
-        window.removeEventListener('resize', this._overlayResize);
-    }
-
-    // Convert a (cx, cy) point in content-canvas pixel coords to screen pixels via the
-    // pages mesh's +Z face. The +Z face UV runs with local +X (no inversion), and the
-    // CanvasTexture flipY puts canvas row 0 at the top of the face.
+    // Canvas pixel → screen pixel via the pages mesh's +Z face.
     _canvasPxToScreen(cx, cy, camera, viewport) {
         const local = new THREE.Vector3(
             (cx / this._contentCanvasW - 0.5) * this._pageFace.w,
@@ -938,7 +883,7 @@ export class Book extends THREE.Group {
         this._activeTl = this._buildOpenTimeline();
         // Drop the HTML link overlay (e.g. project "Go to Repo" button) once the book
         // has finished opening and settled in place.
-        this._activeTl.call(() => this.showLinkOverlay(this._openCtx));
+        this._activeTl.call(() => this._showLinkOverlay(this._openCtx));
         return this._activeTl;
     }
 
@@ -946,7 +891,7 @@ export class Book extends THREE.Group {
         if (this._activeTl) this._activeTl.kill();
         this.isOpen = false;
         // Remove the overlay immediately so its links can't intercept clicks mid-close.
-        this.hideLinkOverlay();
+        this._linkOverlay?.hide();
         this._activeTl = this._buildCloseTimeline();
         return this._activeTl;
     }
