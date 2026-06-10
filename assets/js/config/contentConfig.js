@@ -1,37 +1,27 @@
 import { colors } from './constants.js';
 
 // Single source of truth for where everything sits on the bookshelf. Each section
-// value is either an array of book ids (standard books) or { ref: '<key>' } for a
-// special item whose content/tuning lives in bookConfigs.other.<key>.
+// is an object with an optional `label` and either `items` (an array of book ids
+// for standard books) or `ref` (a special item whose content/tuning lives in
+// bookConfigs.other.<key>).
 export const shelfConfigs = {
     A: {
         sections: {
             1: { ref: 'blog' },
-            2: { ref: 'goodreads' },
-        },
-        labels: {
-            2: 'RECENT READS',
+            2: { label: 'RECENT READS', ref: 'goodreads' },
         }
     },
     B: {
         sections: {
-            2: ['audiobookmarks', 'aitools', 'gdrivesync', 'xldefgen'],
-            4: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
-        },
-        labels: {
-            2: 'CODING PROJECTS',
-            4: 'SKILLS',
+            2: { label: 'CODING PROJECTS', items: ['audiobookmarks', 'aitools', 'gdrivesync', 'xldefgen'] },
+            4: { label: 'SKILLS', items: ['skillsA', 'skillsB', 'skillsC', 'skillsD'] },
         }
     },
     C: {
         sections: {
-            1: ['bachelors', 'masters'],
-            3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
+            1: { label: 'EDUCATION', items: ['bachelors', 'masters'] },
+            3: { label: 'EMPLOYMENT', items: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'] },
             4: { ref: 'contact' },
-        },
-        labels: {
-            1: 'EDUCATION',
-            3: 'EMPLOYMENT',
         }
     }
 };

@@ -119,8 +119,8 @@ export class BookshelfScene {
     }
 
     addBooksFromConfig(bookConfigs, shelfConfigs) {
-        // Special items (goodreads, contact, blog) record only their location here,
-        // keyed by ref, and are built by their own render methods via placementFor().
+        // Special items (goodreads, contact, blog) are built by their own render
+        // methods via placementFor(); see the ref handling in the section loop below.
         this._placements = {};
 
         for (const [shelfId, shelfConfig] of Object.entries(shelfConfigs)) {
@@ -128,13 +128,19 @@ export class BookshelfScene {
             if (!shelf) continue;
 
             for (const [section, entry] of Object.entries(shelfConfig.sections ?? {})) {
-                if (!Array.isArray(entry)) {
+                if (entry.label) {
+                    const label = new ShelfLabel(entry.label, shelf, parseInt(section));
+                    this.sceneManager.add(label.mesh);
+                }
+
+                // Special items record only their location here, keyed by ref.
+                if (entry.ref) {
                     this._placements[entry.ref] = { shelfId, section: parseInt(section) };
                     continue;
                 }
 
                 const sectionBooks = [];
-                for (const bookId of entry) {
+                for (const bookId of entry.items ?? []) {
                     let bookConfig = null;
                     for (const category of Object.values(bookConfigs)) {
                         if (bookId in category) {
@@ -151,11 +157,6 @@ export class BookshelfScene {
                 if (sectionBooks.length > 0) {
                     shelf.addBookSection(sectionBooks, parseInt(section));
                 }
-            }
-
-            for (const [section, text] of Object.entries(shelfConfig.labels ?? {})) {
-                const label = new ShelfLabel(text, shelf, parseInt(section));
-                this.sceneManager.add(label.mesh);
             }
         }
     }
