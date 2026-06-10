@@ -31,6 +31,7 @@
   - Current OrbitControls give this partially for free, but it feels unguided. A curated "walk up to the shelf" interaction might be better.
 - [ ] **Re-center / home button** — If free-roam is kept, provide a button to snap back to the default viewing position.
 - [ ] If panning, rotating perspective and cursor ends on an object, don't consider it clicked.
+- [ ] Let user pull out a book manually rather than (or in addition to) just clicking. Might be more fun
 
 ## ⚙️ Stability / Code Quality
 

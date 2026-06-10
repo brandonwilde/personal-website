@@ -78,6 +78,32 @@ export function sectionCenterX(section) {
   return SECTION_FRACTIONS[section] * (BOOKSHELF_DIMENSIONS.WIDTH / 2);
 }
 
+// Shelf nameplate — a thin brass plaque fixed flat to the front face of a shelf plank
+export const SHELF_LABEL = {
+  PIXELS_PER_UNIT: 140,        // canvas px per inch (crisp engraved text)
+  HEIGHT:          0.66,       // plate height — a bit under SHELF_THICKNESS so it sits within the plank
+  DEPTH:           0.1,        // plate thickness
+  FRONT_PROUD:     0.05,       // how far the plate stands proud of the plank's front face
+  PAD_X:           0.34,       // horizontal text padding
+  FONT_IN:         0.42,       // engraved cap text size — fills most of the plate height
+  MIN_WIDTH:       1.8,        // plate width clamp
+  MAX_WIDTH:       11.0,       // stays within a 12in section bay
+  CORNER_RADIUS:   0.4,       // generous rounded corners (≈ the original CSS pill shape)
+
+  // Polished-brass surface
+  BASE_COLOR:      0xffffff,   // white = let the gradient map define the face color unmodified
+  SIDE_COLOR:      0xc9b06a,   // gold tone for the plate's edges (no text map)
+  METALNESS:       0.45,
+  ROUGHNESS:       0.3,
+  ENV_INTENSITY:   1.0,
+
+  // Engraved plate face (canvas) colors
+  GRADIENT_TOP:    '#b5a66b',  // darker gold at top
+  GRADIENT_BOTTOM: '#dbc688',  // lighter gold toward the bottom
+  GLARE:           'rgba(255, 255, 255, 0.7)',  // soft light glare across the top half
+  TEXT_COLOR:      'rgb(122, 92, 18)',          // warm brown engraved lettering
+};
+
 // Wood material for bookshelf frame and shelves
 export const WOOD_MATERIAL = {
   COLOR:     0xc8a87a,

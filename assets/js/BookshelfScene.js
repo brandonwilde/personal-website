@@ -3,6 +3,7 @@ import { Book } from './components/Book.js';
 import { BlogNotebook } from './components/BlogNotebook.js';
 import { BusinessCard } from './components/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
+import { ShelfLabel } from './components/ShelfLabel.js';
 import { SceneManager } from './managers/SceneManager.js';
 import { InteractionManager } from './managers/InteractionManager.js';
 import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, sectionCenterX } from './config/constants.js';
@@ -150,6 +151,11 @@ export class BookshelfScene {
                 if (sectionBooks.length > 0) {
                     shelf.addBookSection(sectionBooks, parseInt(section));
                 }
+            }
+
+            for (const [section, text] of Object.entries(shelfConfig.labels ?? {})) {
+                const label = new ShelfLabel(text, shelf, parseInt(section));
+                this.sceneManager.add(label.mesh);
             }
         }
     }

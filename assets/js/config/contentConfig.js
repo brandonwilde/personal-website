@@ -8,12 +8,19 @@ export const shelfConfigs = {
         sections: {
             1: ['bachelors', 'masters'],
             3: { ref: 'goodreads' },
+        },
+        labels: {
+            1: 'EDUCATION',
+            3: 'RECENT READS',
         }
     },
     B: {
         sections: {
             1: ['projectsA', 'projectsB', 'projectsC', 'projectsD', 'projectsE', 'projectsF', 'projectsG'],
             4: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
+        },
+        labels: {
+            1: 'PROJECTS',
         }
     },
     C: {
@@ -22,6 +29,9 @@ export const shelfConfigs = {
             2: ['misc'],
             3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
             4: { ref: 'contact' },
+        },
+        labels: {
+            3: 'EMPLOYMENT',
         }
     }
 };
