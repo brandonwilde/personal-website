@@ -255,6 +255,100 @@ export class Book extends THREE.Group {
             }
         };
 
+        // Horizontal rule across the text column.
+        const rule = (lineWidth) => items.push({ advance: 2, draw: (c, y) => {
+            c.strokeStyle = accent; c.lineWidth = lineWidth;
+            c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
+        }});
+
+        // Title + optional italic subtitle + org line, closed by a divider.
+        // Shared header for the education / experience / project pages.
+        const header = (subtitle, org) => {
+            centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
+            gap(titlePx * 0.2);
+            if (subtitle) centered(subtitle, `italic ${subPx}px Georgia, serif`, subPx, '#444');
+            if (org)      centered(org,      `${orgPx}px Georgia, serif`,        orgPx, '#666');
+            gap(bodyPx * 0.5);
+            rule(1);
+            gap(bodyPx * 0.6);
+        };
+
+        // "Label: value" stat rows (GPA, dates, repo, …).
+        const metaRows = (rows) => {
+            for (const [label, value] of rows) {
+                items.push({ advance: bodyPx * 1.5, draw: (c, y) => {
+                    c.textAlign = 'left'; c.textBaseline = 'top';
+                    c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = accent;
+                    c.fillText(`${label}: `, marginXpx, y);
+                    const labelW = c.measureText(`${label}: `).width;
+                    c.font = `${bodyPx}px Georgia, serif`; c.fillStyle = '#222';
+                    c.fillText(value, marginXpx + labelW, y);
+                }});
+            }
+            if (rows.length) gap(bodyPx * 0.4);
+        };
+
+        // Headed bullet list (research projects / accomplishments / highlights).
+        const bulletList = (label, listItems) => {
+            if (!label || !listItems.length) return;
+            items.push({ advance: bodyPx * 1.3, draw: (c, y) => {
+                c.textAlign = 'left'; c.textBaseline = 'top';
+                c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = '#1a1a1a';
+                c.fillText(label, marginXpx, y);
+            }});
+            items.push({ advance: 8, draw: (c, y) => {
+                c.strokeStyle = accent; c.lineWidth = 0.5;
+                c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
+            }});
+
+            const bulletX = marginXpx + 10;
+            const itemX   = marginXpx + 22;
+            const itemW   = W - itemX - marginXpx;
+            ctx.font = `${listPx}px Georgia, serif`;
+            for (const item of listItems) {
+                const lines = wrapText(ctx, item, itemW);
+                lines.forEach((line, i) => {
+                    items.push({ advance: listPx * 1.55, draw: (c, y) => {
+                        c.textAlign = 'left'; c.textBaseline = 'top';
+                        c.font = `${listPx}px Georgia, serif`;
+                        if (i === 0) { c.fillStyle = accent; c.fillText('•', bulletX, y); }
+                        c.fillStyle = '#222'; c.fillText(line, itemX, y);
+                    }});
+                });
+            }
+        };
+
+        // Pill "Go to Repo" button at the foot of project pages. The canvas can't hold a
+        // real link, so this draws the button and records a hotspot rect (canvas px) that
+        // showLinkOverlay() turns into an HTML <a> positioned over the button on screen.
+        const repoButton = (url) => {
+            if (!url) return;
+            const label = 'Go to Repo  →';
+            const padX  = bodyPx * 1.1;
+            const btnH  = bodyPx * 1.9;
+            gap(bodyPx * 0.9);
+            items.push({ advance: btnH, draw: (c, y) => {
+                c.font = `bold ${bodyPx}px Georgia, serif`;
+                const btnW = Math.min(c.measureText(label).width + padX * 2, W - marginXpx * 2);
+                const x0 = (W - btnW) / 2, x1 = x0 + btnW, y1 = y + btnH;
+                const r  = btnH / 2;
+                c.beginPath();
+                c.moveTo(x0 + r, y);
+                c.arcTo(x1, y, x1, y1, r);
+                c.arcTo(x1, y1, x0, y1, r);
+                c.arcTo(x0, y1, x0, y, r);
+                c.arcTo(x0, y, x1, y, r);
+                c.closePath();
+                c.fillStyle = accent; c.fill();
+                c.fillStyle = '#f8f4ec';
+                c.textAlign = 'center'; c.textBaseline = 'middle';
+                c.fillText(label, W / 2, y + btnH / 2 + 1);
+                // Hotspot consumed by the HTML link overlay (drawn here so it tracks the
+                // button's actual post-centering position).
+                this._linkHotspots = [{ url, x0, y0: y, x1, y1 }];
+            }});
+        };
+
         // ── Goodreads review variant ──
         // Right page holds everything substantive: a title/subtitle/author ladder, a large
         // star rating, the genres, and the review text when one was written.
@@ -361,82 +455,35 @@ export class Book extends THREE.Group {
             return items;
         }
 
-        // ── Title ──
-        centered(this.content ?? '', `bold ${titlePx}px Georgia, serif`, titlePx, '#1a1a1a');
-        gap(titlePx * 0.2);
+        // ── Standard pages: dispatch by content kind ──
+        // Each kind owns its own field schema; the shared header / metaRows / bulletList
+        // helpers keep the formatting consistent between them.
+        const info = this.modalInfo;
 
-        // ── Subtitle / org ──
-        if (this.modalInfo) {
-            const subtitle = this.modalInfo.degree    ?? this.modalInfo.position ?? '';
-            const org      = this.modalInfo.university ?? this.modalInfo.company  ?? '';
-            if (subtitle) centered(subtitle, `italic ${subPx}px Georgia, serif`, subPx, '#444');
-            if (org)      centered(org,      `${orgPx}px Georgia, serif`,        orgPx, '#666');
+        if (!info) {                          // title-only spine (skills, misc)
+            header('', '');
+            return items;
         }
 
-        // ── Divider ──
-        gap(bodyPx * 0.5);
-        items.push({ advance: 2, draw: (c, y) => {
-            c.strokeStyle = accent; c.lineWidth = 1;
-            c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
-        }});
-        gap(bodyPx * 0.6);
+        if (info.kind === 'education') {
+            header(info.degree, info.university);
+            const meta = [];
+            if (info.gpa)            meta.push(['GPA',       info.gpa]);
+            if (info.graduationDate) meta.push(['Graduated', info.graduationDate]);
+            metaRows(meta);
+            bulletList('Research Projects', info.projects ?? []);
 
-        if (!this.modalInfo) return items;
+        } else if (info.kind === 'experience') {
+            header(info.position, info.company);
+            const meta = [];
+            if (info.startDate) meta.push(['Dates', `${info.startDate} – ${info.endDate ?? 'Present'}`]);
+            metaRows(meta);
+            bulletList('Accomplishments', info.accomplishments ?? []);
 
-        // ── Meta stats (GPA / dates) ──
-        const meta = [];
-        if (this.modalInfo.gpa)            meta.push(['GPA',       this.modalInfo.gpa]);
-        if (this.modalInfo.graduationDate) meta.push(['Graduated', this.modalInfo.graduationDate]);
-        if (this.modalInfo.startDate) {
-            const end = this.modalInfo.endDate ?? 'Present';
-            meta.push(['Dates', `${this.modalInfo.startDate} – ${end}`]);
-        }
-        for (const [label, value] of meta) {
-            items.push({ advance: bodyPx * 1.5, draw: (c, y) => {
-                c.textAlign = 'left'; c.textBaseline = 'top';
-                c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = accent;
-                c.fillText(`${label}: `, marginXpx, y);
-                const labelW = c.measureText(`${label}: `).width;
-                c.font = `${bodyPx}px Georgia, serif`; c.fillStyle = '#222';
-                c.fillText(value, marginXpx + labelW, y);
-            }});
-        }
-        if (meta.length) gap(bodyPx * 0.4);
-
-        // ── Section list (projects / accomplishments) ──
-        const listItems    = this.modalInfo.projects ?? this.modalInfo.accomplishments ?? [];
-        const sectionLabel = this.modalInfo.projects
-            ? 'Research Projects'
-            : this.modalInfo.accomplishments
-                ? 'Accomplishments'
-                : null;
-
-        if (sectionLabel && listItems.length) {
-            items.push({ advance: bodyPx * 1.3, draw: (c, y) => {
-                c.textAlign = 'left'; c.textBaseline = 'top';
-                c.font = `bold ${bodyPx}px Georgia, serif`; c.fillStyle = '#1a1a1a';
-                c.fillText(sectionLabel, marginXpx, y);
-            }});
-            items.push({ advance: 8, draw: (c, y) => {
-                c.strokeStyle = accent; c.lineWidth = 0.5;
-                c.beginPath(); c.moveTo(marginXpx, y); c.lineTo(W - marginXpx, y); c.stroke();
-            }});
-
-            const bulletX = marginXpx + 10;
-            const itemX   = marginXpx + 22;
-            const itemW   = W - itemX - marginXpx;
-            ctx.font = `${listPx}px Georgia, serif`;
-            for (const item of listItems) {
-                const lines = wrapText(ctx, item, itemW);
-                lines.forEach((line, i) => {
-                    items.push({ advance: listPx * 1.55, draw: (c, y) => {
-                        c.textAlign = 'left'; c.textBaseline = 'top';
-                        c.font = `${listPx}px Georgia, serif`;
-                        if (i === 0) { c.fillStyle = accent; c.fillText('•', bulletX, y); }
-                        c.fillStyle = '#222'; c.fillText(line, itemX, y);
-                    }});
-                });
-            }
+        } else if (info.kind === 'project') {
+            header(info.tagline, info.tech);
+            bulletList('Highlights', info.highlights ?? []);
+            repoButton(info.repoUrl);
         }
 
         return items;
@@ -457,6 +504,8 @@ export class Book extends THREE.Group {
         const ctx = canvas.getContext('2d');
         const W = canvas.width;
         const H = canvas.height;
+        this._contentCanvasW = W;
+        this._contentCanvasH = H;
 
         ctx.fillStyle = T.TITLE_BG_COLOR;
         ctx.fillRect(0, 0, W, H);
@@ -616,6 +665,14 @@ export class Book extends THREE.Group {
         const actualThickness = this.dimensions.thickness;
         const coverThickness  = BOOK_DEFAULTS.COVER.THICKNESS;
         const pageInset       = BOOK_DEFAULTS.PAGE.INSET;
+
+        // +Z face of the pages mesh (the right-hand content page when open) — used to
+        // project canvas-pixel link hotspots to screen coords for the HTML overlay.
+        this._pageFace = {
+            w: actualWidth  - pageInset * 2,
+            h: actualHeight - pageInset * 2,
+            z: (actualThickness - coverThickness * 2) / 2,
+        };
 
         const coverTexture = this.createCoverTexture();
 
@@ -793,18 +850,103 @@ export class Book extends THREE.Group {
         });
     }
 
+    // ─── HTML link overlay ──────────────────────────────────────────────────────
+    // The content page is a baked canvas texture, so it can't hold a clickable link.
+    // While the book is open, an invisible <a> rectangle is positioned over each
+    // recorded hotspot (e.g. the project "Go to Repo" button) so the browser shows its
+    // native URL preview on hover and the click opens the repo in a new tab.
+
+    _ensureOverlay() {
+        if (this._overlayEl) return;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;' +
+            'pointer-events:none;z-index:10;display:none;';
+        document.body.appendChild(el);
+        this._overlayEl = el;
+        this._overlayResize = () => this.updateLinkOverlay();
+    }
+
+    showLinkOverlay({ camera, renderer, onLinkClick } = {}) {
+        if (!camera || !renderer || !this._linkHotspots?.length) return;
+        this._ensureOverlay();
+        this._overlayCamera   = camera;
+        this._overlayRenderer = renderer;
+        this._overlayEl.innerHTML = '';
+        for (const h of this._linkHotspots) {
+            const a = document.createElement('a');
+            a.href = h.url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.cssText = 'position:absolute;display:block;pointer-events:auto;cursor:pointer;';
+            if (onLinkClick) a.addEventListener('click', onLinkClick);
+            this._overlayEl.appendChild(a);
+        }
+        this._overlayEl.style.display = 'block';
+        window.addEventListener('resize', this._overlayResize);
+        this.updateLinkOverlay();
+    }
+
+    updateLinkOverlay() {
+        if (!this._overlayEl || this._overlayEl.style.display === 'none') return;
+        const camera = this._overlayCamera, renderer = this._overlayRenderer;
+        if (!camera || !renderer) return;
+        const viewport = renderer.domElement.getBoundingClientRect();
+        this.parts.pages.updateWorldMatrix(true, false);
+        const links = this._overlayEl.children;
+        this._linkHotspots.forEach((h, i) => {
+            const tl = this._canvasPxToScreen(h.x0, h.y0, camera, viewport);
+            const br = this._canvasPxToScreen(h.x1, h.y1, camera, viewport);
+            const a = links[i];
+            if (!a) return;
+            a.style.left   = `${tl.x}px`;
+            a.style.top    = `${tl.y}px`;
+            a.style.width  = `${br.x - tl.x}px`;
+            a.style.height = `${br.y - tl.y}px`;
+        });
+    }
+
+    hideLinkOverlay() {
+        if (!this._overlayEl) return;
+        this._overlayEl.style.display = 'none';
+        this._overlayEl.innerHTML = '';
+        window.removeEventListener('resize', this._overlayResize);
+    }
+
+    // Convert a (cx, cy) point in content-canvas pixel coords to screen pixels via the
+    // pages mesh's +Z face. The +Z face UV runs with local +X (no inversion), and the
+    // CanvasTexture flipY puts canvas row 0 at the top of the face.
+    _canvasPxToScreen(cx, cy, camera, viewport) {
+        const local = new THREE.Vector3(
+            (cx / this._contentCanvasW - 0.5) * this._pageFace.w,
+            (0.5 - cy / this._contentCanvasH) * this._pageFace.h,
+            this._pageFace.z,
+        );
+        const world = local.applyMatrix4(this.parts.pages.matrixWorld);
+        const ndc = world.project(camera);
+        return {
+            x: viewport.left + (ndc.x + 1) * 0.5 * viewport.width,
+            y: viewport.top  + (1 - ndc.y) * 0.5 * viewport.height,
+        };
+    }
+
     // ─── Open / Close ───────────────────────────────────────────────────────────
 
-    open() {
+    open(ctx = {}) {
         if (this._activeTl) this._activeTl.kill();
         this.isOpen = true;
+        this._openCtx = ctx;
         this._activeTl = this._buildOpenTimeline();
+        // Drop the HTML link overlay (e.g. project "Go to Repo" button) once the book
+        // has finished opening and settled in place.
+        this._activeTl.call(() => this.showLinkOverlay(this._openCtx));
         return this._activeTl;
     }
 
     close() {
         if (this._activeTl) this._activeTl.kill();
         this.isOpen = false;
+        // Remove the overlay immediately so its links can't intercept clicks mid-close.
+        this.hideLinkOverlay();
         this._activeTl = this._buildCloseTimeline();
         return this._activeTl;
     }

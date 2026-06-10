@@ -6,7 +6,6 @@
 
 ## 📋 Feature Parity (Pre-launch)
 
-- [ ] **Shelf labels** — Add visible section labels to each shelf row (like the main version) so visitors understand the categories at a glance without opening books.
 - [ ] **Skills books content** — `skillsA–D` have no `modalInfo`. Add real content: programming languages, tools & frameworks, spoken languages, other skills.
 - [ ] **Projects books content** — `projectsA–G` are placeholders ("Project A"…). Fill in real project data with descriptions, tech stack, links.
 
@@ -21,6 +20,7 @@
 - [ ] **Shadow between books** — Books next to each other should cast soft contact shadows onto neighboring spines.
 - [ ] Fill empty space with more books or decorative objects.
 - [ ] Add a background and surroundings to make the scene feel more like a real room.
+- [ ] Improve spacing of items/books. Perhaps handle more like the v1 version with flex container for each shelf rather than fixed item center points on each shelf
 
 ## 🔭 Navigation & Responsive Design
 

@@ -16,11 +16,11 @@ export const shelfConfigs = {
     },
     B: {
         sections: {
-            1: ['projectsA', 'projectsB', 'projectsC', 'projectsD', 'projectsE', 'projectsF', 'projectsG'],
+            1: ['audiobookmarks', 'aitools', 'gdrivesync', 'xldefgen'],
             4: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
         },
         labels: {
-            1: 'PROJECTS',
+            1: 'CODING PROJECTS',
         }
     },
     C: {
@@ -46,6 +46,7 @@ export const bookConfigs = {
             color: colors.brown,
             content: 'B.S. Chemical Engineering & German',
             modalInfo: {
+                kind: 'education',
                 logoSrc: "assets/images/Wyoming_Athletics_logo.svg",
                 logoAlt: "Wyoming Logo",
                 degree: "Bachelor of Science in German, Chemical Engineering, Engineering Honors",
@@ -64,6 +65,7 @@ export const bookConfigs = {
             color: colors.red,
             content: 'M.S. Computational Linguistics',
             modalInfo: {
+                kind: 'education',
                 logoSrc: "assets/images/hawk-logo-color-2.svg",
                 logoAlt: "Montclair Logo",
                 degree: "Master of Science in Computational Linguistics",
@@ -121,6 +123,7 @@ export const bookConfigs = {
             color: colors.yellow,
             content: 'Freelance Translation',
             modalInfo: {
+                kind: 'experience',
                 company: "Self-Employed",
                 position: "Freelance German-English Translator",
                 startDate: "December 2016",
@@ -140,6 +143,7 @@ export const bookConfigs = {
             color: colors.purple,
             content: 'Montco Hunger Solutions',
             modalInfo: {
+                kind: 'experience',
                 company: "Montco Hunger Solutions (a subsidiary of the Share Food Program)",
                 position: "Program Assistant",
                 startDate: "June 2018",
@@ -158,6 +162,7 @@ export const bookConfigs = {
             color: colors.gray,
             content: 'AEI',
             modalInfo: {
+                kind: 'experience',
                 company: "AEI Consultants",
                 position: "Staff Engineer",
                 startDate: "September 2018",
@@ -174,6 +179,7 @@ export const bookConfigs = {
             color: colors.red,
             content: 'MSU',
             modalInfo: {
+                kind: 'experience',
                 company: "Montclair State University",
                 position: "Graduate Research Assistant",
                 startDate: "September 2021",
@@ -190,6 +196,7 @@ export const bookConfigs = {
             color: colors.red,
             content: 'MSU',
             modalInfo: {
+                kind: 'experience',
                 company: "Montclair State University",
                 position: "Adjunct Lecturer",
                 startDate: "August 2022",
@@ -205,6 +212,7 @@ export const bookConfigs = {
             color: colors.yellowGreen,
             content: 'Inventives',
             modalInfo: {
+                kind: 'experience',
                 company: "Inventives",
                 position: "Artificial Intelligence Developer",
                 startDate: "June 2022",
@@ -228,6 +236,7 @@ export const bookConfigs = {
             color: colors.blue,
             content: 'Syera',
             modalInfo: {
+                kind: 'experience',
                 company: "Syera",
                 position: "Software Engineer",
                 startDate: "January 2024",
@@ -240,64 +249,73 @@ export const bookConfigs = {
         }
     },
 
-    // Project books
+    // Project books — public GitHub repos (github.com/brandonwilde). Like the
+    // education/experience books, these carry modalInfo, so they're auto-sized
+    // from their content and the kind:'project' page renders their details.
     projects: {
-        projectsA: {
-            id: 'projectsA',
-            width: 5.5,
-            height: 6.5,
-            thickness: 2,
-            color: colors.gray,
-            content: 'Project A',
-        },
-        projectsB: {
-            id: 'projectsB',
-            width: 5,
-            height: 7.5,
-            thickness: 1.5,
-            color: colors.yellowGreen,
-            content: 'Project B'
-        },
-        projectsC: {
-            id: 'projectsC',
-            width: 6,
-            height: 7.3,
-            thickness: 1.8,
-            color: colors.brown,
-            content: 'Project C'
-        },
-        projectsD: {
-            id: 'projectsD',
-            width: 5.5,
-            height: 7.0,
-            thickness: 1.5,
-            color: colors.gray,
-            content: 'Project D'
-        },
-        projectsE: {
-            id: 'projectsE',
-            width: 5.7,
-            height: 6.5,
-            thickness: 1.5,
+        audiobookmarks: {
+            id: 'audiobookmarks',
             color: colors.blue,
-            content: 'Project E'
+            content: 'AudioBookmarks',
+            modalInfo: {
+                kind: 'project',
+                tagline: 'Turn audiobook bookmarks into searchable notes',
+                tech: 'Python · Playwright · OpenAI Whisper',
+                repoUrl: 'https://github.com/brandonwilde/audiobookmarks',
+                highlights: [
+                    'Drives Libby and Hoopla in the browser to capture the audio around each bookmark.',
+                    'Transcribes the snippets with Whisper and selects the most relevant quote.',
+                    'Saves the results as notes in an Obsidian vault.'
+                ]
+            }
         },
-        projectsF: {
-            id: 'projectsF',
-            width: 5.5,
-            height: 6.5,
-            thickness: 1.8,
-            color: colors.red,
-            content: 'Project F'
-        },
-        projectsG: {
-            id: 'projectsG',
-            width: 6.5,
-            height: 6.5,
-            thickness: 1.5,
+        aitools: {
+            id: 'aitools',
             color: colors.green,
-            content: 'Project G'
-        }
+            content: 'AI Tools',
+            modalInfo: {
+                kind: 'project',
+                tagline: 'A unified toolkit for everyday AI tasks',
+                tech: 'Python · OpenAI · Anthropic · Google · Azure',
+                repoUrl: 'https://github.com/brandonwilde/ai-tools',
+                highlights: [
+                    'One interface for LLM prompting and chat across multiple providers.',
+                    'Bundled tools for translation, image analysis and generation, transcription, and OCR.',
+                    'Installable as a package with optional per-provider dependencies.'
+                ]
+            }
+        },
+        gdrivesync: {
+            id: 'gdrivesync',
+            color: colors.yellowGreen,
+            content: 'gdrive-sync',
+            modalInfo: {
+                kind: 'project',
+                tagline: 'Keep a local folder in sync with Google Drive',
+                tech: 'Bash · rclone · systemd',
+                repoUrl: 'https://github.com/brandonwilde/gdrive-sync',
+                highlights: [
+                    'Mirrors a local directory to Google Drive via rclone whenever it changes.',
+                    'Installs as a background systemd service with configurable sync delays.'
+                ]
+            }
+        },
+        xldefgen: {
+            id: 'xldefgen',
+            color: colors.red,
+            content: 'XLdefgen',
+            modalInfo: {
+                kind: 'project',
+                tagline: 'Zero-shot cross-lingual definition generation',
+                tech: 'Python · PyTorch · mT5 · Hugging Face',
+                repoUrl: 'https://github.com/brandonwilde/XLdefgen',
+                highlights: [
+                    'Turns a small multilingual mT5 into a language-agnostic definition generator.',
+                    'Produces English definitions for foreign-language terms with no bilingual training data.',
+                    "Master's research project; the full paper is included in the repo."
+                ]
+            }
+        },
     },
 
     // Other books/items
