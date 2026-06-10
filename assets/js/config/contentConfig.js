@@ -16,17 +16,17 @@ export const shelfConfigs = {
     },
     B: {
         sections: {
-            1: ['audiobookmarks', 'aitools', 'gdrivesync', 'xldefgen'],
+            2: ['audiobookmarks', 'aitools', 'gdrivesync', 'xldefgen'],
             4: ['skillsA', 'skillsB', 'skillsC', 'skillsD'],
         },
         labels: {
-            1: 'CODING PROJECTS',
+            2: 'CODING PROJECTS',
+            4: 'SKILLS',
         }
     },
     C: {
         sections: {
             1: { ref: 'blog' },
-            2: ['misc'],
             3: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'],
             4: { ref: 'contact' },
         },
@@ -365,14 +365,6 @@ export const bookConfigs = {
                 offsetFromLeft:  4.2,  // inches inward from the left side wall
                 offsetFromBack:  3.5,  // inches forward from the back panel
             },
-        },
-        misc: {
-            id: 'misc',
-            width: 5.5,
-            height: 6.5,
-            thickness: 1.2,
-            color: colors.blue,
-            content: 'Miscellaneous'
         },
         // Goodreads recent reads, rendered as real 3D books from the committed snapshot
         // (data/goodreadsSnapshot.js), with a live RSS refresh swapped in if it differs.
