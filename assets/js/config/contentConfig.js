@@ -20,7 +20,7 @@ export const shelfConfigs = {
     C: {
         sections: {
             1: { label: 'EDUCATION', items: ['bachelors', 'masters'] },
-            3: { label: 'EMPLOYMENT', items: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera'] },
+            3: { label: 'EMPLOYMENT', items: ['translate', 'montco', 'aei', 'msu1', 'msu2', 'inventives', 'syera', 'ruck', 'castle'] },
             4: { ref: 'contact' },
         }
     }
@@ -60,7 +60,7 @@ export const bookConfigs = {
                 logoAlt: "Montclair Logo",
                 degree: "Master of Science in Computational Linguistics",
                 university: "Montclair State University: Montclair, NJ",
-                gpa: "3.96",
+                gpa: "3.97",
                 graduationDate: "Graduated May 2022",
                 projects: [
                     "Cross-lingual definition modeling without bilingual corpora",
@@ -94,7 +94,7 @@ export const bookConfigs = {
                 kind: 'skills',
                 columns: 2,
                 groups: [
-                    { label: 'AI / ML',          items: ['LangChain', 'LangGraph', 'Hugging Face', 'PyTorch', 'scikit-learn'] },
+                    { label: 'AI / ML',          items: ['LangChain', 'LangGraph', 'LangSmith', 'Hugging Face', 'PyTorch', 'scikit-learn'] },
                     { label: 'Retrieval & Data', items: ['FAISS', 'Pinecone', 'PostgreSQL', 'Redis', 'MongoDB'] },
                     { label: 'Web',              items: ['React', 'Node.js', 'Next.js'] },
                     { label: 'Infrastructure',   items: ['AWS', 'Azure', 'Docker', 'Git', 'GitHub Actions (CI/CD)'] }
@@ -114,8 +114,7 @@ export const bookConfigs = {
                         'German — Fluent',
                         'Spanish — Working',
                         'Persian (Farsi) — Limited',
-                        'Egyptian Arabic — Basic',
-                        'Hebrew — Elementary'
+                        'Egyptian Arabic — Basic'
                     ] }
                 ]
             }
@@ -261,12 +260,49 @@ export const bookConfigs = {
             modalInfo: {
                 kind: 'experience',
                 company: "Syera",
-                position: "Software Engineer",
+                position: "Founding Software Engineer",
                 startDate: "January 2024",
+                endDate: "November 2024",
+                accomplishments: [
+                    "Architected an end-to-end ML pipeline for medical record processing, including OCR, record segmentation, classification, extraction, and timeline generation.",
+                    "Built a chunked LLM orchestration system enabling classification and extraction over arbitrarily large documents (100+ pages).",
+                    "Implemented multi-stage confidence scoring and LLM-based arbitration for ambiguous predictions, producing auditable outputs with reasoning traces.",
+                    "Designed hybrid extraction approaches: regex-based date detection followed by LLM correction and significance labeling, balancing deterministic extraction with generative refinement for timeline event detection.",
+                    "Led technical architecture as founding engineer on a 3-person dev team."
+                ]
+            }
+        },
+        ruck: {
+            id: 'ruck',
+            color: colors.green,
+            content: 'Ruck',
+            modalInfo: {
+                kind: 'experience',
+                company: "Ruck",
+                position: "Software Engineer",
+                startDate: "November 2024",
+                endDate: "April 2026",
+                accomplishments: [
+                    "Built and maintained a multi-stage LLM pipeline for inventory processing, combining OCR, deterministic parsing, structured extraction, and generative enrichment.",
+                    "Designed automated vendor onboarding with AI-assisted inventory ingestion, reducing onboarding from 2-3 days to 1-2 hours for 10-2,000+ SKUs.",
+                    "Led architecture and deployment of a unified v2 platform consolidating 3 web apps and 1 mobile app onto shared backend infrastructure, eliminating data sync issues and supporting ~200 vendors processing 200+ orders monthly in production."
+                ]
+            }
+        },
+        castle: {
+            id: 'castle',
+            color: colors.tan,
+            content: 'Castle Biosciences',
+            modalInfo: {
+                kind: 'experience',
+                company: "Castle Biosciences",
+                position: "AI Engineer",
+                startDate: "April 2026",
                 endDate: "Present",
                 accomplishments: [
-                    "Architecting and developing core software, designing and building intelligent document processing and data extraction systems using ML and NLP techniques.",
-                    "Engineering scalable, cloud-based infrastructure to transform legal case documents into intuitive visual timelines, enabling rapid evidence discovery."
+                    "Designing and deploying generative AI and agentic automation systems to streamline internal workflows and support decision-making across the organization.",
+                    "Establishing AI governance best practices and guardrails for responsible enterprise use.",
+                    "Collaborating with cross-functional stakeholders to translate business needs into scalable AI solutions."
                 ]
             }
         }
