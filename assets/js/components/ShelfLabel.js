@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS, SHELF_LABEL, sectionCenterX } from '../config/constants.js';
-import { roomEnvironment } from '../utils/roomEnvironment.js';
 
 // Thin brass nameplate fixed to the front face of a shelf plank
 
@@ -34,21 +33,23 @@ export class ShelfLabel {
         );
         this.geometry.center();
 
-        const env = roomEnvironment();
         const faceMaterial = new THREE.MeshStandardMaterial({
             map:            texture,
             color:          new THREE.Color(SHELF_LABEL.BASE_COLOR),
             metalness:      SHELF_LABEL.METALNESS,
             roughness:      SHELF_LABEL.ROUGHNESS,
-            envMap:         env,
             envMapIntensity: SHELF_LABEL.ENV_INTENSITY,
+            emissiveMap:       texture,  // glows the gold, leaves engraved text dark
+            emissive:          new THREE.Color(0xffffff),
+            emissiveIntensity: SHELF_LABEL.EMISSIVE_INTENSITY,
         });
         const sideMaterial = new THREE.MeshStandardMaterial({
             color:          new THREE.Color(SHELF_LABEL.SIDE_COLOR),
             metalness:      SHELF_LABEL.METALNESS,
             roughness:      SHELF_LABEL.ROUGHNESS,
-            envMap:         env,
             envMapIntensity: SHELF_LABEL.ENV_INTENSITY,
+            emissive:          new THREE.Color(SHELF_LABEL.SIDE_COLOR),
+            emissiveIntensity: SHELF_LABEL.EMISSIVE_INTENSITY,
         });
 
         this.mesh = new THREE.Mesh(this.geometry, [faceMaterial, sideMaterial]);

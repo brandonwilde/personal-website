@@ -19,23 +19,22 @@ export const colors = {
 // Scene background color in hex
 export const SCENE_BACKGROUND = 0xf7f3e9;
 
-// Shared "room" reflection map that reflective surfaces mirror (see utils/roomEnvironment.js).
-// A warm ceiling-to-floor gradient with a soft overhead highlight band.
+// Shared room reflection/IBL map (see utils/roomEnvironment.js); keep mostly dark.
 export const ROOM_ENVIRONMENT = {
   WIDTH:  512,                 // equirectangular texture size
   HEIGHT: 256,
 
-  // Vertical gradient: ceiling/lights at top → dark floor at bottom. [stop, color]
+  // Vertical gradient: dim warm ceiling → near-black floor. [stop, color]
   GRADIENT: [
-    [0.0, '#fff4dc'],          // ceiling / lights
-    [0.4, '#cdb37a'],          // upper wall (warm)
-    [0.6, '#8a7c55'],          // lower wall
-    [1.0, '#211c12'],          // floor
+    [0.0, '#4a3f2a'],          // ceiling — dim warm, not the light source itself
+    [0.4, '#2a2418'],          // upper wall
+    [0.6, '#17130c'],          // lower wall
+    [1.0, '#080603'],          // floor
   ],
 
-  // Soft overhead highlight band → a bright sweep across polished faces.
+  // Soft overhead highlight band — the "light fixture" glint on polished faces.
   BAND_CENTER_Y: 40,           // px from top; the band's origin/peak
-  BAND_INNER:    'rgba(255, 255, 255, 0.55)',
+  BAND_INNER:    'rgba(255, 255, 255, 0.45)',
   BAND_OUTER:    'rgba(255, 255, 255, 0)',
 };
 
@@ -115,7 +114,8 @@ export const SHELF_LABEL = {
   SIDE_COLOR:      0xc9b06a,   // gold tone for the plate's edges (no text map)
   METALNESS:       0.45,
   ROUGHNESS:       0.3,
-  ENV_INTENSITY:   1.0,
+  ENV_INTENSITY:   1.5,
+  EMISSIVE_INTENSITY: 0.4,     // self-illuminate the gold (text stays dark) so it reads bright vs the dim env
 
   // Engraved plate face (canvas) colors
   GRADIENT_TOP:    '#b5a66b',  // darker gold at top
@@ -214,11 +214,7 @@ export const BOOK_DEFAULTS = {
     TITLE_LINE_HEIGHT_RATIO:    1.5,   // line height as multiple of font size
     TITLE_TEXT_PADDING:         57,    // px padding inside inner border for text (~0.57in)
 
-    // Content page texture (pages +Z face — right page when open)
-    // Type is sized in physical inches (not ratios of width) so text appears at a
-    // consistent, readable size across every book regardless of trim size — the way
-    // real publishing works. A book's dimensions then follow from its content; see
-    // CONTENT_SIZING below and Book._computeContentSizing().
+    // Content page texture (pages +Z face — right page when open); type sized in inches.
     CONTENT_PIXELS_PER_UNIT:  120,   // canvas pixels per inch — high-res for close zoom
     CONTENT_TITLE_IN:         0.30,  // bold title (~22pt)
     CONTENT_SUBTITLE_IN:      0.21,  // italic subtitle / position (~15pt)
@@ -230,9 +226,7 @@ export const BOOK_DEFAULTS = {
     CONTENT_MARGIN_TOP_IN:    0.4,   // top/bottom margin in inches
   },
 
-  // Content-driven dimension sizing (inches). When a book has modalInfo and its
-  // dimensions aren't pinned in config, width/height/thickness are derived from the
-  // laid-out content within these realistic bands. See Book._computeContentSizing().
+  // Content-driven dimension sizing (inches); see Book._computeContentSizing().
   CONTENT_SIZING: {
     MEASURE_WIDTH: 6.0,   // trim width used when first measuring content height
     WIDTH_MIN:     4.8,
@@ -286,8 +280,7 @@ export const BUSINESS_CARD_DEFAULTS = {
   LEAN_ANGLE: -0.38,
 };
 
-// All animation parameters — the single source of truth for book animations.
-// Mutated at runtime by the debug panel; Book reads via _params() each timeline build.
+// All animation parameters — single source of truth, mutated by the debug panel.
 export const ANIM_PARAMS = {
     open: {
         duration:     0.8,            // base seconds; individual steps are multiples of this

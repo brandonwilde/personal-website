@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { CAMERA_SETTINGS, SCENE_BACKGROUND, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
+import { roomEnvironment } from '../utils/roomEnvironment.js';
 
 export class SceneManager {
     constructor() {
@@ -16,6 +17,9 @@ export class SceneManager {
     setupScene() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(SCENE_BACKGROUND);
+
+        // Scene-wide reflection source
+        this.scene.environment = roomEnvironment();
     }
 
     setupCamera() {
