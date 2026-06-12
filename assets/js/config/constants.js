@@ -172,6 +172,9 @@ export const CAMERA_SETTINGS = {
   FOV:  10,
   NEAR: 1.2,
   FAR:  12000,
+  // Extra vertical headroom around the shelf so the top/bottom plank labels
+  // aren't clipped at the viewport edges (1.0 = fit HEIGHT exactly).
+  FRAME_MARGIN: 1.14,
 };
 
 // Renderer settings

@@ -30,14 +30,25 @@ export class SceneManager {
             CAMERA_SETTINGS.FAR
         );
 
-        const vFov     = this.camera.fov * Math.PI / 180;
-        const centerY  = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
-        const distance = BOOKSHELF_DIMENSIONS.HEIGHT / (2 * Math.tan(vFov / 2));
-        this.camera.position.set(0, centerY, distance);
+        const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
+        this.camera.position.set(0, centerY, this._fitDistance());
 
         // Camera must be in the scene so objects parented to it are rendered.
         // (OrbitControls will set lookAt each frame via its target.)
         this.scene.add(this.camera);
+    }
+
+    // Camera distance that "contains" the whole bookcase (plus FRAME_MARGIN
+    // headroom) for the current aspect ratio — fits by whichever of width or
+    // height is more constraining, so labels never clip at any window size.
+    _fitDistance() {
+        const vFov   = this.camera.fov * Math.PI / 180;
+        const margin = CAMERA_SETTINGS.FRAME_MARGIN;
+        const halfH  = (BOOKSHELF_DIMENSIONS.HEIGHT / 2) * margin;
+        const halfW  = (BOOKSHELF_DIMENSIONS.WIDTH  / 2) * margin;
+        const distForHeight = halfH / Math.tan(vFov / 2);
+        const distForWidth  = halfW / (Math.tan(vFov / 2) * this.camera.aspect);
+        return Math.max(distForHeight, distForWidth);
     }
 
     setupRenderer() {
@@ -112,6 +123,17 @@ export class SceneManager {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Re-fit the bookcase to the new viewport. Update the saved "home"
+        // distance so reset() stays correct, and reframe live only when the
+        // user isn't zoomed into an open book (controls disabled while locked).
+        const distance = this._fitDistance();
+        this.controls.position0.setZ(distance);
+        if (this.controls.enabled) {
+            this.camera.position.set(0, BOOKSHELF_DIMENSIONS.HEIGHT / 2, distance);
+            this.controls.target.copy(this.controls.target0);
+            this.controls.update();
+        }
     }
 
     animate() {
