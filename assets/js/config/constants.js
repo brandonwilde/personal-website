@@ -16,8 +16,20 @@ export const colors = {
   black: [64, 64, 64],
 };
 
-// Scene background color in hex
-export const SCENE_BACKGROUND = 0xf7f3e9;
+// Scene background color in hex — matches the room wall so areas beyond the
+// wall plane blend seamlessly into it.
+export const SCENE_BACKGROUND = 0x3b4a66;
+
+// Room the bookcase sits in: a dark navy wall behind it and a tan carpet floor
+// it stands on, so the scene reads as a room rather than a void.
+export const ROOM = {
+  WALL_COLOR:      0x3b4a66,  // musty navy blue
+  FLOOR_COLOR:     0xb39a74,  // tan carpet
+  WALL_GAP:        0.9,       // how far the wall sits behind the bookcase's back face
+  PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
+  WALL_ROUGHNESS:  0.95,
+  FLOOR_ROUGHNESS: 1.0,
+};
 
 // Shared room reflection/IBL map (see utils/roomEnvironment.js); keep mostly dark.
 export const ROOM_ENVIRONMENT = {
