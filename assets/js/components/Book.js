@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BOOK_DEFAULTS, ANIM_PARAMS } from '../config/constants.js';
 import { formatReadDate } from '../data/goodreads.js';
 import { LinkOverlay } from '../utils/LinkOverlay.js';
+import { showcasePosition } from '../utils/showcase.js';
 
 export class Book extends THREE.Group {
     constructor(bookId, {
@@ -978,17 +979,26 @@ export class Book extends THREE.Group {
                 centerStart, rotateOverlap, coverDelay, pageFanOffset } = p.open;
         const tl = window.gsap.timeline();
 
+        // Showcase target: a fixed distance in front of the camera (zOut), centered
+        // in view, so the open book fills the frame the same however far the camera
+        // has zoomed from the shelf. showcaseY is an optional vertical nudge.
+        const cam = this._openCtx?.camera;
+        const s = cam
+            ? showcasePosition(cam, zOut)
+            : new THREE.Vector3(0, showcaseY, this.initialZ + zOut);
+        const showcase = { x: cam ? s.x : 0, y: s.y + (cam ? showcaseY : 0), z: s.z };
+
         // 1. Slide out from shelf
         tl.to(this.position, {
-            z:        this.initialZ + zOut,
+            z:        showcase.z,
             duration: duration * slideOutMult,
             ease:     'power2.out'
         });
 
         // 2. Center on screen (X and Y) as a closed book while still moving forward
         tl.to(this.position, {
-            x:        0,
-            y:        showcaseY,
+            x:        showcase.x,
+            y:        showcase.y,
             duration: duration * centerMult,
             ease:     'power2.inOut'
         }, `<${centerStart}`);
@@ -1011,7 +1021,7 @@ export class Book extends THREE.Group {
             ease
         }, `>-${coverDelay}`);
         tl.to(this.position, {
-            x:        centeredX,
+            x:        showcase.x + centeredX,
             duration: duration * coverOpenMult,
             ease
         }, `<`);

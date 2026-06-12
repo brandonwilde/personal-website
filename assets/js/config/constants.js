@@ -327,6 +327,10 @@ export const BUSINESS_CARD_DEFAULTS = {
   // How far the top (flying) card sits in front of the stack in the tray
   STACK_Z_OFFSET: 0.16,
 
+  // Distance in front of the camera the card flies to when opened — keeps its
+  // on-screen size constant regardless of how far the camera has zoomed.
+  SHOWCASE_DISTANCE: 21,
+
   // Lean angle in radians (~22° back from vertical, face tilts toward viewer)
   LEAN_ANGLE: -0.38,
 };
@@ -335,8 +339,8 @@ export const BUSINESS_CARD_DEFAULTS = {
 export const ANIM_PARAMS = {
     open: {
         duration:     0.8,            // base seconds; individual steps are multiples of this
-        zOut:         150,            // units pulled forward from the shelf
-        showcaseY:    13,             // world-Y the book centers on when open (= camera lookAt Y)
+        zOut:         55,             // distance in front of the camera the open book sits (keeps on-screen size constant at any zoom)
+        showcaseY:    0,              // optional vertical nudge from the camera's view center
         coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
         bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
         ease:         "power2.inOut",
