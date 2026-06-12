@@ -53,42 +53,47 @@ export class BookshelfScene {
     }
 
     createBookshelf() {
-        // Create back panel
-        const backPanelGeometry = new THREE.BoxGeometry(
-            BOOKSHELF_DIMENSIONS.WIDTH, 
-            BOOKSHELF_DIMENSIONS.HEIGHT, 
-            BOOKSHELF_DIMENSIONS.FRAME_THICKNESS
+        const { WIDTH, HEIGHT, DEPTH, FRAME_THICKNESS, SHELF_THICKNESS } = BOOKSHELF_DIMENSIONS;
+        // Side posts are the outer envelope; everything else butts flush inside them.
+        const innerWidth = WIDTH - 2 * FRAME_THICKNESS;   // span between the side posts
+        const sideInnerX = innerWidth / 2;                // inner face of each post
+
+        // Posts/back run a touch taller than HEIGHT so they cover the top and
+        // bottom cap shelves (which straddle ±HEIGHT/2), giving flush edges.
+        const outerHeight = HEIGHT + SHELF_THICKNESS;
+
+        // Back panel — inset so its rear face sits flush with the posts' back edge.
+        const backPanel = new THREE.Mesh(
+            new THREE.BoxGeometry(innerWidth, outerHeight, FRAME_THICKNESS),
+            this.frameMaterial
         );
-        const backPanel = new THREE.Mesh(backPanelGeometry, this.frameMaterial);
-        backPanel.position.set(0, 0, -BOOKSHELF_DIMENSIONS.DEPTH/2);
+        backPanel.position.set(0, 0, -DEPTH / 2 + FRAME_THICKNESS / 2);
         backPanel.castShadow = true;
         backPanel.receiveShadow = true;
         this.sceneManager.add(backPanel);
 
-        // Create side panels
-        const sidePanelGeometry = new THREE.BoxGeometry(
-            BOOKSHELF_DIMENSIONS.FRAME_THICKNESS,
-            BOOKSHELF_DIMENSIONS.HEIGHT,
-            BOOKSHELF_DIMENSIONS.DEPTH
-        );
+        // Side posts — run the full height (covering the cap shelves) and full
+        // depth, with their outer faces flush at ±WIDTH/2.
+        const sidePanelGeometry = new THREE.BoxGeometry(FRAME_THICKNESS, outerHeight, DEPTH);
 
         const leftPanel = new THREE.Mesh(sidePanelGeometry, this.frameMaterial);
-        leftPanel.position.set(-BOOKSHELF_DIMENSIONS.WIDTH/2, 0, 0);
+        leftPanel.position.set(-(WIDTH / 2 - FRAME_THICKNESS / 2), 0, 0);
         leftPanel.castShadow = true;
         leftPanel.receiveShadow = true;
         this.sceneManager.add(leftPanel);
 
         const rightPanel = new THREE.Mesh(sidePanelGeometry, this.frameMaterial);
-        rightPanel.position.set(BOOKSHELF_DIMENSIONS.WIDTH/2, 0, 0);
+        rightPanel.position.set(WIDTH / 2 - FRAME_THICKNESS / 2, 0, 0);
         rightPanel.castShadow = true;
         rightPanel.receiveShadow = true;
         this.sceneManager.add(rightPanel);
 
-        // Create shelves
-        const numShelves = Math.floor(BOOKSHELF_DIMENSIONS.HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING);
+        // Shelves — span only the inner width so each plank butts cleanly between
+        // the side posts. Y-centers are unchanged, so book/label placement is too.
+        const numShelves = Math.floor(HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING);
         for (let i = 0; i <= numShelves; i++) {
-            const y = i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - BOOKSHELF_DIMENSIONS.HEIGHT / 2;
-            const shelf = new Shelf(String.fromCharCode(65 + i), y, this.shelfMaterial);
+            const y = i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - HEIGHT / 2;
+            const shelf = new Shelf(String.fromCharCode(65 + i), y, this.shelfMaterial, 2 * sideInnerX);
             this.sceneManager.add(shelf.mesh);
             this.shelves.set(shelf.id, shelf);
         }
@@ -230,9 +235,10 @@ export class BookshelfScene {
         const shelf = this.shelves.get(shelfId);
         const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
 
-        // Inner faces of the bookcase the notebook leans against
-        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS / 2;
-        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS / 2;
+        // Inner faces of the bookcase the notebook leans against (posts/back are
+        // inset by a full FRAME_THICKNESS from the outer envelope).
+        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS;
+        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS;
 
         const posX = leftInnerX + offsetFromLeft;
         const posZ = backInnerZ + offsetFromBack;

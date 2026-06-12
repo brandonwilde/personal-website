@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS, shelfInnerSpan, flexCenters } from '../config/constants.js';
 
 export class Shelf {
-    constructor(id, y, material) {
+    constructor(id, y, material, width = BOOKSHELF_DIMENSIONS.WIDTH) {
         this.id = id;
         this.y = y;
+        this.width = width;
         this.books = new Map();
         // Layout groups (book sections, special items) distributed by layout().
         this.groups = [];
@@ -15,7 +16,7 @@ export class Shelf {
         this.material = material;
 
         this.geometry = new THREE.BoxGeometry(
-            BOOKSHELF_DIMENSIONS.WIDTH,
+            this.width,
             BOOKSHELF_DIMENSIONS.SHELF_THICKNESS,
             BOOKSHELF_DIMENSIONS.DEPTH
         );
