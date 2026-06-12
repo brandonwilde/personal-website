@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { INTERACTION } from '../config/constants.js';
 
 export class InteractionManager {
     constructor(camera, renderer, { onOpen, onCloseStart } = {}) {
@@ -110,6 +111,13 @@ export class InteractionManager {
     }
 
     onClick(event) {
+        // Ignore clicks that were really camera drags (orbit/pan)
+        const down = this._downPos;
+        this._downPos = null;
+        if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > INTERACTION.DRAG_THRESHOLD_PX) {
+            return;
+        }
+
         this._updateMouse(event);
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
@@ -142,6 +150,7 @@ export class InteractionManager {
 
     setupEventListeners() {
         this.renderer.domElement.addEventListener('mousemove', e => this.onMouseMove(e));
+        this.renderer.domElement.addEventListener('mousedown', e => { this._downPos = { x: e.clientX, y: e.clientY }; });
         this.renderer.domElement.addEventListener('click',     e => this.onClick(e));
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') this.closeOpenBook();

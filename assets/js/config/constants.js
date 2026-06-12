@@ -167,6 +167,11 @@ export const WOOD_MATERIAL = {
   METALNESS: 0.0,
 };
 
+// Pointer interaction thresholds
+export const INTERACTION = {
+  DRAG_THRESHOLD_PX: 6,  // pointer travel (press→release) beyond this counts as a camera drag, not a click
+};
+
 // Camera settings
 export const CAMERA_SETTINGS = {
   FOV:  10,
