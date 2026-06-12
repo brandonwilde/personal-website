@@ -16,12 +16,8 @@ export const colors = {
   black: [64, 64, 64],
 };
 
-// Scene background color in hex — matches the room wall so areas beyond the
-// wall plane blend seamlessly into it.
 export const SCENE_BACKGROUND = 0x3b4a66;
 
-// Room the bookcase sits in: a dark navy wall behind it and a tan carpet floor
-// it stands on, so the scene reads as a room rather than a void.
 export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
   FLOOR_COLOR:     0xb39a74,  // tan carpet
@@ -186,7 +182,7 @@ export const CAMERA_SETTINGS = {
   FAR:  12000,
   // Extra vertical headroom around the shelf so the top/bottom plank labels
   // aren't clipped at the viewport edges (1.0 = fit HEIGHT exactly).
-  FRAME_MARGIN: 1.14,
+  FRAME_MARGIN: 1.1,
 };
 
 // Renderer settings
@@ -327,8 +323,7 @@ export const BUSINESS_CARD_DEFAULTS = {
   // How far the top (flying) card sits in front of the stack in the tray
   STACK_Z_OFFSET: 0.16,
 
-  // Distance in front of the camera the card flies to when opened — keeps its
-  // on-screen size constant regardless of how far the camera has zoomed.
+  // Distance in front of the camera the card flies to when opened
   SHOWCASE_DISTANCE: 21,
 
   // Lean angle in radians (~22° back from vertical, face tilts toward viewer)
