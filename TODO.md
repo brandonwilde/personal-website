@@ -10,7 +10,6 @@
 
 ## 🎨 Realism & Polish
 
-- [ ] **Fix bookshelf corners** — Side panels, back panel, and shelves don't align cleanly at the corners.
 - [ ] **More realistic lighting** — Add multiple light sources of varying brightness and color temperature to simulate a real room (overhead, sconce, ambient fill, etc.). Current lighting is functional but flat.
 - [ ] **Smoother / slower animations** — Current open/close animations feel a bit fast or abrupt. Slow them down and ease curves so the motion feels more deliberate and cinematic.
 - [ ] **Lived-in book arrangement** — Add slight random Y offsets and lean angles so books don't all sit perfectly flush — more natural bookshelf look.
@@ -18,12 +17,11 @@
 - [ ] **Shadow between books** — Books next to each other should cast soft contact shadows onto neighboring spines.
 - [ ] Fill empty space with more books or decorative objects.
 - [ ] **Miniature piano/keyboard prop** — Add a small 3D piano (or keyboard) sitting on a shelf, mirroring the mini keyboard on Brandon's real bookshelf. A personality touch nodding to playing piano. Could also be the home for an "improv comedy" easter egg/personal note.
-- [ ] Add a background and surroundings to make the scene feel more like a real room.
-- [ ] Improve spacing of items/books. Perhaps handle more like the v1 version with flex container for each shelf rather than fixed item center points on each shelf
+- [ ] Add carpet texture
+- [ ] Add baseboards to wall
 
 ## 🔭 Navigation & Responsive Design
 
-- [ ] **Responsive layout** — The scene needs to look good across a range of viewport sizes (desktop widescreen, laptop 1080p, tablet). Tune camera FOV, book scale, and UI element sizes relative to viewport.
 - [ ] **Free-roam camera (undecided)** — Consider letting users orbit/pan around the shelf freely rather than locking to a fixed viewpoint. Trade-offs:
   - *Pro*: more immersive, novel UX.
   - *Con*: requires exterior shelf detail (back, sides visible), a "re-center" control button, and the open-book animation must bring content to the viewer's current vantage point rather than assuming a fixed camera position.

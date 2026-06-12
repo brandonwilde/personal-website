@@ -16,8 +16,16 @@ export const colors = {
   black: [64, 64, 64],
 };
 
-// Scene background color in hex
-export const SCENE_BACKGROUND = 0xf7f3e9;
+export const SCENE_BACKGROUND = 0x3b4a66;
+
+export const ROOM = {
+  WALL_COLOR:      0x3b4a66,  // musty navy blue
+  FLOOR_COLOR:     0xb39a74,  // tan carpet
+  WALL_GAP:        0.9,       // how far the wall sits behind the bookcase's back face
+  PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
+  WALL_ROUGHNESS:  0.95,
+  FLOOR_ROUGHNESS: 1.0,
+};
 
 // Shared room reflection/IBL map (see utils/roomEnvironment.js); keep mostly dark.
 export const ROOM_ENVIRONMENT = {
@@ -177,6 +185,9 @@ export const CAMERA_SETTINGS = {
   FOV:  10,
   NEAR: 1.2,
   FAR:  12000,
+  // Extra vertical headroom around the shelf so the top/bottom plank labels
+  // aren't clipped at the viewport edges (1.0 = fit HEIGHT exactly).
+  FRAME_MARGIN: 1.1,
 };
 
 // Renderer settings
@@ -317,6 +328,9 @@ export const BUSINESS_CARD_DEFAULTS = {
   // How far the top (flying) card sits in front of the stack in the tray
   STACK_Z_OFFSET: 0.16,
 
+  // Distance in front of the camera the card flies to when opened
+  SHOWCASE_DISTANCE: 21,
+
   // Lean angle in radians (~22° back from vertical, face tilts toward viewer)
   LEAN_ANGLE: -0.38,
 };
@@ -325,8 +339,8 @@ export const BUSINESS_CARD_DEFAULTS = {
 export const ANIM_PARAMS = {
     open: {
         duration:     0.8,            // base seconds; individual steps are multiples of this
-        zOut:         150,            // units pulled forward from the shelf
-        showcaseY:    13,             // world-Y the book centers on when open (= camera lookAt Y)
+        zOut:         55,             // distance in front of the camera the open book sits (keeps on-screen size constant at any zoom)
+        showcaseY:    0,              // optional vertical nudge from the camera's view center
         coverAngle:   -Math.PI * 0.9, // radians the cover swings open (~162°)
         bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
         ease:         "power2.inOut",

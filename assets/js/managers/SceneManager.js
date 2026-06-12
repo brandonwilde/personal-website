@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, SCENE_BACKGROUND, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
+import { CAMERA_SETTINGS, SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
 import { roomEnvironment } from '../utils/roomEnvironment.js';
 
 export class SceneManager {
@@ -9,6 +9,7 @@ export class SceneManager {
         this.setupCamera();
         this.setupRenderer();
         this.setupLighting();
+        this.setupBackdrop();
         this.setupControls();
         this.setupEventListeners();
         this.interactionManager = null; // Will be set by BookshelfScene
@@ -22,6 +23,40 @@ export class SceneManager {
         this.scene.environment = roomEnvironment();
     }
 
+    // Wall behind the bookcase and a floor it stands on, framing it as a room.
+    setupBackdrop() {
+        const size = ROOM.PLANE_SIZE;
+
+        const wall = new THREE.Mesh(
+            new THREE.PlaneGeometry(size, size),
+            new THREE.MeshStandardMaterial({
+                color:     new THREE.Color(ROOM.WALL_COLOR),
+                roughness: ROOM.WALL_ROUGHNESS,
+                metalness: 0,
+            })
+        );
+        // Just behind the bookcase's back face (faces +Z toward the camera).
+        wall.position.set(0, 0, -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP);
+        wall.receiveShadow = true;
+        this.scene.add(wall);
+
+        // Floor sits at the bookcase's base; the planks straddle ±HEIGHT/2, so the
+        // outer bottom is half a shelf-thickness below -HEIGHT/2.
+        const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(size, size),
+            new THREE.MeshStandardMaterial({
+                color:     new THREE.Color(ROOM.FLOOR_COLOR),
+                roughness: ROOM.FLOOR_ROUGHNESS,
+                metalness: 0,
+            })
+        );
+        floor.rotation.x = -Math.PI / 2;       // lay flat, normal pointing up
+        floor.position.set(0, floorY, 0);      // spans well behind the wall and past the camera
+        floor.receiveShadow = true;
+        this.scene.add(floor);
+    }
+
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(
             CAMERA_SETTINGS.FOV,
@@ -30,14 +65,25 @@ export class SceneManager {
             CAMERA_SETTINGS.FAR
         );
 
-        const vFov     = this.camera.fov * Math.PI / 180;
-        const centerY  = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
-        const distance = BOOKSHELF_DIMENSIONS.HEIGHT / (2 * Math.tan(vFov / 2));
-        this.camera.position.set(0, centerY, distance);
+        const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
+        this.camera.position.set(0, centerY, this._fitDistance());
 
         // Camera must be in the scene so objects parented to it are rendered.
         // (OrbitControls will set lookAt each frame via its target.)
         this.scene.add(this.camera);
+    }
+
+    // Camera distance that "contains" the whole bookcase (plus FRAME_MARGIN
+    // headroom) for the current aspect ratio — fits by whichever of width or
+    // height is more constraining, so labels never clip at any window size.
+    _fitDistance() {
+        const vFov   = this.camera.fov * Math.PI / 180;
+        const margin = CAMERA_SETTINGS.FRAME_MARGIN;
+        const halfH  = (BOOKSHELF_DIMENSIONS.HEIGHT / 2) * margin;
+        const halfW  = (BOOKSHELF_DIMENSIONS.WIDTH  / 2) * margin;
+        const distForHeight = halfH / Math.tan(vFov / 2);
+        const distForWidth  = halfW / (Math.tan(vFov / 2) * this.camera.aspect);
+        return Math.max(distForHeight, distForWidth);
     }
 
     setupRenderer() {
@@ -112,6 +158,17 @@ export class SceneManager {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Re-fit the bookcase to the new viewport. Update the saved "home"
+        // distance so reset() stays correct, and reframe live only when the
+        // user isn't zoomed into an open book (controls disabled while locked).
+        const distance = this._fitDistance();
+        this.controls.position0.setZ(distance);
+        if (this.controls.enabled) {
+            this.camera.position.set(0, BOOKSHELF_DIMENSIONS.HEIGHT / 2, distance);
+            this.controls.target.copy(this.controls.target0);
+            this.controls.update();
+        }
     }
 
     animate() {

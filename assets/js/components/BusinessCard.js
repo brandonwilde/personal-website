@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ANIM_PARAMS, BOOK_DEFAULTS, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
 import { LinkOverlay } from '../utils/LinkOverlay.js';
+import { showcasePosition } from '../utils/showcase.js';
 
 // A business card holder that sits on the shelf.
 // Cards lean back in a dark metal tray. On click, the top card detaches
@@ -375,10 +376,13 @@ export class BusinessCard extends THREE.Group {
 
     _buildOpenTimeline() {
         const { duration, ease } = this._p().open;
-        // Camera sits at z≈206 (HEIGHT / 2·tan5°). Place card 21 units in front.
-        // Screen-center Y at z=185: 18 * 185 / 206 ≈ 16.
-        const targetZ = 185;
-        const targetY = 16;
+        // Fly the card to a fixed distance in front of the camera, centered in
+        // view, so its on-screen size stays constant however far the camera has
+        // zoomed from the shelf.
+        const cam = this._openCtx?.camera;
+        const target = cam
+            ? showcasePosition(cam, BUSINESS_CARD_DEFAULTS.SHOWCASE_DISTANCE)
+            : new THREE.Vector3(0, 16, 185);
         const tl = window.gsap.timeline();
 
         // 1. Card pops up slightly from the stack
@@ -390,7 +394,7 @@ export class BusinessCard extends THREE.Group {
 
         // 2. Card flies forward to center screen
         tl.to(this.flyingCard.position, {
-            x: 0, y: targetY, z: targetZ,
+            x: target.x, y: target.y, z: target.z,
             duration: duration * 0.85,
             ease:     'power2.inOut',
         }, '>-0.05');
