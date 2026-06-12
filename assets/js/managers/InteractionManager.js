@@ -111,9 +111,7 @@ export class InteractionManager {
     }
 
     onClick(event) {
-        // Ignore clicks that were really camera drags (orbit/pan): a browser fires
-        // `click` after any mousedown→mouseup on the same element regardless of travel,
-        // so releasing over a book mid-orbit would otherwise open/close it.
+        // Ignore clicks that were really camera drags (orbit/pan)
         const down = this._downPos;
         this._downPos = null;
         if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > INTERACTION.DRAG_THRESHOLD_PX) {
