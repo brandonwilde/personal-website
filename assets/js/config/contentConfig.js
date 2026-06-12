@@ -390,6 +390,7 @@ export const bookConfigs = {
                 leanLeft:        0.22, // rotation.z — tip the top toward the left side wall
                 offsetFromLeft:  4.2,  // inches inward from the left side wall
                 offsetFromBack:  3.5,  // inches forward from the back panel
+                flowReserve:     13,   // inches reserved from the left so flowed books clear the notebook
             },
         },
         // Goodreads recent reads, rendered as real 3D books from the committed snapshot

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS, SHELF_LABEL, sectionCenterX } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, SHELF_LABEL } from '../config/constants.js';
 
 // Thin brass nameplate fixed to the front face of a shelf plank
 
@@ -19,7 +19,7 @@ function roundedRectShape(w, h, r) {
 }
 
 export class ShelfLabel {
-    constructor(text, shelf, section) {
+    constructor(text, shelf) {
         this.text = text;
 
         const { texture, widthIn } = this._buildTexture(text);
@@ -57,7 +57,12 @@ export class ShelfLabel {
         this.mesh.receiveShadow = true;
 
         const frontZ = BOOKSHELF_DIMENSIONS.DEPTH / 2 + SHELF_LABEL.DEPTH / 2 - SHELF_LABEL.FRONT_PROUD;
-        this.mesh.position.set(sectionCenterX(section), shelf.y, frontZ);
+        this.mesh.position.set(0, shelf.y, frontZ);
+    }
+
+    // Slide the plate to follow its group's flex-computed center.
+    setCenterX(x) {
+        this.mesh.position.x = x;
     }
 
     _buildTexture(text) {

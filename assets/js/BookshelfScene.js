@@ -6,7 +6,7 @@ import { Shelf } from './components/Shelf.js';
 import { ShelfLabel } from './components/ShelfLabel.js';
 import { SceneManager } from './managers/SceneManager.js';
 import { InteractionManager } from './managers/InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, sectionCenterX } from './config/constants.js';
+import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, BUSINESS_CARD_DEFAULTS } from './config/constants.js';
 import { goodreadsSnapshot } from './data/goodreadsSnapshot.js';
 import { fetchRecentReads } from './data/goodreads.js';
 
@@ -122,20 +122,28 @@ export class BookshelfScene {
         // Special items (goodreads, contact, blog) are built by their own render
         // methods via placementFor(); see the ref handling in the section loop below.
         this._placements = {};
+        // Labels for special-ref sections, picked up when that item registers its group.
+        this._refLabels = {};
+
+        const touched = new Set();
 
         for (const [shelfId, shelfConfig] of Object.entries(shelfConfigs)) {
             const shelf = this.shelves.get(shelfId);
             if (!shelf) continue;
 
             for (const [section, entry] of Object.entries(shelfConfig.sections ?? {})) {
+                const order = parseInt(section);
+
+                let label = null;
                 if (entry.label) {
-                    const label = new ShelfLabel(entry.label, shelf, parseInt(section));
+                    label = new ShelfLabel(entry.label, shelf);
                     this.sceneManager.add(label.mesh);
                 }
 
-                // Special items record only their location here, keyed by ref.
+                // Special items record their location (and label) for their own method.
                 if (entry.ref) {
-                    this._placements[entry.ref] = { shelfId, section: parseInt(section) };
+                    this._placements[entry.ref] = { shelfId, section: order };
+                    if (label) this._refLabels[entry.ref] = label;
                     continue;
                 }
 
@@ -155,10 +163,21 @@ export class BookshelfScene {
                 }
 
                 if (sectionBooks.length > 0) {
-                    shelf.addBookSection(sectionBooks, parseInt(section));
+                    shelf.registerGroup({
+                        id:    `${shelfId}:${section}`,
+                        order,
+                        width: Shelf.sectionWidth(sectionBooks),
+                        place: cx => {
+                            shelf.positionBooks(sectionBooks, cx);
+                            label?.setCenterX(cx);
+                        },
+                    });
+                    touched.add(shelf);
                 }
             }
         }
+
+        touched.forEach(shelf => shelf.layout());
     }
 
     placementFor(ref) {
@@ -175,14 +194,20 @@ export class BookshelfScene {
         const { shelfAngle } = contactConfig.placement;
         const shelf = this.shelves.get(shelfId);
         const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
-        const sectionX = sectionCenterX(section);
 
-        card.position.set(sectionX, shelfSurfaceY, 0);
+        card.position.set(0, shelfSurfaceY, 0);
         card.rotation.y = shelfAngle;
-        card.initialX = sectionX;
         card.initialY = shelfSurfaceY;
         card.initialZ = 0;
         card.initialRotationY = shelfAngle;
+
+        shelf.registerGroup({
+            id:    'contact',
+            order: section,
+            width: BUSINESS_CARD_DEFAULTS.WIDTH,
+            place: cx => { card.position.x = cx; card.initialX = cx; },
+        });
+        shelf.layout();
 
         this.sceneManager.add(card);
         this.interactionManager.registerBook('contact', card, {
@@ -199,8 +224,8 @@ export class BookshelfScene {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
 
-        const { shelfId } = this.placementFor('blog');
-        const { leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack } = config.placement;
+        const { shelfId, section } = this.placementFor('blog');
+        const { leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack, flowReserve } = config.placement;
 
         const shelf = this.shelves.get(shelfId);
         const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
@@ -232,6 +257,18 @@ export class BookshelfScene {
         notebook.initialY         = notebook.position.y;
         notebook.initialZ         = notebook.position.z;
         notebook.initialRotationY = notebook.rotation.y;
+
+        // Anchored to the corner — opt out of the flex flow and reserve the left
+        // end so flowed books on this shelf clear the leaning notebook.
+        shelf.registerGroup({
+            id:          'blog',
+            order:       section,
+            width:       flowReserve,
+            anchored:    true,
+            reserveSide: 'left',
+            place:       () => {},
+        });
+        shelf.layout();
 
         this.sceneManager.add(notebook);
         this.interactionManager.registerBook('blog', notebook, {
@@ -285,7 +322,17 @@ export class BookshelfScene {
             },
         }));
 
-        shelf.addBookSection(books, section);
+        const label = this._refLabels?.goodreads ?? null;
+        shelf.registerGroup({
+            id:    'goodreads',
+            order: section,
+            width: Shelf.sectionWidth(books),
+            place: cx => {
+                shelf.positionBooks(books, cx);
+                label?.setCenterX(cx);
+            },
+        });
+        shelf.layout();
         return books;
     }
 

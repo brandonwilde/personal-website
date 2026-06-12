@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS, sectionCenterX } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, shelfInnerSpan, flexCenters } from '../config/constants.js';
 
 export class Shelf {
     constructor(id, y, material) {
         this.id = id;
         this.y = y;
         this.books = new Map();
+        // Layout groups (book sections, special items) distributed by layout().
+        this.groups = [];
         this.createGeometry(material);
     }
 
@@ -24,19 +26,22 @@ export class Shelf {
         this.mesh.receiveShadow = true;
     }
 
-    addBookSection(books, section) {
-        const sectionX = sectionCenterX(section);
-
-        const spacing    = BOOKSHELF_DIMENSIONS.BOOK_SPACING;
-        const totalWidth = books.reduce((sum, book) => sum + book.dimensions.thickness, 0)
+    // Combined spine-out width of a run of books, including inter-book spacing.
+    static sectionWidth(books) {
+        const spacing = BOOKSHELF_DIMENSIONS.BOOK_SPACING;
+        return books.reduce((sum, book) => sum + book.dimensions.thickness, 0)
             + spacing * (books.length - 1);
+    }
 
-        let x = sectionX - totalWidth / 2;
+    // Lay a run of books spine-out, centered on centerX.
+    positionBooks(books, centerX) {
+        const spacing = BOOKSHELF_DIMENSIONS.BOOK_SPACING;
+        let x = centerX - Shelf.sectionWidth(books) / 2;
 
         books.forEach(book => {
             this.books.set(book.bookId, book);
 
-            book.rotation.y      = Math.PI / 2;
+            book.rotation.y       = Math.PI / 2;
             book.initialRotationY = Math.PI / 2;
 
             const bookX = x + book.dimensions.thickness / 2;
@@ -51,6 +56,36 @@ export class Shelf {
 
             x += book.dimensions.thickness + spacing;
         });
+    }
+
+    // Register (or replace, by id) a group to be placed by layout().
+    //   order       — left→right ordering hint (the old section number)
+    //   width       — footprint along X
+    //   place(cx)   — positions the group's contents at center X (cx is null for anchored)
+    //   anchored    — true to opt out of flow (e.g. wall-leaning items)
+    //   reserveSide — 'left' | 'right': which end an anchored group reserves
+    registerGroup(group) {
+        if (group.id) {
+            const i = this.groups.findIndex(g => g.id === group.id);
+            if (i !== -1) { this.groups[i] = group; return; }
+        }
+        this.groups.push(group);
+    }
+
+    // Distribute flowing groups across the shelf's inner span, after reserving
+    // space for any anchored groups, then position each group's contents.
+    layout() {
+        let { left, right } = shelfInnerSpan();
+
+        for (const g of this.groups.filter(g => g.anchored)) {
+            g.place(null);
+            if (g.reserveSide === 'right') right -= g.width;
+            else left += g.width;
+        }
+
+        const flow = this.groups.filter(g => !g.anchored).sort((a, b) => a.order - b.order);
+        const centers = flexCenters(flow.map(g => g.width), left, right);
+        flow.forEach((g, i) => g.place(centers[i]));
     }
 
     removeBook(bookId) {
