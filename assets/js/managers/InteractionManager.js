@@ -75,22 +75,25 @@ export class InteractionManager {
         return targets;
     }
 
-    // True if the topmost intersect belongs to the currently open book — either
-    // as a descendant of its group, or via getOpenInteractables().
-    _intersectIsOnOpenBook(intersects) {
-        if (!this.openBook || !intersects.length) return false;
+    // Single source of truth for "what is under the cursor", shared by hover and
+    // click so their rules can't drift apart. Returns { kind, book } where kind is:
+    //   'closed'           — a registered book that isn't currently open (clickable)
+    //   'open-body'        — the open book's own pages/cover (not clickable)
+    //   'open-interactable'— an extra the open book exposes, e.g. a link mesh
+    //   'none'             — empty space
+    _classifyTopIntersect(intersects) {
+        if (!intersects.length) return { kind: 'none', book: null };
         const obj = intersects[0].object;
-        const open = this.openBook.object;
-        const extras = open.getOpenInteractables?.() ?? [];
-        if (extras.includes(obj)) return true;
-        return this.isChildOfBook(obj, open);
-    }
 
-    // True if the topmost intersect is one of the open book's interactable extras
-    _intersectIsOpenInteractable(intersects) {
-        if (!this.openBook || !intersects.length) return false;
-        const extras = this.openBook.object.getOpenInteractables?.() ?? [];
-        return extras.includes(intersects[0].object);
+        if (this.openBook) {
+            const open = this.openBook.object;
+            const extras = open.getOpenInteractables?.() ?? [];
+            if (extras.includes(obj))         return { kind: 'open-interactable', book: this.openBook };
+            if (this.isChildOfBook(obj, open)) return { kind: 'open-body',         book: this.openBook };
+        }
+
+        const book = this.findBookFromMesh(obj);
+        return book ? { kind: 'closed', book } : { kind: 'none', book: null };
     }
 
     _updateMouse(event) {
@@ -104,22 +107,18 @@ export class InteractionManager {
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
         const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
+        const { kind, book } = this._classifyTopIntersect(intersects);
 
-        const intersectedBook = intersects.length > 0
-            ? this.findBookFromMesh(intersects[0].object)
-            : null;
-
-        if (this.hoveredBook !== intersectedBook) {
-            if (this.hoveredBook)  this.hoveredBook.object.setHovered(false);
-            if (intersectedBook)   intersectedBook.object.setHovered(true);
-            this.hoveredBook = intersectedBook;
+        // Only closed books get the hover lift/glow — the open book isn't clickable.
+        const hoverBook = kind === 'closed' ? book : null;
+        if (this.hoveredBook !== hoverBook) {
+            if (this.hoveredBook) this.hoveredBook.object.setHovered(false);
+            if (hoverBook)        hoverBook.object.setHovered(true);
+            this.hoveredBook = hoverBook;
         }
 
-        // The open book's body isn't clickable, only its interactable extras
-        const onOpenBody = this._intersectIsOnOpenBook(intersects)
-            && !this._intersectIsOpenInteractable(intersects);
-        this.renderer.domElement.style.cursor =
-            (intersectedBook && !onOpenBody) ? 'pointer' : 'default';
+        const clickable = kind === 'closed' || kind === 'open-interactable';
+        this.renderer.domElement.style.cursor = clickable ? 'pointer' : 'default';
     }
 
     onClick(event) {
@@ -134,30 +133,28 @@ export class InteractionManager {
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
         const intersects = this.raycaster.intersectObjects(this._raycastTargets(), true);
+        const { kind, book } = this._classifyTopIntersect(intersects);
 
-        // Click on the open book itself — leave it open so users can interact
-        // with the displayed content (text selection, links via the overlay).
-        if (this._intersectIsOnOpenBook(intersects)) return;
+        // Click on the open book (body or its extras) — leave it open so users can
+        // interact with the displayed content (text selection, links via the overlay).
+        if (kind === 'open-body' || kind === 'open-interactable') return;
 
-        const clickedBook = intersects.length > 0
-            ? this.findBookFromMesh(intersects[0].object)
-            : null;
-
-        if (!clickedBook) {
+        if (kind === 'none') {
             this.closeOpenBook();
             return;
         }
 
-        if (clickedBook.link) {
+        // kind === 'closed'
+        if (book.link) {
             // Open immediately (must be synchronous with the click to avoid popup blockers).
             // Close animation plays concurrently on the main tab.
-            window.open(clickedBook.link, '_blank', 'noopener,noreferrer');
+            window.open(book.link, '_blank', 'noopener,noreferrer');
             this.closeOpenBook();
             return;
         }
 
         // Different book — close current and open the new one.
-        this.closeOpenBook(() => this.openBookEntry(clickedBook));
+        this.closeOpenBook(() => this.openBookEntry(book));
     }
 
     setupEventListeners() {
