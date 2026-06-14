@@ -63,6 +63,8 @@ function buildPanel() {
         { label: 'Close duration (s)', path: ['close', 'duration'],   min: 0.1, max: 4,   step: 0.05, fmt: v => v.toFixed(2) + 's' },
         { label: 'Open delay (s)',     path: ['close', 'openDelay'],  min: 0,   max: 4,   step: 0.05, fmt: v => v.toFixed(2) + 's' },
         { label: 'Pull-out (zOut)',    path: ['open',  'zOut'],       min: 1,   max: 200, step: 1,    fmt: v => v.toFixed(0) },
+        { label: 'Arc curvature (in)', path: ['open',  'pullOffDist'], min: 0,  max: 60,  step: 0.5,  fmt: v => v.toFixed(1) },
+        { label: 'Move duration (×)',  path: ['open',  'moveMult'],   min: 0.2, max: 3,   step: 0.05, fmt: v => v.toFixed(2) + '×' },
         { label: 'Center Y',          path: ['open',  'showcaseY'],   min: -30, max: 30,  step: 0.5,  fmt: v => v.toFixed(1) },
         { label: 'Cover angle (°)',    path: ['open',  'coverAngle'],  min: 45,  max: 175, step: 1,
           // stored as negative radians; slider works in positive degrees

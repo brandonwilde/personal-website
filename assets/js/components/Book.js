@@ -900,7 +900,7 @@ export class Book extends THREE.Group {
         if (this.isHovered === isHovered) return;
         this.isHovered = isHovered;
 
-        if (!this.isOpen) {
+        if (!this.isOpen && !(this._activeTl && this._activeTl.isActive())) {
             const { duration, zOffset, ease } = this._params().hover;
             window.gsap.to(this.position, {
                 z:        isHovered ? this.initialZ + zOffset : this.initialZ,
@@ -950,6 +950,7 @@ export class Book extends THREE.Group {
 
     open(ctx = {}) {
         if (this._activeTl) this._activeTl.kill();
+        window.gsap.killTweensOf(this.position); // clear any in-flight hover lift
         this.isOpen = true;
         this._openCtx = ctx;
         this._activeTl = this._buildOpenTimeline();
@@ -961,6 +962,7 @@ export class Book extends THREE.Group {
 
     close() {
         if (this._activeTl) this._activeTl.kill();
+        window.gsap.killTweensOf(this.position); // clear any in-flight hover lift
         this.isOpen = false;
         // Remove the overlay immediately so its links can't intercept clicks mid-close.
         this._linkOverlay?.hide();
@@ -975,8 +977,8 @@ export class Book extends THREE.Group {
     _buildOpenTimeline() {
         const p = this._params();
         const { duration, zOut, showcaseY, coverAngle, bookRotation, ease,
-                pageFanAngle, slideOutMult, centerMult, rotateMult, coverOpenMult, pageFanMult,
-                centerStart, rotateOverlap, coverDelay, pageFanOffset } = p.open;
+                pageFanAngle, pullOffDist, moveMult, rotateMult, coverOpenMult, pageFanMult,
+                rotateOverlap, coverDelay, pageFanOffset } = p.open;
         const tl = window.gsap.timeline();
 
         // Showcase target: a fixed distance in front of the camera (zOut), centered
@@ -988,29 +990,40 @@ export class Book extends THREE.Group {
             : new THREE.Vector3(0, showcaseY, this.initialZ + zOut);
         const showcase = { x: cam ? s.x : 0, y: s.y + (cam ? showcaseY : 0), z: s.z };
 
-        // 1. Slide out from shelf
-        tl.to(this.position, {
-            z:        showcase.z,
-            duration: duration * slideOutMult,
-            ease:     'power2.out'
+        // 1. Glide from the shelf to the showcase along a quadratic Bézier curve. The
+        // control point sits straight off the shelf (+z) so the book leaves moving
+        // forward, then smoothly curves toward the showcase — one continuous arc with
+        // no velocity kink. start/control are captured at run time to respect any hover.
+        const start = new THREE.Vector3();
+        const ctrl  = new THREE.Vector3();
+        const end   = new THREE.Vector3(showcase.x, showcase.y, showcase.z);
+        const pt    = new THREE.Vector3();
+        const proxy = { t: 0 };
+        tl.to(proxy, {
+            t:        1,
+            duration: duration * moveMult,
+            ease:     'power2.inOut',
+            onStart: () => {
+                start.copy(this.position);
+                ctrl.copy(start).z += pullOffDist;
+            },
+            onUpdate: () => {
+                const t = proxy.t, u = 1 - t;
+                pt.copy(start).multiplyScalar(u * u)
+                  .addScaledVector(ctrl, 2 * u * t)
+                  .addScaledVector(end,  t * t);
+                this.position.copy(pt);
+            }
         });
 
-        // 2. Center on screen (X and Y) as a closed book while still moving forward
-        tl.to(this.position, {
-            x:        showcase.x,
-            y:        showcase.y,
-            duration: duration * centerMult,
-            ease:     'power2.inOut'
-        }, `<${centerStart}`);
-
-        // 3. Rotate so front cover faces viewer
+        // 2. Rotate so front cover faces viewer
         tl.to(this.rotation, {
             y:        bookRotation,
             duration: duration * rotateMult,
             ease
         }, `>-${rotateOverlap}`);
 
-        // 4. Open the front cover, and simultaneously drift right so the open spread
+        // 3. Open the front cover, and simultaneously drift right so the open spread
         // stays visually centered. When fully open the cover's free edge lands at
         // x = -w/2 + w·cos(coverAngle) relative to the book, so the spread midpoint
         // is w/2·cos(coverAngle) to the left of position — negate to re-center.
@@ -1026,7 +1039,7 @@ export class Book extends THREE.Group {
             ease
         }, `<`);
 
-        // 5. Pages fan out gently as cover opens
+        // 4. Pages fan out gently as cover opens
         tl.to(this.parts.pages.rotation, {
             y:        pageFanAngle,
             duration: duration * pageFanMult,
@@ -1038,9 +1051,9 @@ export class Book extends THREE.Group {
 
     _buildCloseTimeline() {
         const p = this._params();
-        const { duration, pageSettleMult, coverCloseMult, rotateMult, slideXYMult, slideZMult,
-                rotateOverlap, slideZOverlap } = p.close;
-        const { coverAngle, ease } = p.open;
+        const { duration, pageSettleMult, coverCloseMult, rotateMult, moveMult,
+                rotateOverlap } = p.close;
+        const { ease, pullOffDist } = p.open;
         const targetZ = this.isHovered
             ? this.initialZ + p.hover.zOffset
             : this.initialZ;
@@ -1066,19 +1079,28 @@ export class Book extends THREE.Group {
             ease
         }, `>-${rotateOverlap}`);
 
-        // 3. Slide back to original shelf position
-        tl.to(this.position, {
-            x:        this.initialX,
-            y:        this.initialY,
-            duration: duration * slideXYMult,
-            ease:     'power2.inOut'
-        }, '<');
-
-        tl.to(this.position, {
-            z:        targetZ,
-            duration: duration * slideZMult,
-            ease:     'power2.in'
-        }, `>-${slideZOverlap}`);
+        // 3. Glide back to the shelf along the same quadratic Bézier as opening, in
+        // reverse: the control point sits straight off the shelf (+z) so the book
+        // arrives sliding straight into its slot. start is captured at run time.
+        const start = new THREE.Vector3();
+        const end   = new THREE.Vector3(this.initialX, this.initialY, targetZ);
+        const ctrl  = end.clone();
+        ctrl.z += pullOffDist;
+        const pt    = new THREE.Vector3();
+        const proxy = { t: 0 };
+        tl.to(proxy, {
+            t:        1,
+            duration: duration * moveMult,
+            ease:     'power2.inOut',
+            onStart: () => { start.copy(this.position); },
+            onUpdate: () => {
+                const t = proxy.t, u = 1 - t;
+                pt.copy(start).multiplyScalar(u * u)
+                  .addScaledVector(ctrl, 2 * u * t)
+                  .addScaledVector(end,  t * t);
+                this.position.copy(pt);
+            }
+        }, `>-${rotateOverlap}`);
 
         return tl;
     }

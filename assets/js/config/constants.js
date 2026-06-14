@@ -345,16 +345,15 @@ export const ANIM_PARAMS = {
         bookRotation: 0,              // rotation.y when open; 0 = front cover faces viewer
         ease:         "power2.inOut",
         pageFanAngle: 0.08,           // radians pages fan out as cover opens
+        pullOffDist:  30,              // inches the Bézier control point sits straight off the shelf (+z); shapes the arc so the book leaves the shelf moving forward before curving to showcase
 
         // Step duration multipliers (× base duration)
-        slideOutMult:  0.5,
-        centerMult:    0.7,
+        moveMult:      1.05,  // total duration of the curved move from shelf to showcase
         rotateMult:    1.0,
         coverOpenMult: 1.2,
         pageFanMult:   0.8,
 
         // Timeline overlap/delay offsets (seconds)
-        centerStart:   0.1,   // seconds after slideOut starts that centering begins
         rotateOverlap: 0.2,   // seconds before centering ends that rotation starts
         coverDelay:    0.1,   // seconds after rotation ends before cover opens
         pageFanOffset: 0.2,   // seconds after cover starts that pages fan out
@@ -367,16 +366,14 @@ export const ANIM_PARAMS = {
         pageSettleMult: 0.5,
         coverCloseMult: 1.2,
         rotateMult:     1.0,
-        slideXYMult:    0.7,
-        slideZMult:     0.5,
+        moveMult:       1.05,  // total duration of the curved move from showcase back to the shelf
 
         // Timeline overlap offsets (seconds)
         rotateOverlap: 0.3,   // seconds before cover closes that rotation starts
-        slideZOverlap: 0.1,   // seconds before slide-XY ends that Z slide starts
     },
     hover: {
         duration: 0.3,
-        zOffset:  1,
+        zOffset:  5,
         ease:     "power2.out",
     },
 };
