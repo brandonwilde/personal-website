@@ -34,7 +34,7 @@ export class BookshelfScene {
         
         // Initialize collections
         this.shelves = new Map();
-        this.books = new Map();
+        this.items = new Map(); // mixed: books, the business card, the blog notebook
         this.setupTextures();
         this.createBookshelf();
     }
@@ -112,14 +112,14 @@ export class BookshelfScene {
         const book = new Book(id, bookProps);
         this.sceneManager.add(book);
 
-        this.interactionManager.registerBook(id, book, {
+        this.interactionManager.registerItem(id, book, {
             title:     bookProps.content   ?? id,
             modalInfo: bookProps.modalInfo ?? null,
             color:     bookProps.color,
             link:      bookProps.link      ?? null,
         });
 
-        this.books.set(id, { object: book });
+        this.items.set(id, { object: book });
         return book;
     }
 
@@ -215,12 +215,12 @@ export class BookshelfScene {
         shelf.layout();
 
         this.sceneManager.add(card);
-        this.interactionManager.registerBook('contact', card, {
+        this.interactionManager.registerItem('contact', card, {
             title:     'Contact Info',
             modalInfo: contactConfig.modalInfo ?? null,
             color:     contactConfig.color,
         });
-        this.books.set('contact', { object: card });
+        this.items.set('contact', { object: card });
     }
 
     // Places the blog as a spiral notebook leaning into a shelf's back-left corner,
@@ -277,12 +277,12 @@ export class BookshelfScene {
         shelf.layout();
 
         this.sceneManager.add(notebook);
-        this.interactionManager.registerBook('blog', notebook, {
+        this.interactionManager.registerItem('blog', notebook, {
             title: 'Blog',
             link:  config.link ?? null,
             color: config.color,
         });
-        this.books.set('blog', { object: notebook });
+        this.items.set('blog', { object: notebook });
     }
 
     // Populates a shelf section with one real 3D book per recent Goodreads read. Renders
@@ -365,8 +365,8 @@ export class BookshelfScene {
         const shelf = this.shelves.get(this._goodreadsPlacement.shelfId);
 
         for (const book of this._reviewBooks) {
-            this.interactionManager.unregisterBook(book.bookId);
-            this.books.delete(book.bookId);
+            this.interactionManager.unregisterItem(book.bookId);
+            this.items.delete(book.bookId);
             shelf?.removeBook(book.bookId);
             this._fadeBook(book, 1, 0, () => this.sceneManager.remove(book));
         }
