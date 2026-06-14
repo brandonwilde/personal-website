@@ -11,7 +11,6 @@
 ## 🎨 Realism & Polish
 
 - [ ] **More realistic lighting** — Add multiple light sources of varying brightness and color temperature to simulate a real room (overhead, sconce, ambient fill, etc.). Current lighting is functional but flat.
-- [ ] **Smoother / slower animations** — Current open/close animations feel a bit fast or abrupt. Slow them down and ease curves so the motion feels more deliberate and cinematic.
 - [ ] **Lived-in book arrangement** — Add slight random Y offsets and lean angles so books don't all sit perfectly flush — more natural bookshelf look.
 - [ ] **Better spine texture** — Spines look flat. Add subtle vertical grain lines or an embossed title effect to the spine canvas texture.
 - [ ] **Shadow between books** — Books next to each other should cast soft contact shadows onto neighboring spines.
@@ -27,9 +26,7 @@
   - *Con*: requires exterior shelf detail (back, sides visible), a "re-center" control button, and the open-book animation must bring content to the viewer's current vantage point rather than assuming a fixed camera position.
   - Current OrbitControls give this partially for free, but it feels unguided. A curated "walk up to the shelf" interaction might be better.
 - [ ] **Re-center / home button** — If free-roam is kept, provide a button to snap back to the default viewing position.
-- [ ] If panning, rotating perspective and cursor ends on an object, don't consider it clicked.
 - [ ] Let user pull out a book manually rather than (or in addition to) just clicking. Might be more fun
-- [ ] Don't use pointer on open books, unless there's something to click on - there usually isn't.
 
 ## ⚙️ Stability / Code Quality
 

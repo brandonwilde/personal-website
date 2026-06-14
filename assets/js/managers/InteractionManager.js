@@ -86,6 +86,13 @@ export class InteractionManager {
         return this.isChildOfBook(obj, open);
     }
 
+    // True if the topmost intersect is one of the open book's interactable extras
+    _intersectIsOpenInteractable(intersects) {
+        if (!this.openBook || !intersects.length) return false;
+        const extras = this.openBook.object.getOpenInteractables?.() ?? [];
+        return extras.includes(intersects[0].object);
+    }
+
     _updateMouse(event) {
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width)  *  2 - 1;
@@ -106,8 +113,13 @@ export class InteractionManager {
             if (this.hoveredBook)  this.hoveredBook.object.setHovered(false);
             if (intersectedBook)   intersectedBook.object.setHovered(true);
             this.hoveredBook = intersectedBook;
-            this.renderer.domElement.style.cursor = intersectedBook ? 'pointer' : 'default';
         }
+
+        // The open book's body isn't clickable, only its interactable extras
+        const onOpenBody = this._intersectIsOnOpenBook(intersects)
+            && !this._intersectIsOpenInteractable(intersects);
+        this.renderer.domElement.style.cursor =
+            (intersectedBook && !onOpenBody) ? 'pointer' : 'default';
     }
 
     onClick(event) {

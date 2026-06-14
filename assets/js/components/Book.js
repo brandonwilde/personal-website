@@ -900,7 +900,9 @@ export class Book extends THREE.Group {
         if (this.isHovered === isHovered) return;
         this.isHovered = isHovered;
 
-        if (!this.isOpen && !(this._activeTl && this._activeTl.isActive())) {
+        if (this.isOpen) return;
+
+        if (!(this._activeTl && this._activeTl.isActive())) {
             const { duration, zOffset, ease } = this._params().hover;
             window.gsap.to(this.position, {
                 z:        isHovered ? this.initialZ + zOffset : this.initialZ,
@@ -952,6 +954,10 @@ export class Book extends THREE.Group {
         if (this._activeTl) this._activeTl.kill();
         window.gsap.killTweensOf(this.position); // clear any in-flight hover lift
         this.isOpen = true;
+        // Clear any hover glow so the open book doesn't look clickable.
+        Object.values(this.materials).forEach(mat => {
+            if (mat?.emissive) mat.emissive.setHex(BOOK_DEFAULTS.MATERIAL.DEFAULT_EMISSIVE);
+        });
         this._openCtx = ctx;
         this._activeTl = this._buildOpenTimeline();
         // Drop the HTML link overlay (e.g. project "Go to Repo" button) once the book
