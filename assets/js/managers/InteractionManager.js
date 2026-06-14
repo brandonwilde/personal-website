@@ -103,6 +103,22 @@ export class InteractionManager {
     }
 
     onMouseMove(event) {
+        // While dragging the camera (orbit/pan), suppress hover effects — clear
+        // any current hover and skip raycasting until the drag ends. event.buttons
+        // confirms a button is still held (so a stale _downPos can't re-trigger this).
+        if (event.buttons !== 0 && this._downPos &&
+            Math.hypot(event.clientX - this._downPos.x, event.clientY - this._downPos.y) > INTERACTION.DRAG_THRESHOLD_PX) {
+            this._dragging = true;
+        }
+        if (this._dragging) {
+            if (this.hoveredItem) {
+                this.hoveredItem.object.setHovered(false);
+                this.hoveredItem = null;
+            }
+            this.renderer.domElement.style.cursor = 'default';
+            return;
+        }
+
         this._updateMouse(event);
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
@@ -161,6 +177,8 @@ export class InteractionManager {
         this.renderer.domElement.addEventListener('mousemove', e => this.onMouseMove(e));
         this.renderer.domElement.addEventListener('mousedown', e => { this._downPos = { x: e.clientX, y: e.clientY }; });
         this.renderer.domElement.addEventListener('click',     e => this.onClick(e));
+        // Drag ends on mouseup (may land outside the canvas, so listen on window).
+        window.addEventListener('mouseup', () => { this._dragging = false; });
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') this.closeOpenItem();
         });
