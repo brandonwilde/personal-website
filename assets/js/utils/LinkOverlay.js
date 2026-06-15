@@ -1,3 +1,22 @@
+import { INTERACTION } from '../config/constants.js';
+
+export function forwardCameraEvents(anchor, canvas) {
+    let downX = 0, downY = 0;
+    anchor.addEventListener('pointerdown', e => {
+        downX = e.clientX; downY = e.clientY;
+        canvas.dispatchEvent(new PointerEvent('pointerdown', e));
+    });
+    anchor.addEventListener('click', e => {
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) > INTERACTION.DRAG_THRESHOLD_PX) {
+            e.preventDefault(); // was a camera drag, not a link click
+        }
+    });
+    anchor.addEventListener('wheel', e => {
+        e.preventDefault();
+        canvas.dispatchEvent(new WheelEvent('wheel', e));
+    }, { passive: false });
+}
+
 // Floats invisible <a>s over hotspot rects, positioned by projecting each to the screen.
 // projectPoint(cx, cy, camera, viewport) => { x, y } maps a hotspot coord to a screen point.
 export class LinkOverlay {
@@ -31,6 +50,7 @@ export class LinkOverlay {
             a.rel    = 'noopener noreferrer';
             a.style.cssText = 'position:absolute;display:block;pointer-events:auto;cursor:pointer;';
             if (onLinkClick) a.addEventListener('click', onLinkClick);
+            forwardCameraEvents(a, renderer.domElement);
             this._el.appendChild(a);
         }
         this._el.style.display = 'block';

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BOOK_DEFAULTS, BLOG_NOTEBOOK_DEFAULTS } from '../config/constants.js';
+import { forwardCameraEvents } from '../utils/LinkOverlay.js';
 
 // A spiral-bound notebook representing the blog link.
 // Sits on the shelf leaning at an angle rather than spine-out like books.
@@ -192,6 +193,8 @@ export class BlogNotebook extends THREE.Group {
             this.setHovered(false);
             if (this._renderer) this._renderer.domElement.style.cursor = 'default';
         });
+
+        forwardCameraEvents(a, this._renderer.domElement);
 
         this._overlayEl.appendChild(a);
         this._overlayEl.style.display = 'block';
