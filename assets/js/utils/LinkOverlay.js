@@ -1,15 +1,31 @@
 import { INTERACTION } from '../config/constants.js';
 
+// Lets an overlay link <a> pass camera controls through to the canvas: wheel
+// forwards zoom; a drag is handed to OrbitControls once it passes the drag threshold
 export function forwardCameraEvents(anchor, canvas) {
-    let downX = 0, downY = 0;
+    let downX = 0, downY = 0, handedOff = false;
+
+    anchor.draggable = false;
+    anchor.addEventListener('dragstart', e => e.preventDefault());
+    anchor.addEventListener('contextmenu', e => e.preventDefault()); // so right-drag can pan
+
     anchor.addEventListener('pointerdown', e => {
-        downX = e.clientX; downY = e.clientY;
-        canvas.dispatchEvent(new PointerEvent('pointerdown', e));
+        downX = e.clientX; downY = e.clientY; handedOff = false;
+    });
+    anchor.addEventListener('pointermove', e => {
+        if (handedOff || e.buttons === 0) return;
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) <= INTERACTION.DRAG_THRESHOLD_PX) return;
+        handedOff = true;
+        // pointermove reports button:-1, so derive it from buttons: bit 2 = right (pan).
+        const button = (e.buttons & 2) ? 2 : 0;
+        canvas.dispatchEvent(new PointerEvent('pointerdown', {
+            pointerId: e.pointerId, pointerType: e.pointerType, isPrimary: e.isPrimary,
+            clientX: e.clientX, clientY: e.clientY,
+            button, buttons: e.buttons || 1, bubbles: true,
+        }));
     });
     anchor.addEventListener('click', e => {
-        if (Math.hypot(e.clientX - downX, e.clientY - downY) > INTERACTION.DRAG_THRESHOLD_PX) {
-            e.preventDefault(); // was a camera drag, not a link click
-        }
+        if (handedOff) e.preventDefault(); // was a drag, not a click
     });
     anchor.addEventListener('wheel', e => {
         e.preventDefault();
