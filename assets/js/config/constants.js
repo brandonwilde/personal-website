@@ -180,6 +180,15 @@ export const INTERACTION = {
   DRAG_THRESHOLD_PX: 6,  // pointer travel (press→release) beyond this counts as a camera drag, not a click
 };
 
+// Corner navigation-hints guide
+export const NAV_HINTS = {
+  CORNER:      'bottom-left', // top-left | top-right | bottom-left | bottom-right
+  MARGIN_PX:   16,
+  BG:          'rgba(15,15,20,0.82)',
+  TEXT:        '#e8e4dc',
+  ACCENT:      '#f0c060', // highlighted mouse button + key terms
+};
+
 // Camera settings
 export const CAMERA_SETTINGS = {
   FOV:  10,
