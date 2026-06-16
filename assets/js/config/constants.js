@@ -20,11 +20,33 @@ export const SCENE_BACKGROUND = 0x3b4a66;
 
 export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
-  FLOOR_COLOR:     0xb39a74,  // tan carpet
   WALL_GAP:        0.9,       // how far the wall sits behind the bookcase's back face
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
   WALL_ROUGHNESS:  0.95,
   FLOOR_ROUGHNESS: 1.0,
+};
+
+// Procedural cut-pile carpet for the floor (see utils/carpetTexture.js).
+export const CARPET = {
+  COLOR:           0xcdb88f,  // cream-tan base yarn colour
+  TEXTURE_SIZE:    512,        // canvas resolution of each generated map
+  REPEAT:          40,         // tiles across the 800-inch floor (~20in per tile)
+  ANISOTROPY:      8,          // sharpens the pile when viewed at grazing angles
+  TUFT_CELLS:      48,         // grid of the dominant pile clumps within a tile
+  OCTAVES:         4,          // fractal octaves layered over the tuft scale
+  PERSISTENCE:     0.55,       // how fast finer octaves fade (0..1)
+  GRAIN:           0.10,       // per-pixel fibre fuzz on top of the tufts
+  COLOR_VARIATION: 0.22,       // tuft-to-valley brightness spread (fake AO)
+  NORMAL_STRENGTH: 8.0,        // how steeply pile bumps tilt the surface normal
+  NORMAL_SCALE:    1.4,        // material normalScale applied to the normal map
+
+  // Near "patch" of real displaced geometry, laid over the flat far floor so
+  // the foreground pile has actual 3D topography (see SceneManager backdrop).
+  PATCH_SIZE:        360,      // inches square; large enough to cover the view
+  PATCH_SEGMENTS:    720,      // subdivisions per side (~0.5in per vertex)
+  DISPLACEMENT_SCALE: 0.45,    // inches of real pile relief — subtle until close
+  DISP_CELLS:        24,       // clump grid per tile (~0.8in lumps)
+  DISP_OCTAVES:      3,        // octaves layered into the displacement
 };
 
 // Shared room reflection/IBL map (see utils/roomEnvironment.js); keep mostly dark.
