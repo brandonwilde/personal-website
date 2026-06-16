@@ -58,6 +58,7 @@ export const bookConfigs = {
                 kind: 'education',
                 logoSrc: "assets/images/hawk-logo-color-2.svg",
                 logoAlt: "Montclair Logo",
+                logoScale: 1.25,
                 degree: "Master of Science in Computational Linguistics",
                 university: "Montclair State University: Montclair, NJ",
                 gpa: "3.97",
