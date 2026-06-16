@@ -215,7 +215,13 @@ export const BOOK_DEFAULTS = {
 
   // Cover properties
   COVER: {
-    THICKNESS: 0.24,  // Cover thickness in inches
+    THICKNESS: 0.24,            // Cover thickness in inches
+    LOGO_CANVAS_SIZE:     512,  // higher-res canvas for covers bearing a logo/crest
+    LOGO_MAX_FRACTION:    0.6,  // largest fraction of the cover the logo may span (× per-book logoScale)
+    LOGO_ALPHA:           0.82, // logo opacity — <1 lets the cloth color/weave bleed through
+    LOGO_GRAIN_AMPLITUDE: 110,  // ±brightness of the weave grain blended into the logo
+    LOGO_GRAIN_ALPHA:     0.9,  // strength of that weave overlay
+    LOGO_DARKEN:          0.2,  // translucent black blended over the logo (0 = none)
   },
 
   // Page properties
