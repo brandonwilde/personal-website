@@ -55,6 +55,50 @@ export class Book extends THREE.Group {
         return { main: raw.slice(0, idx).trim(), subtitle: raw.slice(idx + 1).trim() };
     }
 
+    // Add cloth-grain noise to a painted region so cover and spine share the
+    // same fabric look. Applies before any text is drawn so lettering stays crisp.
+    _applyFabricGrain(ctx, x, y, w, h) {
+        const amp = BOOK_DEFAULTS.TEXTURE.COVER_NOISE_AMPLITUDE;
+        const imageData = ctx.getImageData(x, y, w, h);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const n = (Math.random() - 0.5) * amp;
+            data[i]   = Math.min(255, Math.max(0, data[i]   + n));
+            data[i+1] = Math.min(255, Math.max(0, data[i+1] + n));
+            data[i+2] = Math.min(255, Math.max(0, data[i+2] + n));
+        }
+        ctx.putImageData(imageData, x, y);
+    }
+
+    // Wrap a canvas as an albedo texture. Pixels are painted with sRGB values,
+    // so tag the texture sRGB or three.js samples them as linear and the result
+    // renders too bright/washed out.
+    _albedoTexture(canvas) {
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = BOOK_DEFAULTS.TEXTURE.ANISOTROPY;
+        return tex;
+    }
+
+    // Bend the spine box into a shallow circular arc so it reads as a rounded
+    // hardcover. Every vertex is shifted toward the viewer by the arc depth at its
+    // thickness position, so the whole shell curves uniformly (inner face matches
+    // outer) rather than just bulging the front into a wedge. The thickness edges
+    // stay put (depth → 0) so the curve meets the cover edges flush, and shifting
+    // along X alone leaves the UVs — and thus the title mapping — untouched.
+    _curveSpineGeometry(geometry, thickness, bulge) {
+        if (bulge <= 0) return;
+        const R = (bulge * bulge + (thickness / 2) ** 2) / (2 * bulge);
+        const pos = geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            const z = pos.getZ(i);
+            const depth = Math.sqrt(Math.max(0, R * R - z * z)) - (R - bulge);
+            pos.setX(i, pos.getX(i) - depth);
+        }
+        pos.needsUpdate = true;
+        geometry.computeVertexNormals();
+    }
+
     // Vertical title text on the spine
     createSpineTexture() {
         const { thickness, height } = this.dimensions;
@@ -65,9 +109,11 @@ export class Book extends THREE.Group {
         const ctx = canvas.getContext('2d');
 
         const [r, g, b] = this.color;
-        const d = T.SPINE_DARKEN;
-        ctx.fillStyle = `rgb(${Math.round(r*d)}, ${Math.round(g*d)}, ${Math.round(b*d)})`;
+        const d = T.SPINE_DARKEN * T.COLOR_GAIN;
+        const lift = (c) => Math.min(255, Math.round(c * d));
+        ctx.fillStyle = `rgb(${lift(r)}, ${lift(g)}, ${lift(b)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        this._applyFabricGrain(ctx, 0, 0, canvas.width, canvas.height);
 
         if (this.spineText) {
             const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
@@ -88,7 +134,7 @@ export class Book extends THREE.Group {
             ctx.restore();
         }
 
-        return new THREE.CanvasTexture(canvas);
+        return this._albedoTexture(canvas);
     }
 
     // Subtle fabric/cloth grain texture for cover exteriors
@@ -100,21 +146,13 @@ export class Book extends THREE.Group {
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        const [r, g, b] = this.color;
+        const g0 = T.COLOR_GAIN;
+        const [r, g, b] = this.color.map(c => Math.min(255, Math.round(c * g0)));
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         ctx.fillRect(0, 0, size, size);
+        this._applyFabricGrain(ctx, 0, 0, size, size);
 
-        const imageData = ctx.getImageData(0, 0, size, size);
-        const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-            const n = (Math.random() - 0.5) * T.COVER_NOISE_AMPLITUDE;
-            data[i]   = Math.min(255, Math.max(0, data[i]   + n));
-            data[i+1] = Math.min(255, Math.max(0, data[i+1] + n));
-            data[i+2] = Math.min(255, Math.max(0, data[i+2] + n));
-        }
-        ctx.putImageData(imageData, 0, 0);
-
-        return new THREE.CanvasTexture(canvas);
+        return this._albedoTexture(canvas);
     }
 
     // Title page shown on the inside face of the front cover when open
@@ -219,7 +257,7 @@ export class Book extends THREE.Group {
             }
         }
 
-        return new THREE.CanvasTexture(canvas);
+        return this._albedoTexture(canvas);
     }
 
     // Builds the ordered list of drawable items for the content page at a given page
@@ -579,7 +617,7 @@ export class Book extends THREE.Group {
         ctx.fillStyle = T.TITLE_BG_COLOR;
         ctx.fillRect(0, 0, W, H);
 
-        if (!this.content && !this.modalInfo) return new THREE.CanvasTexture(canvas);
+        if (!this.content && !this.modalInfo) return this._albedoTexture(canvas);
 
         const marginXpx = T.CONTENT_MARGIN_X_IN  * PPU;
         const marginYpx = T.CONTENT_MARGIN_TOP_IN * PPU;
@@ -599,7 +637,7 @@ export class Book extends THREE.Group {
             y += it.advance;
         }
 
-        return new THREE.CanvasTexture(canvas);
+        return this._albedoTexture(canvas);
     }
 
     // Derives realistic trim dimensions from the laid-out content: fixed readable type
@@ -782,7 +820,15 @@ export class Book extends THREE.Group {
         };
 
         const coverGeometry = new THREE.BoxGeometry(actualWidth, actualHeight, coverThickness);
-        const spineGeometry = new THREE.BoxGeometry(coverThickness, actualHeight, actualThickness);
+        // Subdivide across the thickness (depth) axis so the shell can be bent
+        // into a smooth rounded spine; height/width need no extra segments.
+        const spineGeometry = new THREE.BoxGeometry(
+            coverThickness, actualHeight, actualThickness,
+            1, 1, BOOK_DEFAULTS.TEXTURE.SPINE_CURVE_SEGMENTS
+        );
+        this._curveSpineGeometry(
+            spineGeometry, actualThickness, BOOK_DEFAULTS.TEXTURE.SPINE_CURVE_DEPTH
+        );
         const pagesGeometry = new THREE.BoxGeometry(
             actualWidth  - pageInset * 2,
             actualHeight - pageInset * 2,

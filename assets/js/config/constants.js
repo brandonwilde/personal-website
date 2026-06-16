@@ -239,9 +239,21 @@ export const BOOK_DEFAULTS = {
 
   // Texture generation settings
   TEXTURE: {
+    // Brightness lift applied to the painted cover/spine color. The palette is
+    // sampled in sRGB and decoded correctly, which renders the muted source
+    // colors fairly dark; this gain lifts them back up while keeping their hue
+    // and saturation. 1.0 = raw palette.
+    COLOR_GAIN: 1.4,
+
+    // Filtering — anisotropic sampling stops the spine/cover grain from
+    // shimmering ("hashing") along edges seen at grazing camera angles.
+    ANISOTROPY: 8,
+
     // Spine texture
     SPINE_PIXELS_PER_UNIT:      50,    // canvas pixels per scene unit
     SPINE_DARKEN:               0.8,   // spine color darkened slightly vs cover
+    SPINE_CURVE_DEPTH:          0.16,  // inches the rounded spine bulges toward the viewer
+    SPINE_CURVE_SEGMENTS:       24,    // cross-section subdivisions for a smooth curve
     SPINE_LUMINANCE_THRESHOLD:  0.45,  // below = light text, above = dark text
     SPINE_MAX_LINES:            3,     // longest titles may wrap across up to this many columns
     SPINE_TEXT_WIDTH_FRAC:      0.7,   // fraction of spine thickness the text columns may use (side padding)
