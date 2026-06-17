@@ -139,20 +139,104 @@ export class Book extends THREE.Group {
 
     // Subtle fabric/cloth grain texture for cover exteriors
     createCoverTexture() {
-        const T = BOOK_DEFAULTS.TEXTURE;
-        const size = T.COVER_CANVAS_SIZE;
+        const size = BOOK_DEFAULTS.TEXTURE.COVER_CANVAS_SIZE;
         const canvas = document.createElement('canvas');
         canvas.width  = size;
         canvas.height = size;
-        const ctx = canvas.getContext('2d');
+        this._paintCloth(canvas.getContext('2d'), size);
+        return this._albedoTexture(canvas);
+    }
 
+    // Fills a square canvas with the book's cloth color plus subtle grain noise.
+    // COLOR_GAIN brightens the cloth and the grain matches every other fabric face.
+    _paintCloth(ctx, size) {
+        const T = BOOK_DEFAULTS.TEXTURE;
         const g0 = T.COLOR_GAIN;
         const [r, g, b] = this.color.map(c => Math.min(255, Math.round(c * g0)));
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         ctx.fillRect(0, 0, size, size);
         this._applyFabricGrain(ctx, 0, 0, size, size);
+    }
 
-        return this._albedoTexture(canvas);
+    // Front outer cover material with a logo/crest centered over the cloth. coverAspect
+    // (width/height) keeps the logo undistorted on the non-square face; it loads async.
+    _createLogoFrontMaterial(logoSrc, coverAspect, logoScale = 1) {
+        const M = BOOK_DEFAULTS.MATERIAL;
+        const C = BOOK_DEFAULTS.COVER;
+        const size = C.LOGO_CANVAS_SIZE;
+        const canvas = document.createElement('canvas');
+        canvas.width  = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        this._paintCloth(ctx, size);
+
+        // sRGB-tagged like createCoverTexture so the cloth brightness matches.
+        const texture = this._albedoTexture(canvas);
+        const material = new THREE.MeshStandardMaterial({
+            map:       texture,
+            roughness: M.COVER_ROUGHNESS,
+            metalness: M.COVER_METALNESS,
+        });
+
+        const img = new Image();
+        img.onload = () => {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            const maxPx = size * C.LOGO_MAX_FRACTION * logoScale;
+            // Canvas-px aspect that yields the logo's true world aspect once the
+            // non-square cover stretches it: world aspect = (cw/ch) * coverAspect.
+            const cwToCh = (img.naturalWidth / img.naturalHeight) / coverAspect;
+            let cw, ch;
+            if (cwToCh >= 1) { cw = maxPx; ch = maxPx / cwToCh; }
+            else             { ch = maxPx; cw = maxPx * cwToCh; }
+            const dx = (size - cw) / 2, dy = (size - ch) / 2;
+
+            // Build the logo on its own layer so the heavy weave grain affects only the
+            // logo — the surrounding cloth stays identical to the other cover faces.
+            const layer = document.createElement('canvas');
+            layer.width  = size;
+            layer.height = size;
+            const lctx = layer.getContext('2d');
+            lctx.globalAlpha = C.LOGO_ALPHA;     // let cloth color/weave bleed up through the logo
+            lctx.drawImage(img, dx, dy, cw, ch);
+            lctx.globalAlpha = 1;
+            this._overlayGrain(lctx, size);      // weave the grain into the logo
+            lctx.globalCompositeOperation = 'source-atop';     // darken only the logo pixels
+            lctx.fillStyle = `rgba(0, 0, 0, ${C.LOGO_DARKEN})`;
+            lctx.fillRect(0, 0, size, size);
+            lctx.globalCompositeOperation = 'destination-in';  // clip grain back to the logo shape
+            lctx.drawImage(img, dx, dy, cw, ch);
+
+            ctx.drawImage(layer, 0, 0);          // composite the woven logo onto untouched cloth
+            texture.needsUpdate = true;
+        };
+        img.src = logoSrc;
+
+        return material;
+    }
+
+    // Overlay-blends neutral-gray noise so the logo beneath picks up the fabric weave.
+    // Gray is neutral, so only the noise varies light/dark — no color shift.
+    _overlayGrain(ctx, size) {
+        const C = BOOK_DEFAULTS.COVER;
+        const amp = C.LOGO_GRAIN_AMPLITUDE;
+        const grain = document.createElement('canvas');
+        grain.width  = size;
+        grain.height = size;
+        const gctx = grain.getContext('2d');
+        const imageData = gctx.createImageData(size, size);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const v = 128 + (Math.random() - 0.5) * amp;
+            data[i] = data[i+1] = data[i+2] = v;
+            data[i+3] = 255;
+        }
+        gctx.putImageData(imageData, 0, 0);
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = C.LOGO_GRAIN_ALPHA;
+        ctx.drawImage(grain, 0, 0);
+        ctx.restore();
     }
 
     // Title page shown on the inside face of the front cover when open
@@ -859,6 +943,11 @@ export class Book extends THREE.Group {
             });
             this.materials.frontArt = frontOuterMat;
             this._loadCoverImage(frontOuterMat, this.modalInfo.coverImgSrcFull, this.modalInfo.coverImgSrc);
+        } else if (this.modalInfo?.logoSrc) {
+            // Books with a logo (e.g. a university crest) wear it on the front cover.
+            frontOuterMat = this._createLogoFrontMaterial(
+                this.modalInfo.logoSrc, actualWidth / actualHeight, this.modalInfo.logoScale);
+            this.materials.frontArt = frontOuterMat;
         }
 
         // Front cover uses per-face materials so the inside (-Z face, index 5) shows
