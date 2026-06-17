@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
+import { CAMERA_SETTINGS, SCENE_BACKGROUND, ROOM, CARPET, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
 import { roomEnvironment } from '../utils/roomEnvironment.js';
+import { carpetTexture } from '../utils/carpetTexture.js';
 
 export class SceneManager {
     constructor() {
@@ -43,18 +44,59 @@ export class SceneManager {
         // Floor sits at the bookcase's base; the planks straddle ±HEIGHT/2, so the
         // outer bottom is half a shelf-thickness below -HEIGHT/2.
         const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
+        const carpet = carpetTexture();
+        const normalScale = new THREE.Vector2(CARPET.NORMAL_SCALE, CARPET.NORMAL_SCALE);
+        const half = CARPET.DISPLACEMENT_SCALE / 2;
+
+        // Flat far floor: fills the whole view cheaply. Sits just under the
+        // displaced patch's lowest tuft so the two never z-fight at the seam.
         const floor = new THREE.Mesh(
             new THREE.PlaneGeometry(size, size),
             new THREE.MeshStandardMaterial({
-                color:     new THREE.Color(ROOM.FLOOR_COLOR),
-                roughness: ROOM.FLOOR_ROUGHNESS,
-                metalness: 0,
+                map:         carpet.map,
+                normalMap:   carpet.normalMap,
+                normalScale: normalScale,
+                roughness:   ROOM.FLOOR_ROUGHNESS,
+                metalness:   0,
             })
         );
         floor.rotation.x = -Math.PI / 2;       // lay flat, normal pointing up
-        floor.position.set(0, floorY, 0);      // spans well behind the wall and past the camera
+        floor.position.set(0, floorY - half - 0.05, 0);
         floor.receiveShadow = true;
         this.scene.add(floor);
+
+        // Near patch: real subdivided geometry displaced into pile topography,
+        // oscillating around floorY so the room sits at the same height as before.
+        // Patch map/normal are cloned to the same tile density as the far floor
+        // so feature scale stays continuous across the seam.
+        const density = CARPET.REPEAT / size;
+        const patchRepeat = density * CARPET.PATCH_SIZE;
+        const pMap    = carpet.map.clone();
+        const pNormal = carpet.normalMap.clone();
+        for (const tex of [pMap, pNormal, carpet.displacementMap]) {
+            tex.repeat.set(patchRepeat, patchRepeat);
+            tex.needsUpdate = true;
+        }
+        const patch = new THREE.Mesh(
+            new THREE.PlaneGeometry(
+                CARPET.PATCH_SIZE, CARPET.PATCH_SIZE,
+                CARPET.PATCH_SEGMENTS, CARPET.PATCH_SEGMENTS
+            ),
+            new THREE.MeshStandardMaterial({
+                map:              pMap,
+                normalMap:        pNormal,
+                normalScale:      normalScale,
+                displacementMap:  carpet.displacementMap,
+                displacementScale: CARPET.DISPLACEMENT_SCALE,
+                displacementBias: -half,   // centre the relief on floorY
+                roughness:        ROOM.FLOOR_ROUGHNESS,
+                metalness:        0,
+            })
+        );
+        patch.rotation.x = -Math.PI / 2;
+        patch.position.set(0, floorY, 0);
+        patch.receiveShadow = true;
+        this.scene.add(patch);
     }
 
     setupCamera() {
