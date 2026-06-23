@@ -24,6 +24,12 @@ export const ROOM = {
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
   WALL_ROUGHNESS:  0.95,
   FLOOR_ROUGHNESS: 1.0,
+
+  BASEBOARD_COLOR:     0xf5f3ee,  // off-white trim
+  BASEBOARD_HEIGHT:    2.5,         // how tall the baseboard stands off the floor
+  BASEBOARD_DEPTH:     0.4,       // how far it juts out from the wall
+  BASEBOARD_ROUGHNESS: 0.6,       // slightly sheened painted trim
+  BASEBOARD_SINK:      0.4,       // how far the bottom tucks below the floor into the pile
 };
 
 // Procedural cut-pile carpet for the floor (see utils/carpetTexture.js).

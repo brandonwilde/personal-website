@@ -37,13 +37,51 @@ export class SceneManager {
             })
         );
         // Just behind the bookcase's back face (faces +Z toward the camera).
-        wall.position.set(0, 0, -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP);
+        const wallZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
+        wall.position.set(0, 0, wallZ);
         wall.receiveShadow = true;
         this.scene.add(wall);
 
         // Floor sits at the bookcase's base; the planks straddle ±HEIGHT/2, so the
         // outer bottom is half a shelf-thickness below -HEIGHT/2.
         const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
+
+        // Moulded white trim: riser → bullnose → cove. Bottom sinks below floorY
+        // so it tucks into the carpet pile rather than hovering.
+        const h = ROOM.BASEBOARD_HEIGHT;
+        const d = ROOM.BASEBOARD_DEPTH;
+        const sink = ROOM.BASEBOARD_SINK;
+        const profile = new THREE.Shape();
+        profile.moveTo(0, -sink);
+        profile.lineTo(d, -sink);
+        profile.lineTo(d, h * 0.5);                        // front riser
+        profile.quadraticCurveTo(d, h * 0.74, d * 0.55, h * 0.8);  // bullnose
+        profile.quadraticCurveTo(d * 0.12, h * 0.86, d * 0.12, h); // cove
+        profile.lineTo(0, h);
+        profile.lineTo(0, -sink);
+
+        const baseboardMat = new THREE.MeshStandardMaterial({
+            color:     new THREE.Color(ROOM.BASEBOARD_COLOR),
+            roughness: ROOM.BASEBOARD_ROUGHNESS,
+            metalness: 0,
+        });
+        // Local +X is depth out from the wall, +Z the run; rotY/x/z seat it.
+        const addBaseboard = (length, rotY, x, z) => {
+            const geo = new THREE.ExtrudeGeometry(profile, {
+                depth: length,
+                bevelEnabled: false,
+                curveSegments: 24,
+            });
+            const mesh = new THREE.Mesh(geo, baseboardMat);
+            mesh.rotation.y = rotY;
+            mesh.position.set(x, floorY, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            this.scene.add(mesh);
+        };
+
+        // Back wall: runs along X, faces +Z.
+        addBaseboard(size, -Math.PI / 2, size / 2, wallZ);
         const carpet = carpetTexture();
         const normalScale = new THREE.Vector2(CARPET.NORMAL_SCALE, CARPET.NORMAL_SCALE);
         const half = CARPET.DISPLACEMENT_SCALE / 2;
