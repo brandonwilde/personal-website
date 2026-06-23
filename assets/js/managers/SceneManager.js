@@ -190,10 +190,26 @@ export class SceneManager {
 
         if (this._isTouchDevice()) this._setupTouchControls();
 
+        // Lowest/closest the camera and target may sit, keeping them clear of the
+        // floor and back-wall planes (see setupBackdrop for their positions).
+        const clr = C.BOUNDS_CLEARANCE;
+        this._minY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2) + clr;
+        this._minZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP + clr;
+
         // target stays at (0,0,0) — the bookshelf center — which is the OrbitControls default.
         // saveState() records this as the "home" position for reset().
         this.controls.update();
         this.controls.saveState();
+    }
+
+    // Hard barrier so neither orbiting nor panning can take the camera below the
+    // floor or behind the back wall. Clamps both the camera and its look-at target
+    // to the half-spaces y >= _minY and z >= _minZ (in front of the wall).
+    _clampToBounds() {
+        for (const v of [this.camera.position, this.controls.target]) {
+            if (v.y < this._minY) v.y = this._minY;
+            if (v.z < this._minZ) v.z = this._minZ;
+        }
     }
 
     _isTouchDevice() {
@@ -275,7 +291,10 @@ export class SceneManager {
         // Only run OrbitControls update when controls are active.
         // When locked, we drive the camera directly (GSAP tweens or snapToDefault),
         // and controls.update() would fight those changes by reapplying its stored spherical.
-        if (this.controls.enabled) this.controls.update();
+        if (this.controls.enabled) {
+            this.controls.update();
+            this._clampToBounds();
+        }
         this.renderer.render(this.scene, this.camera);
     }
 

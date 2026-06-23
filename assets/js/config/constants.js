@@ -236,6 +236,8 @@ export const CONTROLS_SETTINGS = {
   MAX_DISTANCE:          360,
   // maxDistance floor = auto-fit distance × this, so portrait can frame the shelf.
   MAX_DISTANCE_FIT_MARGIN: 1.2,
+  // Camera and look-at target stay this many inches clear of the floor and back-wall planes.
+  BOUNDS_CLEARANCE: 2,
   ZOOM_SPEED:            3,
   ROTATE_SPEED:          0.8,
   PAN_SPEED:             0.8,
