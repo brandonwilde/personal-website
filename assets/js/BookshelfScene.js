@@ -20,13 +20,19 @@ export class BookshelfScene {
             {
                 onOpen: () => {
                     // Snap camera to the default shelf view so the book always
-                    // animates into a known, visible position, then lock controls.
+                    // animates into a known, visible position, then lock controls
+                    // until it settles (focus re-enables them via onShowcased).
                     this.sceneManager.snapToDefault();
                     this.sceneManager.lockCamera();
                 },
+                onShowcased: (center) => {
+                    // Item has settled on display: retarget controls onto it so the
+                    // user can zoom in to read while it's open.
+                    this.sceneManager.focusOpenItem(center);
+                },
                 onCloseStart: () => {
-                    // Fly camera back to default and unlock when it arrives.
-                    this.sceneManager.flyToDefault(() => this.sceneManager.unlockCamera());
+                    // Release focus and fly camera back to default, unlock on arrival.
+                    this.sceneManager.unfocusAndFlyToDefault();
                 },
             }
         );

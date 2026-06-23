@@ -1,10 +1,14 @@
 import * as THREE from 'three';
+import { CAMERA_SETTINGS } from '../config/constants.js';
 
 // World position a fixed distance directly in front of the camera, centered in
-// its view. Placing an opened item here keeps its on-screen size and framing
-// constant no matter how far the camera has been dollied/zoomed from the shelf.
+// its view, so an opened item keeps a constant on-screen size at any zoom.
+// On screens narrower than SHOWCASE_BASE_ASPECT it's pushed proportionally
+// farther back so it still fits by width (width scales with distance * aspect).
 const _dir = new THREE.Vector3();
 export function showcasePosition(camera, distance) {
+    const factor = Math.max(1, CAMERA_SETTINGS.SHOWCASE_BASE_ASPECT / camera.aspect);
+    const d = distance * factor;
     camera.getWorldDirection(_dir);                 // unit forward vector
-    return camera.position.clone().addScaledVector(_dir, distance);
+    return camera.position.clone().addScaledVector(_dir, d);
 }

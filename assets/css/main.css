@@ -1,7 +1,14 @@
-body {
+/* Suppress the mobile blue tap-highlight flash everywhere — the scene and its
+   overlay links all handle their own interactions. */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
 canvas {
@@ -9,4 +16,6 @@ canvas {
     top: 0;
     left: 0;
     outline: none;
+    -webkit-touch-callout: none;
+    user-select: none;
 }

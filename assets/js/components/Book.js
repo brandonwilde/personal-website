@@ -1068,6 +1068,12 @@ export class Book extends THREE.Group {
         this._linkOverlay.show(this._linkHotspots, ctx);
     }
 
+    // Re-project the link hotspots; called each frame while the book is on display
+    // so they track the page as the camera moves.
+    syncOverlay() {
+        this._linkOverlay?.update();
+    }
+
     // Canvas pixel → screen pixel via the pages mesh's +Z face.
     _canvasPxToScreen(cx, cy, camera, viewport) {
         const local = new THREE.Vector3(
@@ -1095,9 +1101,13 @@ export class Book extends THREE.Group {
         });
         this._openCtx = ctx;
         this._activeTl = this._buildOpenTimeline();
-        // Drop the HTML link overlay (e.g. project "Go to Repo" button) once the book
-        // has finished opening and settled in place.
-        this._activeTl.call(() => this._showLinkOverlay(this._openCtx));
+        // Once the book has finished opening and settled: drop the HTML link overlay
+        // (e.g. project "Go to Repo" button) and hand its center to the camera so it
+        // can become the orbit/zoom locus while on display.
+        this._activeTl.call(() => {
+            this._showLinkOverlay(this._openCtx);
+            this._openCtx.onShowcased?.(this._showcaseCenter);
+        });
         return this._activeTl;
     }
 
@@ -1130,6 +1140,9 @@ export class Book extends THREE.Group {
             ? showcasePosition(cam, zOut)
             : new THREE.Vector3(0, showcaseY, this.initialZ + zOut);
         const showcase = { x: cam ? s.x : 0, y: s.y + (cam ? showcaseY : 0), z: s.z };
+        // Visual center of the open spread (the book drifts by centeredX below so its
+        // midpoint lands here) — used as the orbit target while the book is on display.
+        this._showcaseCenter = new THREE.Vector3(showcase.x, showcase.y, showcase.z);
 
         // 1. Glide from the shelf to the showcase along a quadratic Bézier curve. The
         // control point sits straight off the shelf (+z) so the book leaves moving

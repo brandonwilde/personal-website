@@ -298,6 +298,11 @@ export class BusinessCard extends THREE.Group {
         this._linkOverlay.show(this._linkHotspots, ctx);
     }
 
+    // Re-project the link hotspots each frame so they track the card as the camera moves.
+    syncOverlay() {
+        this._linkOverlay?.update();
+    }
+
     // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels.
     // The contact texture lives on the -Z back face, whose UV.x is inverted relative
     // to local X. After the Y-flip (rotation.y = π) the two inversions cancel, so
@@ -383,6 +388,8 @@ export class BusinessCard extends THREE.Group {
         const target = cam
             ? showcasePosition(cam, BUSINESS_CARD_DEFAULTS.SHOWCASE_DISTANCE)
             : new THREE.Vector3(0, 16, 185);
+        // Orbit/zoom locus while the card is on display.
+        this._showcaseCenter = target.clone();
         const tl = window.gsap.timeline();
 
         // 1. Card pops up slightly from the stack
@@ -413,8 +420,12 @@ export class BusinessCard extends THREE.Group {
             ease: 'power2.inOut',
         });
 
-        // 5. Once at rest, drop the invisible HTML link overlay on top.
-        tl.call(() => this._showLinkOverlay(this._openCtx));
+        // 5. Once at rest, drop the invisible HTML link overlay on top and hand
+        // the card's center to the camera as its orbit/zoom locus.
+        tl.call(() => {
+            this._showLinkOverlay(this._openCtx);
+            this._openCtx.onShowcased?.(this._showcaseCenter);
+        });
 
         return tl;
     }

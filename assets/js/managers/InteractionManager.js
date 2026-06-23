@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { INTERACTION } from '../config/constants.js';
 
 export class InteractionManager {
-    constructor(camera, renderer, { onOpen, onCloseStart } = {}) {
+    constructor(camera, renderer, { onOpen, onShowcased, onCloseStart } = {}) {
         this.camera   = camera;
         this.renderer = renderer;
         this.raycaster      = new THREE.Raycaster();
@@ -11,6 +11,7 @@ export class InteractionManager {
         this.openItem       = null; // at most one item open at a time
         this.items          = new Map();
         this._onOpen        = onOpen       ?? null; // fires before open animation
+        this._onShowcased   = onShowcased  ?? null; // fires when the open item settles on display
         this._onCloseStart  = onCloseStart ?? null; // fires before close animation
         this._pendingOpen   = null;                 // delayedCall scheduled by closeOpenItem
 
@@ -62,6 +63,7 @@ export class InteractionManager {
             camera:      this.camera,
             renderer:    this.renderer,
             onLinkClick: () => this.closeOpenItem(),
+            onShowcased: (center) => this._onShowcased?.(center),
         });
     }
 

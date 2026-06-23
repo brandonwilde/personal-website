@@ -219,6 +219,8 @@ export const CAMERA_SETTINGS = {
   // Extra vertical headroom around the shelf so the top/bottom plank labels
   // aren't clipped at the viewport edges (1.0 = fit HEIGHT exactly).
   FRAME_MARGIN: 1.1,
+  // Aspect the fixed showcase distances were tuned at; narrower screens push opened items back to fit by width.
+  SHOWCASE_BASE_ASPECT: 1.1,
 };
 
 // Renderer settings
@@ -232,9 +234,17 @@ export const CONTROLS_SETTINGS = {
   MAX_POLAR_ANGLE_DENOM: 1.5,   // maxPolarAngle = PI / this
   MIN_DISTANCE:          12,
   MAX_DISTANCE:          360,
+  // Closest the camera may get to an open item while reading it (target is on the item).
+  FOCUS_MIN_DISTANCE:    8,
+  // maxDistance floor = auto-fit distance × this, so portrait can frame the shelf.
+  MAX_DISTANCE_FIT_MARGIN: 1.2,
+  // Camera and look-at target stay this many inches clear of the floor and back-wall planes.
+  BOUNDS_CLEARANCE: 2,
   ZOOM_SPEED:            3,
   ROTATE_SPEED:          0.8,
   PAN_SPEED:             0.8,
+  TOUCH_ZOOM_SPEED:      1,
+  TOUCH_GESTURE_THRESHOLD_PX: 8,
 };
 
 // Book default properties

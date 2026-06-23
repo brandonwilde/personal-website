@@ -3,6 +3,9 @@ import { NAV_HINTS } from '../config/constants.js';
 const NS = 'http://www.w3.org/2000/svg';
 let clipIdSeq = 0; // unique ids for per-icon clip paths
 
+const isTouch = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const hasFinePointer = () => window.matchMedia?.('(pointer: fine)').matches ?? true;
+
 /**
  * Small corner guide showing how the left/right mouse buttons drive navigation.
  * Collapses to a mouse-icon button; hover (or click) it to reopen.
@@ -24,17 +27,19 @@ export function initNavHints() {
     wrap.appendChild(buildHeader(C));
     wrap.appendChild(buildBody(C));
 
-    // Starts collapsed to the mouse-icon button; hover the button to reveal the
-    // guide, and moving the cursor off the guide collapses it again.
+    // Collapsed by default; hover (mouse) or tap (touch) the pill to reveal.
     wrap.style.display = 'none';
     const pill = buildPill(C);
 
-    function expand()   { pill.style.display = 'none'; wrap.style.display = 'block'; }
+    let expandedAt = 0;
+    function expand()   { pill.style.display = 'none'; wrap.style.display = 'block'; expandedAt = Date.now(); }
     function collapse() { wrap.style.display = 'none'; pill.style.display = 'flex'; }
 
     pill.onmouseenter = expand;
     pill.onclick = expand;
     wrap.onmouseleave = collapse;
+    // Ignore the synthesized click bundled with the expanding tap.
+    wrap.onclick = () => { if (Date.now() - expandedAt > 250) collapse(); };
 
     document.body.appendChild(wrap);
     document.body.appendChild(pill);
@@ -51,23 +56,34 @@ function buildHeader(C) {
 }
 
 function buildBody(C) {
-    // Each row: a mouse glyph and the [action, result] pairs it covers.
-    const rows = [
+    // Show the mouse model for a fine pointer and the gesture model for touch;
+    // a hybrid touchscreen laptop shows both.
+    const mouseGroup = [mouseIcon, [
         ['left',  [['Left-drag', 'orbit'], ['Left-click', 'open']]],
         ['right', [['Right-drag', 'pan']]],
         ['wheel', [['Scroll', 'zoom']]],
-    ];
+    ]];
+    const touchGroup = [touchIcon, [
+        ['one', [['One finger', 'pan'], ['Tap', 'open']]],
+        ['two', [['Two-finger drag', 'orbit'], ['Pinch', 'zoom']]],
+    ]];
+    const groups = [];
+    if (hasFinePointer()) groups.push(mouseGroup);
+    if (isTouch()) groups.push(touchGroup);
+    if (!groups.length) groups.push(mouseGroup);
+
     const body = document.createElement('div');
     body.style.cssText = 'display:flex;flex-direction:column;gap:9px;';
-    for (const [highlight, descs] of rows) body.appendChild(row(highlight, descs, C));
+    for (const [iconFn, rows] of groups)
+        for (const [highlight, descs] of rows) body.appendChild(row(highlight, descs, C, iconFn));
     return body;
 }
 
-// One legend line: mouse icon + its "<action> — <result>" descriptions.
-function row(highlight, descs, C) {
+// One legend line: input icon + its "<action> — <result>" descriptions.
+function row(highlight, descs, C, iconFn) {
     const r = document.createElement('div');
     r.style.cssText = 'display:flex;align-items:center;gap:10px;';
-    const icon = mouseIcon(highlight, C);
+    const icon = iconFn(highlight, C);
     icon.style.flex = '0 0 auto';
     r.appendChild(icon);
 
@@ -139,6 +155,52 @@ function mouseIcon(highlight, C, scale = 1) {
     return svg;
 }
 
+/**
+ * Touch glyph: a fist with raised fingers. `variant` ∈ 'one' | 'two' | 'none'
+ * sets how many fingers point up; the raised finger(s) fill with the accent
+ * (except 'none', the neutral pill state). Folded fingers read as knuckles on
+ * the fist, with a tucked thumb. `scale` sizes it to the mouse icon's footprint.
+ */
+function touchIcon(variant, C, scale = 1) {
+    const w = 24, h = 34;
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', w * scale);
+    svg.setAttribute('height', h * scale);
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+
+    const raised = variant === 'two' ? 2 : 1; // index, then middle
+    const highlight = variant !== 'none';
+    const stroke = C.TEXT, sw = '1.5';
+
+    const stroked = (el, fill) => {
+        el.setAttribute('fill', fill);
+        el.setAttribute('stroke', stroke);
+        el.setAttribute('stroke-width', sw);
+        svg.appendChild(el);
+        return el;
+    };
+
+    // Palm / fist.
+    stroked(roundedRect(5, 14, 14, 16, 4), 'none');
+
+    // Tucked thumb bump on the lower left.
+    stroked(roundedRect(2.5, 18, 3.5, 6.5, 1.75), 'none')
+        .setAttribute('transform', 'rotate(-22 4 21)');
+
+    // Four fingers, left→right. Raised ones rise to the top and take the accent;
+    // folded ones only peek above the knuckles.
+    const fw = 3.2, frx = 1.6, base = 15;
+    [8, 11.4, 14.8, 18.2].forEach((cx, i) => {
+        const up = i < raised;
+        const topY = up ? 4 : 11;
+        const fill = up && highlight ? C.ACCENT : 'none';
+        const f = stroked(roundedRect(cx - fw / 2, topY, fw, base - topY, frx), fill);
+        // Second raised finger is splayed slightly
+        if (i === 1 && up) f.setAttribute('transform', `rotate(11 ${cx} ${base})`);
+    });
+    return svg;
+}
+
 function buildPill(C) {
     const pill = document.createElement('button');
     pill.id = 'nav-hints-pill';
@@ -152,7 +214,7 @@ function buildPill(C) {
         'box-shadow:0 6px 22px rgba(0,0,0,0.45)', 'backdrop-filter:blur(5px)',
         'z-index:9998', 'padding:0',
     ].join(';');
-    pill.appendChild(mouseIcon('none', C, 0.62));
+    pill.appendChild((hasFinePointer() ? mouseIcon : touchIcon)('none', C, 0.62));
     return pill;
 }
 
