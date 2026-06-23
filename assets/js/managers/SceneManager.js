@@ -180,16 +180,72 @@ export class SceneManager {
         this.controls.dampingFactor = C.DAMPING_FACTOR;
         this.controls.maxPolarAngle = Math.PI / C.MAX_POLAR_ANGLE_DENOM;
         this.controls.minDistance   = C.MIN_DISTANCE;
-        this.controls.maxDistance   = C.MAX_DISTANCE;
+        // At least the auto-fit distance, so portrait can pull back to frame the shelf.
+        this.controls.maxDistance   = Math.max(C.MAX_DISTANCE, this._fitDistance() * C.MAX_DISTANCE_FIT_MARGIN);
         this.controls.zoomSpeed     = C.ZOOM_SPEED;
         this.controls.rotateSpeed   = C.ROTATE_SPEED;
         this.controls.enablePan     = true;
         this.controls.panSpeed      = C.PAN_SPEED;
         this.controls.screenSpacePanning = true;
+
+        if (this._isTouchDevice()) this._setupTouchControls();
+
         // target stays at (0,0,0) — the bookshelf center — which is the OrbitControls default.
         // saveState() records this as the "home" position for reset().
         this.controls.update();
         this.controls.saveState();
+    }
+
+    _isTouchDevice() {
+        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    }
+
+    // Touch: one finger pans, two fingers do EITHER pinch-zoom OR orbit per
+    // gesture (never both). DOLLY_ROTATE checks enableZoom/enableRotate each
+    // move, so the arbiter below picks the mode by toggling them.
+    _setupTouchControls() {
+        const C = CONTROLS_SETTINGS;
+        this.controls.touches.ONE = THREE.TOUCH.PAN;
+        this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+        this.controls.zoomSpeed   = C.TOUCH_ZOOM_SPEED;
+
+        const el = this.renderer.domElement;
+        let startDist = 0, startMidX = 0, startMidY = 0, classified = false;
+
+        const reset = () => {
+            classified = false;
+            this.controls.enableZoom   = true;
+            this.controls.enableRotate = true;
+        };
+
+        el.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 2) { reset(); return; }
+            const [a, b] = e.touches;
+            startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+            startMidX = (a.clientX + b.clientX) / 2;
+            startMidY = (a.clientY + b.clientY) / 2;
+            classified = false;
+            // Hold both off until the gesture's intent is clear.
+            this.controls.enableZoom   = false;
+            this.controls.enableRotate = false;
+        }, { passive: true });
+
+        el.addEventListener('touchmove', (e) => {
+            if (e.touches.length !== 2 || classified) return;
+            const [a, b] = e.touches;
+            const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+            const midX = (a.clientX + b.clientX) / 2;
+            const midY = (a.clientY + b.clientY) / 2;
+            const dDist = Math.abs(dist - startDist);
+            const dMid  = Math.hypot(midX - startMidX, midY - startMidY);
+            if (Math.max(dDist, dMid) < C.TOUCH_GESTURE_THRESHOLD_PX) return;
+            classified = true;
+            if (dDist >= dMid) this.controls.enableZoom = true;     // pinch -> zoom only
+            else               this.controls.enableRotate = true;   // drag  -> orbit only
+        }, { passive: true });
+
+        el.addEventListener('touchend',    reset);
+        el.addEventListener('touchcancel', reset);
     }
 
     setupEventListeners() {
@@ -206,6 +262,7 @@ export class SceneManager {
         // user isn't zoomed into an open book (controls disabled while locked).
         const distance = this._fitDistance();
         this.controls.position0.setZ(distance);
+        this.controls.maxDistance = Math.max(CONTROLS_SETTINGS.MAX_DISTANCE, distance * CONTROLS_SETTINGS.MAX_DISTANCE_FIT_MARGIN);
         if (this.controls.enabled) {
             this.camera.position.set(0, BOOKSHELF_DIMENSIONS.HEIGHT / 2, distance);
             this.controls.target.copy(this.controls.target0);
