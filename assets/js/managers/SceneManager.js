@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, SCENE_BACKGROUND, ROOM, CARPET, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
-import { roomEnvironment } from '../utils/roomEnvironment.js';
-import { carpetTexture } from '../utils/carpetTexture.js';
+import { CAMERA_SETTINGS, SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
+import { roomEnvironment } from '../room/environment.js';
+import { addWalls } from '../room/walls.js';
+import { addBaseboards } from '../room/baseboards.js';
+import { addFloor } from '../room/floor.js';
 
 export class SceneManager {
     constructor() {
@@ -26,149 +28,12 @@ export class SceneManager {
 
     // Wall behind the bookcase and a floor it stands on, framing it as a room.
     setupBackdrop() {
-        const size = ROOM.PLANE_SIZE;
-
-        const wall = new THREE.Mesh(
-            new THREE.PlaneGeometry(size, size),
-            new THREE.MeshStandardMaterial({
-                color:     new THREE.Color(ROOM.WALL_COLOR),
-                roughness: ROOM.WALL_ROUGHNESS,
-                metalness: 0,
-            })
-        );
-        const wallZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
-        wall.position.set(0, 0, wallZ);
-        wall.receiveShadow = true;
-        this.scene.add(wall);
-
+        const wallZ  = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
         const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
 
-        // Moulded white trim: riser → bullnose → cove.
-        const h = ROOM.BASEBOARD_HEIGHT;
-        const d = ROOM.BASEBOARD_DEPTH;
-        const sink = ROOM.BASEBOARD_SINK;
-        const profile = new THREE.Shape();
-        profile.moveTo(0, -sink);
-        profile.lineTo(d, -sink);
-        profile.lineTo(d, h * 0.5);                        // front riser
-        profile.quadraticCurveTo(d, h * 0.74, d * 0.55, h * 0.8);  // bullnose
-        profile.quadraticCurveTo(d * 0.12, h * 0.86, d * 0.12, h); // cove
-        profile.lineTo(0, h);
-        profile.lineTo(0, -sink);
-
-        const baseboardMat = new THREE.MeshStandardMaterial({
-            color:     new THREE.Color(ROOM.BASEBOARD_COLOR),
-            roughness: ROOM.BASEBOARD_ROUGHNESS,
-            metalness: 0,
-        });
-        const addBaseboard = (length, rotY, x, z) => {
-            const geo = new THREE.ExtrudeGeometry(profile, {
-                depth: length,
-                bevelEnabled: false,
-                curveSegments: 24,
-            });
-            const mesh = new THREE.Mesh(geo, baseboardMat);
-            mesh.rotation.y = rotY;
-            mesh.position.set(x, floorY, z);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            this.scene.add(mesh);
-        };
-
-        // Back wall: runs along X, faces +Z.
-        addBaseboard(size, -Math.PI / 2, size / 2, wallZ);
-
-        const wallMat = new THREE.MeshStandardMaterial({
-            color:     new THREE.Color(ROOM.WALL_COLOR),
-            roughness: ROOM.WALL_ROUGHNESS,
-            metalness: 0,
-        });
-
-        // Side walls at ±SIDE_WALL_X, running from the back wall to the camera-side edge.
-        const sideDepth = size / 2 - wallZ;
-        for (const sign of [-1, 1]) {
-            const sideWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(sideDepth, size),
-                wallMat
-            );
-            sideWall.rotation.y = -sign * Math.PI / 2;
-            sideWall.position.set(sign * ROOM.SIDE_WALL_X, 0, wallZ + sideDepth / 2);
-            sideWall.receiveShadow = true;
-            this.scene.add(sideWall);
-
-            // Flat plane baseboard — culls naturally when camera passes through the wall.
-            const bb = new THREE.Mesh(
-                new THREE.PlaneGeometry(sideDepth, h + sink),
-                new THREE.MeshStandardMaterial({
-                    color:     new THREE.Color(ROOM.BASEBOARD_COLOR),
-                    roughness: ROOM.BASEBOARD_ROUGHNESS,
-                    metalness: 0,
-                })
-            );
-            bb.rotation.y = -sign * Math.PI / 2;
-            bb.position.set(
-                sign * (ROOM.SIDE_WALL_X - d),
-                floorY + (h - sink) / 2,
-                wallZ + sideDepth / 2
-            );
-            bb.receiveShadow = true;
-            bb.castShadow = true;
-            this.scene.add(bb);
-        }
-
-        const carpet = carpetTexture();
-        const normalScale = new THREE.Vector2(CARPET.NORMAL_SCALE, CARPET.NORMAL_SCALE);
-        const half = CARPET.DISPLACEMENT_SCALE / 2;
-
-        // Flat far floor: fills the whole view cheaply. Sits just under the
-        // displaced patch's lowest tuft so the two never z-fight at the seam.
-        const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(size, size),
-            new THREE.MeshStandardMaterial({
-                map:         carpet.map,
-                normalMap:   carpet.normalMap,
-                normalScale: normalScale,
-                roughness:   ROOM.FLOOR_ROUGHNESS,
-                metalness:   0,
-            })
-        );
-        floor.rotation.x = -Math.PI / 2;       // lay flat, normal pointing up
-        floor.position.set(0, floorY - half - 0.05, 0);
-        floor.receiveShadow = true;
-        this.scene.add(floor);
-
-        // Near patch: real subdivided geometry displaced into pile topography,
-        // oscillating around floorY so the room sits at the same height as before.
-        // Patch map/normal are cloned to the same tile density as the far floor
-        // so feature scale stays continuous across the seam.
-        const density = CARPET.REPEAT / size;
-        const patchRepeat = density * CARPET.PATCH_SIZE;
-        const pMap    = carpet.map.clone();
-        const pNormal = carpet.normalMap.clone();
-        for (const tex of [pMap, pNormal, carpet.displacementMap]) {
-            tex.repeat.set(patchRepeat, patchRepeat);
-            tex.needsUpdate = true;
-        }
-        const patch = new THREE.Mesh(
-            new THREE.PlaneGeometry(
-                CARPET.PATCH_SIZE, CARPET.PATCH_SIZE,
-                CARPET.PATCH_SEGMENTS, CARPET.PATCH_SEGMENTS
-            ),
-            new THREE.MeshStandardMaterial({
-                map:              pMap,
-                normalMap:        pNormal,
-                normalScale:      normalScale,
-                displacementMap:  carpet.displacementMap,
-                displacementScale: CARPET.DISPLACEMENT_SCALE,
-                displacementBias: -half,   // centre the relief on floorY
-                roughness:        ROOM.FLOOR_ROUGHNESS,
-                metalness:        0,
-            })
-        );
-        patch.rotation.x = -Math.PI / 2;
-        patch.position.set(0, floorY, 0);
-        patch.receiveShadow = true;
-        this.scene.add(patch);
+        const { sideDepth } = addWalls(this.scene, { wallZ });
+        addBaseboards(this.scene, { wallZ, floorY, sideDepth });
+        addFloor(this.scene, { floorY });
     }
 
     setupCamera() {

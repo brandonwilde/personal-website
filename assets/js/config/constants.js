@@ -33,7 +33,7 @@ export const ROOM = {
   BASEBOARD_SINK:      0.4,       // how far the bottom tucks below the floor into the pile
 };
 
-// Procedural cut-pile carpet for the floor (see utils/carpetTexture.js).
+// Procedural cut-pile carpet for the floor (see room/carpet.js).
 export const CARPET = {
   COLOR:           0xcdb88f,  // cream-tan base yarn colour
   TEXTURE_SIZE:    512,        // canvas resolution of each generated map
@@ -56,7 +56,7 @@ export const CARPET = {
   DISP_OCTAVES:      3,        // octaves layered into the displacement
 };
 
-// Shared room reflection/IBL map (see utils/roomEnvironment.js); keep mostly dark.
+// Shared room reflection/IBL map (see room/environment.js); keep mostly dark.
 export const ROOM_ENVIRONMENT = {
   WIDTH:  512,                 // equirectangular texture size
   HEIGHT: 256,

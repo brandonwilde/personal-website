@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CARPET } from '../config/constants.js';
 
 // Procedural carpet maps built on a canvas (no external assets), in the same
-// spirit as utils/roomEnvironment.js. Produces a tileable colour, normal, and
+// spirit as room/environment.js. Produces a tileable colour, normal, and
 // displacement map so the floor reads as a soft, fibrous cut-pile carpet
 // instead of a flat painted plane.
 //
@@ -11,7 +11,7 @@ import { CARPET } from '../config/constants.js';
 // dominated by a tuft frequency give clumps the lights can rake across. The
 // normal map tilts hard off those clumps and the colour darkens in the valleys
 // as fake ambient occlusion, while the separate, coarser displacement map
-// pushes the near floor patch into genuine 3D topography (see SceneManager).
+// pushes the near floor patch into genuine 3D topography (see room/floor.js).
 // Tunables live in CARPET in config/constants.js.
 
 let _maps = null;
@@ -140,7 +140,7 @@ function buildNormalMap(size, height, C) {
             const o = (y * size + x) * 4;
             data[o]     = clamp255((dx / len * 0.5 + 0.5) * 255);
             data[o + 1] = clamp255((dy / len * 0.5 + 0.5) * 255);
-            data[o + 2] = clamp255((1 / len * 0.5 + 0.5) * 255);
+            data[o + 2] = clamp255((1  / len * 0.5 + 0.5) * 255);
             data[o + 3] = 255;
         }
     }
