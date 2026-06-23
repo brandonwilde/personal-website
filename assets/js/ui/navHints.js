@@ -4,6 +4,7 @@ const NS = 'http://www.w3.org/2000/svg';
 let clipIdSeq = 0; // unique ids for per-icon clip paths
 
 const isTouch = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+const hasFinePointer = () => window.matchMedia?.('(pointer: fine)').matches ?? true;
 
 /**
  * Small corner guide showing how the left/right mouse buttons drive navigation.
@@ -26,23 +27,19 @@ export function initNavHints() {
     wrap.appendChild(buildHeader(C));
     wrap.appendChild(buildBody(C));
 
-    // Starts collapsed to the icon button. On desktop, hovering the button reveals
-    // the guide and moving the cursor off it collapses again; on touch there's no
-    // hover, so tapping the button expands and tapping the guide collapses it.
+    // Collapsed by default; hover (mouse) or tap (touch) the pill to reveal.
     wrap.style.display = 'none';
     const pill = buildPill(C);
 
-    function expand()   { pill.style.display = 'none'; wrap.style.display = 'block'; }
+    let expandedAt = 0;
+    function expand()   { pill.style.display = 'none'; wrap.style.display = 'block'; expandedAt = Date.now(); }
     function collapse() { wrap.style.display = 'none'; pill.style.display = 'flex'; }
 
-    if (isTouch()) {
-        pill.onclick = expand;
-        wrap.onclick = collapse;
-    } else {
-        pill.onmouseenter = expand;
-        pill.onclick = expand;
-        wrap.onmouseleave = collapse;
-    }
+    pill.onmouseenter = expand;
+    pill.onclick = expand;
+    wrap.onmouseleave = collapse;
+    // Ignore the synthesized click bundled with the expanding tap.
+    wrap.onclick = () => { if (Date.now() - expandedAt > 250) collapse(); };
 
     document.body.appendChild(wrap);
     document.body.appendChild(pill);
@@ -59,23 +56,26 @@ function buildHeader(C) {
 }
 
 function buildBody(C) {
-    // Each row: an input glyph and the [action, result] pairs it covers. Touch
-    // devices get the finger-gesture model; everything else gets the mouse one.
-    const touch = isTouch();
-    const iconFn = touch ? touchIcon : mouseIcon;
-    const rows = touch
-        ? [
-            ['one', [['One finger', 'pan'], ['Tap', 'open']]],
-            ['two', [['Two-finger drag', 'orbit'], ['Pinch', 'zoom']]],
-        ]
-        : [
-            ['left',  [['Left-drag', 'orbit'], ['Left-click', 'open']]],
-            ['right', [['Right-drag', 'pan']]],
-            ['wheel', [['Scroll', 'zoom']]],
-        ];
+    // Show the mouse model for a fine pointer and the gesture model for touch;
+    // a hybrid touchscreen laptop shows both.
+    const mouseGroup = [mouseIcon, [
+        ['left',  [['Left-drag', 'orbit'], ['Left-click', 'open']]],
+        ['right', [['Right-drag', 'pan']]],
+        ['wheel', [['Scroll', 'zoom']]],
+    ]];
+    const touchGroup = [touchIcon, [
+        ['one', [['One finger', 'pan'], ['Tap', 'open']]],
+        ['two', [['Two-finger drag', 'orbit'], ['Pinch', 'zoom']]],
+    ]];
+    const groups = [];
+    if (hasFinePointer()) groups.push(mouseGroup);
+    if (isTouch()) groups.push(touchGroup);
+    if (!groups.length) groups.push(mouseGroup);
+
     const body = document.createElement('div');
     body.style.cssText = 'display:flex;flex-direction:column;gap:9px;';
-    for (const [highlight, descs] of rows) body.appendChild(row(highlight, descs, C, iconFn));
+    for (const [iconFn, rows] of groups)
+        for (const [highlight, descs] of rows) body.appendChild(row(highlight, descs, C, iconFn));
     return body;
 }
 
@@ -214,7 +214,7 @@ function buildPill(C) {
         'box-shadow:0 6px 22px rgba(0,0,0,0.45)', 'backdrop-filter:blur(5px)',
         'z-index:9998', 'padding:0',
     ].join(';');
-    pill.appendChild((isTouch() ? touchIcon : mouseIcon)('none', C, 0.62));
+    pill.appendChild((hasFinePointer() ? mouseIcon : touchIcon)('none', C, 0.62));
     return pill;
 }
 
