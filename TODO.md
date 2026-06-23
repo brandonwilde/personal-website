@@ -12,20 +12,18 @@
 
 - [ ] **More realistic lighting** — Add multiple light sources of varying brightness and color temperature to simulate a real room (overhead, sconce, ambient fill, etc.). Current lighting is functional but flat.
 - [ ] **Lived-in book arrangement** — Add slight random Y offsets and lean angles so books don't all sit perfectly flush — more natural bookshelf look.
-- [ ] **Better spine texture** — Spines look flat. Add subtle vertical grain lines or an embossed title effect to the spine canvas texture.
 - [ ] **Shadow between books** — Books next to each other should cast soft contact shadows onto neighboring spines.
 - [ ] Fill empty space with more books or decorative objects.
-- [ ] **Miniature piano/keyboard prop** — Add a small 3D piano (or keyboard) sitting on a shelf, mirroring the mini keyboard on Brandon's real bookshelf. A personality touch nodding to playing piano. Could also be the home for an "improv comedy" easter egg/personal note.
-- [ ] Add carpet texture
-- [ ] Add baseboards to wall
+  - [ ] Generate 3D items with TripoSR, StableFast3D, Hunyuan3D, Meshy, Tripo3D, or Hyper3D Rodin
+  - [ ] Add something above the shelf (artwork, wifi router?) and something in the foreground (Persian rug?) for mobile displays where there's a lot of vertical space
+  - [ ] Add lamp beside shelf
+  - [ ] **Miniature piano/keyboard prop** — Add a small 3D piano (or keyboard) sitting on a shelf, mirroring the mini keyboard on Brandon's real bookshelf. A personality touch nodding to playing piano. Could also be the home for an "improv comedy" easter egg/personal note.
+  - [ ] Add chessboard
 
 ## 🔭 Navigation & Responsive Design
 
-- [ ] **Free-roam camera (undecided)** — Consider letting users orbit/pan around the shelf freely rather than locking to a fixed viewpoint. Trade-offs:
-  - *Pro*: more immersive, novel UX.
-  - *Con*: requires exterior shelf detail (back, sides visible), a "re-center" control button, and the open-book animation must bring content to the viewer's current vantage point rather than assuming a fixed camera position.
-  - Current OrbitControls give this partially for free, but it feels unguided. A curated "walk up to the shelf" interaction might be better.
 - [ ] **Re-center / home button** — If free-roam is kept, provide a button to snap back to the default viewing position.
+- [ ] Add controls better suited for laptop
 - [ ] Let user pull out a book manually rather than (or in addition to) just clicking. Might be more fun
 
 ## ⚙️ Stability / Code Quality
@@ -34,4 +32,3 @@
   - Sample each cover's dominant color and bake a spine/back hex into the snapshot, replacing the arbitrary `_hashColor(title)` so spines match the real books.
 - [ ] Improve code organization - break up big files, co-locate related code, such as that for displaying an item and its content
 - [ ] **ES module cache-busting** — Requires Ctrl+Shift+R to pick up JS changes in in browser. Add a version query string to module imports or use a bundler.
-- [ ] **Mobile / touch support** — OrbitControls work on desktop; verify and fix touch interaction on mobile.
