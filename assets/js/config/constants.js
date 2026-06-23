@@ -22,6 +22,7 @@ export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
   WALL_GAP:        0.9,       // how far the wall sits behind the bookcase's back face
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
+  SIDE_WALL_X:     120,       // ±X position of the left/right side walls (= PLANE_SIZE/2 for a true corner)
   WALL_ROUGHNESS:  0.95,
   FLOOR_ROUGHNESS: 1.0,
 

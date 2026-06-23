@@ -36,18 +36,14 @@ export class SceneManager {
                 metalness: 0,
             })
         );
-        // Just behind the bookcase's back face (faces +Z toward the camera).
         const wallZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
         wall.position.set(0, 0, wallZ);
         wall.receiveShadow = true;
         this.scene.add(wall);
 
-        // Floor sits at the bookcase's base; the planks straddle ±HEIGHT/2, so the
-        // outer bottom is half a shelf-thickness below -HEIGHT/2.
         const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
 
-        // Moulded white trim: riser → bullnose → cove. Bottom sinks below floorY
-        // so it tucks into the carpet pile rather than hovering.
+        // Moulded white trim: riser → bullnose → cove.
         const h = ROOM.BASEBOARD_HEIGHT;
         const d = ROOM.BASEBOARD_DEPTH;
         const sink = ROOM.BASEBOARD_SINK;
@@ -65,7 +61,6 @@ export class SceneManager {
             roughness: ROOM.BASEBOARD_ROUGHNESS,
             metalness: 0,
         });
-        // Local +X is depth out from the wall, +Z the run; rotY/x/z seat it.
         const addBaseboard = (length, rotY, x, z) => {
             const geo = new THREE.ExtrudeGeometry(profile, {
                 depth: length,
@@ -82,6 +77,45 @@ export class SceneManager {
 
         // Back wall: runs along X, faces +Z.
         addBaseboard(size, -Math.PI / 2, size / 2, wallZ);
+
+        const wallMat = new THREE.MeshStandardMaterial({
+            color:     new THREE.Color(ROOM.WALL_COLOR),
+            roughness: ROOM.WALL_ROUGHNESS,
+            metalness: 0,
+        });
+
+        // Side walls at ±SIDE_WALL_X, running from the back wall to the camera-side edge.
+        const sideDepth = size / 2 - wallZ;
+        for (const sign of [-1, 1]) {
+            const sideWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(sideDepth, size),
+                wallMat
+            );
+            sideWall.rotation.y = -sign * Math.PI / 2;
+            sideWall.position.set(sign * ROOM.SIDE_WALL_X, 0, wallZ + sideDepth / 2);
+            sideWall.receiveShadow = true;
+            this.scene.add(sideWall);
+
+            // Flat plane baseboard — culls naturally when camera passes through the wall.
+            const bb = new THREE.Mesh(
+                new THREE.PlaneGeometry(sideDepth, h + sink),
+                new THREE.MeshStandardMaterial({
+                    color:     new THREE.Color(ROOM.BASEBOARD_COLOR),
+                    roughness: ROOM.BASEBOARD_ROUGHNESS,
+                    metalness: 0,
+                })
+            );
+            bb.rotation.y = -sign * Math.PI / 2;
+            bb.position.set(
+                sign * (ROOM.SIDE_WALL_X - d),
+                floorY + (h - sink) / 2,
+                wallZ + sideDepth / 2
+            );
+            bb.receiveShadow = true;
+            bb.castShadow = true;
+            this.scene.add(bb);
+        }
+
         const carpet = carpetTexture();
         const normalScale = new THREE.Vector2(CARPET.NORMAL_SCALE, CARPET.NORMAL_SCALE);
         const half = CARPET.DISPLACEMENT_SCALE / 2;
