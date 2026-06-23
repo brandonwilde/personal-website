@@ -273,12 +273,22 @@ export class SceneManager {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-        // Re-fit the bookcase to the new viewport. Update the saved "home"
-        // distance so reset() stays correct, and reframe live only when the
-        // user isn't zoomed into an open book (controls disabled while locked).
+        // Re-fit the bookcase to the new viewport and update the saved "home"
+        // distance so reset() stays correct.
         const distance = this._fitDistance();
         this.controls.position0.setZ(distance);
-        this.controls.maxDistance = Math.max(CONTROLS_SETTINGS.MAX_DISTANCE, distance * CONTROLS_SETTINGS.MAX_DISTANCE_FIT_MARGIN);
+        const fitMax = Math.max(CONTROLS_SETTINGS.MAX_DISTANCE, distance * CONTROLS_SETTINGS.MAX_DISTANCE_FIT_MARGIN);
+
+        // While focused on an open item, keep its framing (don't reframe to the
+        // shelf or touch the focus zoom cap) — just remember the default max for
+        // when focus is released.
+        if (this._focused) {
+            this._prevMaxDistance = fitMax;
+            return;
+        }
+
+        this.controls.maxDistance = fitMax;
+        // Reframe live only when the user is freely browsing (controls enabled).
         if (this.controls.enabled) {
             this.camera.position.set(0, BOOKSHELF_DIMENSIONS.HEIGHT / 2, distance);
             this.controls.target.copy(this.controls.target0);
@@ -294,6 +304,8 @@ export class SceneManager {
         if (this.controls.enabled) {
             this.controls.update();
             this._clampToBounds();
+            // Keep an open item's link hotspots aligned as the camera moves.
+            this.interactionManager?.openItem?.object?.syncOverlay?.();
         }
         this.renderer.render(this.scene, this.camera);
     }
@@ -314,6 +326,35 @@ export class SceneManager {
     snapToDefault() {
         this._killFlyTweens();
         this.controls.reset(); // restores position0/target0 saved in setupControls
+    }
+
+    // Retarget the controls onto an open item and re-enable them, so the user
+    // keeps some mobility (notably zoom-to-read) while it's displayed. With the
+    // target on the item, zoom dollies toward it and stops at FOCUS_MIN_DISTANCE
+    // instead of rushing past; maxDistance is capped at the current framing so
+    // the item stays in view.
+    focusOpenItem(center) {
+        this._killFlyTweens();
+        this.controls.target.copy(center);
+        this._prevMinDistance = this.controls.minDistance;
+        this._prevMaxDistance = this.controls.maxDistance;
+        this.controls.minDistance = CONTROLS_SETTINGS.FOCUS_MIN_DISTANCE;
+        this.controls.maxDistance = this.camera.position.distanceTo(center);
+        this.controls.enabled = true;
+        this._focused = true;
+        this.controls.update();
+    }
+
+    // Undo focusOpenItem's zoom limits, then fly back to the default shelf view.
+    // Controls are disabled for the flight so the tween isn't fought, and
+    // re-enabled (synced) on arrival.
+    unfocusAndFlyToDefault() {
+        this._focused = false;
+        if (this._prevMinDistance != null) this.controls.minDistance = this._prevMinDistance;
+        if (this._prevMaxDistance != null) this.controls.maxDistance = this._prevMaxDistance;
+        this._prevMinDistance = this._prevMaxDistance = null;
+        this.lockCamera();
+        this.flyToDefault(() => this.unlockCamera());
     }
 
     // Smoothly flies camera back to the default position, then fires onComplete.

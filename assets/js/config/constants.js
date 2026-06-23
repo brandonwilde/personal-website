@@ -234,6 +234,8 @@ export const CONTROLS_SETTINGS = {
   MAX_POLAR_ANGLE_DENOM: 1.5,   // maxPolarAngle = PI / this
   MIN_DISTANCE:          12,
   MAX_DISTANCE:          360,
+  // Closest the camera may get to an open item while reading it (target is on the item).
+  FOCUS_MIN_DISTANCE:    8,
   // maxDistance floor = auto-fit distance × this, so portrait can frame the shelf.
   MAX_DISTANCE_FIT_MARGIN: 1.2,
   // Camera and look-at target stay this many inches clear of the floor and back-wall planes.
