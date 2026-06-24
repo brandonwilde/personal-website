@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Book } from './components/book/Book.js';
 import { BlogNotebook } from './components/BlogNotebook.js';
-import { BusinessCard } from './components/BusinessCard.js';
+import { BusinessCard } from './components/businessCard/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
 import { ShelfLabel } from './components/ShelfLabel.js';
 import { SceneManager } from './managers/SceneManager.js';
