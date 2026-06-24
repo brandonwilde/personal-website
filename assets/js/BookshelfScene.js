@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Book } from './components/Book.js';
+import { Book } from './components/book/Book.js';
 import { BlogNotebook } from './components/BlogNotebook.js';
 import { BusinessCard } from './components/BusinessCard.js';
 import { Shelf } from './components/Shelf.js';
