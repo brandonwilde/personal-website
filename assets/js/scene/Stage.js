@@ -6,9 +6,9 @@ import { addBaseboards } from '../room/baseboards.js';
 import { addFloor } from '../room/floor.js';
 import { CameraController } from './CameraController.js';
 
-// The stage: builds and draws the world (scene, renderer, lights, room backdrop) and
+// Builds and draws the world (scene, renderer, lights, room backdrop) and
 // runs the render loop. The camera and its choreography live in CameraController.
-export class SceneManager {
+export class Stage {
     constructor() {
         this.setupScene();
         this.setupRenderer();

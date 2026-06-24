@@ -4,7 +4,7 @@ import { CAMERA_SETTINGS, BOOKSHELF_DIMENSIONS, CONTROLS_SETTINGS, ROOM } from '
 
 // Owns the camera and OrbitControls, and choreographs them: auto-framing the bookcase,
 // clamping to the room bounds, touch-gesture arbitration, and the lock / snap / focus /
-// fly camera moves that play as items open and close. SceneManager adds the camera to the
+// fly camera moves that play as items open and close. Stage adds the camera to the
 // scene and drives update()/onResize() from its render loop; BookshelfScene calls the
 // choreography methods from its interaction callbacks.
 export class CameraController {
@@ -24,7 +24,7 @@ export class CameraController {
 
         const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
         this.camera.position.set(0, centerY, this._fitDistance());
-        // SceneManager adds the camera to the scene (so camera-parented objects render).
+        // Stage adds the camera to the scene (so camera-parented objects render).
     }
 
     // Camera distance that "contains" the whole bookcase (plus FRAME_MARGIN
@@ -58,7 +58,7 @@ export class CameraController {
         if (this._isTouchDevice()) this._setupTouchControls();
 
         // Lowest/closest the camera and target may sit, keeping them clear of the
-        // floor and back-wall planes (see SceneManager.setupBackdrop for their positions).
+        // floor and back-wall planes (see Stage.setupBackdrop for their positions).
         const clr = C.BOUNDS_CLEARANCE;
         this._minY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2) + clr;
         this._minZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP + clr;
