@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL } from '../config/constants.js';
-import { Shelf } from './Shelf.js';
+import { Shelf } from './shelf/Shelf.js';
 
 // The bookcase: its wooden frame (back panel + two side posts) and the run of shelves
 // it holds. Builds everything in world space at the origin and exposes the shelves Map

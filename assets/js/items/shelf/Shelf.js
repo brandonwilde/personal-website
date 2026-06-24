@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS, shelfInnerSpan, flexCenters } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS } from '../../config/constants.js';
+import { shelfInnerSpan, flexCenters } from './shelfLayout.js';
 
 export class Shelf {
     constructor(id, y, material, width = BOOKSHELF_DIMENSIONS.WIDTH) {
