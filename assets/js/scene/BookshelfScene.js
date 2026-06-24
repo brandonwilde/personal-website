@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { Book } from './components/book/Book.js';
-import { BlogNotebook } from './components/BlogNotebook.js';
-import { BusinessCard } from './components/businessCard/BusinessCard.js';
-import { Shelf } from './components/Shelf.js';
-import { ShelfLabel } from './components/ShelfLabel.js';
-import { SceneManager } from './managers/SceneManager.js';
-import { InteractionManager } from './managers/InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, BUSINESS_CARD_DEFAULTS } from './config/constants.js';
-import { goodreadsSnapshot } from './data/goodreadsSnapshot.js';
-import { fetchRecentReads } from './data/goodreads.js';
+import { Book } from '../items/book/Book.js';
+import { BlogNotebook } from '../items/BlogNotebook.js';
+import { BusinessCard } from '../items/businessCard/BusinessCard.js';
+import { Shelf } from '../items/Shelf.js';
+import { ShelfLabel } from '../items/ShelfLabel.js';
+import { SceneManager } from './SceneManager.js';
+import { InteractionManager } from './InteractionManager.js';
+import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
+import { goodreadsSnapshot } from '../data/goodreadsSnapshot.js';
+import { fetchRecentReads } from '../data/goodreads.js';
 
 export class BookshelfScene {
     constructor() {
