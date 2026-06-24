@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { BOOK_DEFAULTS, BLOG_NOTEBOOK_DEFAULTS } from '../config/constants.js';
 import { forwardCameraEvents } from '../utils/LinkOverlay.js';
+import { InteractiveItem } from './InteractiveItem.js';
 
 // A spiral-bound notebook representing the blog link.
 // Sits on the shelf leaning at an angle rather than spine-out like books.
 // Hovering shows the native browser URL preview via an invisible <a> overlay.
-export class BlogNotebook extends THREE.Group {
+export class BlogNotebook extends InteractiveItem {
     constructor(id, { color, link }) {
         super();
         this.bookId = id;
@@ -17,13 +18,6 @@ export class BlogNotebook extends THREE.Group {
             height:    BLOG_NOTEBOOK_DEFAULTS.HEIGHT,
             thickness: BLOG_NOTEBOOK_DEFAULTS.THICKNESS,
         };
-
-        this.isHovered = false;
-        this.isOpen    = false;
-        this.initialX  = 0;
-        this.initialY  = 0;
-        this.initialZ  = 0;
-        this.initialRotationY = 0;
 
         this._allMats   = [];
         this._camera    = null;
@@ -230,11 +224,7 @@ export class BlogNotebook extends THREE.Group {
             [-hW,  hH,  hT], [ hW,  hH,  hT],
         ].map(([x, y, z]) => {
             const w = new THREE.Vector3(x, y, z).applyMatrix4(this.matrixWorld);
-            const n = w.project(this._camera);
-            return {
-                x: viewport.left + (n.x + 1) * 0.5 * viewport.width,
-                y: viewport.top  + (1 - n.y) * 0.5 * viewport.height,
-            };
+            return this._worldToScreen(w, this._camera, viewport);
         });
 
         const xs = screenPts.map(p => p.x);

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BOOK_DEFAULTS, ANIM_PARAMS } from '../../config/constants.js';
-import { LinkOverlay } from '../../utils/LinkOverlay.js';
+import { InteractiveItem } from '../InteractiveItem.js';
 import {
     titleParts,
     createCoverTexture,
@@ -16,7 +16,7 @@ import { buildOpenTimeline, buildCloseTimeline } from './bookAnimation.js';
 // A single 3D book: builds its mesh + textures, handles hover, and orchestrates the
 // open/close showcase animation. Texture painting, content-page layout, spine math,
 // and the GSAP timelines live in the sibling book/ modules.
-export class Book extends THREE.Group {
+export class Book extends InteractiveItem {
     constructor(bookId, {
         width,
         height,
@@ -33,12 +33,6 @@ export class Book extends THREE.Group {
         // Spine text: review books show only the main title (pre-colon) so the spine stays
         // legible; every other book keeps its full content on the spine.
         this.spineText = modalInfo?.kind === 'review' ? titleParts(content).main : content;
-        this.isHovered = false;
-        this.isOpen = false;
-        this.initialX = 0;
-        this.initialY = 0;
-        this.initialZ = 0;
-        this.initialRotationY = 0;
         this._typeScale = 1;
 
         // Books with structured content derive their trim size from how much content
@@ -247,36 +241,16 @@ export class Book extends THREE.Group {
 
     // ─── HTML link overlay ──────────────────────────────────────────────────────
 
-    _showLinkOverlay(ctx) {
-        if (!this._linkHotspots?.length) return;
-        if (!this._linkOverlay) {
-            this._linkOverlay = new LinkOverlay((cx, cy, camera, viewport) => {
-                this.parts.pages.updateWorldMatrix(true, false);
-                return this._canvasPxToScreen(cx, cy, camera, viewport);
-            });
-        }
-        this._linkOverlay.show(this._linkHotspots, ctx);
-    }
-
-    // Re-project the link hotspots; called each frame while the book is on display
-    // so they track the page as the camera moves.
-    syncOverlay() {
-        this._linkOverlay?.update();
-    }
-
-    // Canvas pixel → screen pixel via the pages mesh's +Z face.
-    _canvasPxToScreen(cx, cy, camera, viewport) {
+    // Canvas pixel → screen pixel via the pages mesh's +Z face (the right-hand page).
+    _projectHotspot(cx, cy, camera, viewport) {
+        this.parts.pages.updateWorldMatrix(true, false);
         const local = new THREE.Vector3(
             (cx / this._contentCanvasW - 0.5) * this._pageFace.w,
             (0.5 - cy / this._contentCanvasH) * this._pageFace.h,
             this._pageFace.z,
         );
         const world = local.applyMatrix4(this.parts.pages.matrixWorld);
-        const ndc = world.project(camera);
-        return {
-            x: viewport.left + (ndc.x + 1) * 0.5 * viewport.width,
-            y: viewport.top  + (1 - ndc.y) * 0.5 * viewport.height,
-        };
+        return this._worldToScreen(world, camera, viewport);
     }
 
     // ─── Open / Close ───────────────────────────────────────────────────────────

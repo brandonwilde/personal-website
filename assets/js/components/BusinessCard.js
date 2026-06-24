@@ -1,23 +1,17 @@
 import * as THREE from 'three';
 import { ANIM_PARAMS, BOOK_DEFAULTS, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
-import { LinkOverlay } from '../utils/LinkOverlay.js';
+import { InteractiveItem } from './InteractiveItem.js';
 import { showcasePosition } from '../utils/showcase.js';
 
 // A business card holder that sits on the shelf.
 // Cards lean back in a dark metal tray. On click, the top card detaches
 // and flies forward to present itself; the tray stays on the shelf.
-export class BusinessCard extends THREE.Group {
+export class BusinessCard extends InteractiveItem {
     constructor(id, { modalInfo, color }) {
         super();
         this.bookId    = id;
         this.modalInfo = modalInfo;
         this.color     = color || [147, 147, 147];
-        this.isOpen    = false;
-        this.isHovered = false;
-        this.initialX  = 0;
-        this.initialY  = 0;
-        this.initialZ  = 0;
-        this.initialRotationY = 0;
 
         this.cardW     = BUSINESS_CARD_DEFAULTS.WIDTH;
         this.cardH     = BUSINESS_CARD_DEFAULTS.HEIGHT;
@@ -287,27 +281,12 @@ export class BusinessCard extends THREE.Group {
 
     // ─── HTML link overlay ──────────────────────────────────────────────────
 
-    _showLinkOverlay(ctx) {
-        if (!this._linkHotspots?.length) return;
-        if (!this._linkOverlay) {
-            this._linkOverlay = new LinkOverlay((cx, cy, camera, viewport) => {
-                this.flyingCard.updateWorldMatrix(true, false);
-                return this._canvasPxToScreen(cx, cy, camera, viewport);
-            });
-        }
-        this._linkOverlay.show(this._linkHotspots, ctx);
-    }
-
-    // Re-project the link hotspots each frame so they track the card as the camera moves.
-    syncOverlay() {
-        this._linkOverlay?.update();
-    }
-
     // Convert a (cx, cy) point in contact-canvas pixel coords to screen pixels.
     // The contact texture lives on the -Z back face, whose UV.x is inverted relative
     // to local X. After the Y-flip (rotation.y = π) the two inversions cancel, so
     // text is not mirrored on screen.
-    _canvasPxToScreen(cx, cy, camera, viewport) {
+    _projectHotspot(cx, cy, camera, viewport) {
+        this.flyingCard.updateWorldMatrix(true, false);
         const u = cx / this._contactCanvasW;
         const v = 1 - cy / this._contactCanvasH;
         const local = new THREE.Vector3(
@@ -316,11 +295,7 @@ export class BusinessCard extends THREE.Group {
             -this.cardT / 2,           // back face
         );
         const world = local.applyMatrix4(this.flyingCard.matrixWorld);
-        const ndc = world.project(camera);
-        return {
-            x: viewport.left + (ndc.x + 1) * 0.5 * viewport.width,
-            y: viewport.top  + (1 - ndc.y) * 0.5 * viewport.height,
-        };
+        return this._worldToScreen(world, camera, viewport);
     }
 
     // Meshes that should count as "the open object" for click/raycast purposes.
