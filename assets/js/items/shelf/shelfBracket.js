@@ -1,18 +1,17 @@
 import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS, ROOM, SHELF_BRACKET as B } from '../../config/constants.js';
 
-// The wrought-iron brackets each wall-mounted shelf rests on. The gusset
-// outline is drawn once in the bracket's own plane (u forward from the wall,
-// v down from the shelf's underside) and extruded sideways into a plate, then
-// turned to stand against the wall — the same trick baseboards.js uses.
+// The wooden brackets each wall-mounted shelf rests on. The gusset outline is
+// drawn once in the bracket's own plane (u forward from the wall, v down from
+// the shelf's underside) and extruded sideways into a plate, then turned to
+// stand against the wall — the same trick baseboards.js uses.
 
 let _geometry = null;
-let _material = null;
 
-// Brackets for one shelf, spread evenly across its span.
-export function shelfBrackets(shelfY, shelfWidth) {
+// Brackets for one shelf, spread evenly across its span. Takes the plank's own
+// material so the supports match the shelves they carry.
+export function shelfBrackets(shelfY, shelfWidth, material) {
     const geometry = bracketGeometry();
-    const material = bracketMaterial();
 
     const undersideY = shelfY - BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
     const wallZ      = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
@@ -35,30 +34,44 @@ export function shelfBrackets(shelfY, shelfWidth) {
     return brackets;
 }
 
-// Gusset outline: along the shelf's underside, down the front tip, back along
-// the diagonal, then down the wall arm.
+// Corbel outline, clockwise from the wall/shelf corner: forward along the
+// shelf's underside, around the rounded front tip, back along a concave sweep,
+// then around the rounded foot and up the wall face. Every corner is eased into
+// the next, so the tangents stay continuous and the whole edge reads as one
+// curve. The sweep's control point sits at the inner corner — that is what
+// pulls it hollow rather than bulging.
 function bracketGeometry() {
     if (_geometry) return _geometry;
 
+    const R         = B.NOSE_R;
+    const sweepEndY = -(B.DROP - B.FOOT_R);
+
     const shape = new THREE.Shape();
-    shape.moveTo(0, 0);              // wall / shelf corner
-    shape.lineTo(B.ARM, 0);          // forward under the shelf
-    shape.lineTo(B.ARM, -B.STOCK);   // front tip
-    shape.lineTo(B.STOCK, -B.DROP);  // diagonal back down to the wall arm
-    shape.lineTo(0, -B.DROP);        // bottom of the wall arm
-    shape.lineTo(0, 0);
+    shape.moveTo(0, 0);                                        // wall / shelf corner
+    shape.lineTo(B.ARM - R, 0);                                // forward under the shelf
+    shape.quadraticCurveTo(B.ARM, 0, B.ARM, -R);               // round over the nose
+    shape.lineTo(B.ARM, -(B.TIP - R));                         // front tip face
+    shape.quadraticCurveTo(B.ARM, -B.TIP, B.ARM - R, -B.TIP);  // round under the nose
+    shape.quadraticCurveTo(B.STOCK, -B.TIP, B.STOCK, sweepEndY);        // concave sweep
+    shape.quadraticCurveTo(B.STOCK, -B.DROP, B.STOCK - B.FOOT_R, -B.DROP);  // round the foot
+    shape.lineTo(0, -B.DROP);                                  // underside of the foot
+    shape.lineTo(0, 0);                                        // back up the wall face
 
-    _geometry = new THREE.ExtrudeGeometry(shape, { depth: B.PLATE, bevelEnabled: false });
-    return _geometry;
-}
-
-function bracketMaterial() {
-    if (_material) return _material;
-    _material = new THREE.MeshStandardMaterial({
-        color:           new THREE.Color(B.COLOR),
-        roughness:       B.ROUGHNESS,
-        metalness:       B.METALNESS,
-        envMapIntensity: B.ENV_INTENSITY,
+    _geometry = new THREE.ExtrudeGeometry(shape, {
+        depth: B.PLATE,
+        bevelEnabled: false,
+        curveSegments: B.SEGMENTS,
     });
-    return _material;
+
+    // ExtrudeGeometry lays out UVs in shape units (inches), while a plank's
+    // BoxGeometry stretches one tile across its whole face. Rescale so the
+    // bracket's grain runs at the same inches-per-tile as the shelves it holds,
+    // instead of ~60x finer.
+    const uv = _geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+        uv.setXY(i, uv.getX(i) / BOOKSHELF_DIMENSIONS.WIDTH, uv.getY(i) / BOOKSHELF_DIMENSIONS.WIDTH);
+    }
+    uv.needsUpdate = true;
+
+    return _geometry;
 }

@@ -136,21 +136,28 @@ export const FLOOR_Y = -(
   + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
 );
 
-// Wrought-iron gusset brackets carrying each wall-mounted shelf (see
+// Wooden gusset brackets carrying each wall-mounted shelf (see
 // items/shelf/shelfBracket.js). The profile is drawn in the plane of the
-// bracket and extruded sideways into a plate.
+// bracket and extruded sideways into a plate; it wears the same wood as the
+// planks it holds up.
 export const SHELF_BRACKET = {
   COUNT:      3,     // brackets per shelf, spread evenly across its span
   END_INSET:  9,     // inches from each shelf end to the outermost bracket
-  ARM:        5.4,   // how far it reaches forward under the shelf (shelf DEPTH is 7.2)
-  DROP:       5.0,   // how far the wall arm hangs below the shelf
-  STOCK:      0.75,  // thickness of each arm of the L
-  PLATE:      0.5,   // how thick the bracket plate is (its extrusion)
+  ARM:        5.2,   // how far it reaches forward under the shelf (shelf DEPTH is 7.2)
+  DROP:       6.4,   // how far the wall arm hangs below the shelf
+  STOCK:      1.0,   // thickness of each arm
+  PLATE:      1.25,  // how thick the corbel is (its extrusion)
 
-  COLOR:         0x3a3a3e,  // dark wrought iron
-  ROUGHNESS:     0.45,
-  METALNESS:     0.85,
-  ENV_INTENSITY: 1.0,
+  // Rounded ends — every corner eased so the outline reads as one flowing curve
+  TIP:      1.1,     // height of the front tip face (must exceed NOSE_R)
+  NOSE_R:   0.35,    // rounding at the top and bottom of that tip face
+  FOOT_R:   0.55,    // rounding where the wall arm meets its underside
+  SEGMENTS: 32,      // curve subdivisions
+
+  // Same grain as the planks, in a darker tone so the supports read as their
+  // own pieces rather than as shadow under the shelf.
+  COLOR:     0x8a6a44,
+  ROUGHNESS: 0.7,
 };
 
 // Flex-style shelf layout: groups are distributed across the shelf's inner span
