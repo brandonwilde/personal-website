@@ -90,8 +90,8 @@ export const LIGHTING_SETTINGS = {
   SHADOW_MAP_SIZE:   2048,
   SHADOW_NEAR:       1,
   SHADOW_FAR:        300,
-  SHADOW_LEFT:       -40,
-  SHADOW_RIGHT:       40,
+  SHADOW_LEFT:       -50,   // wide enough to include the floor lamp's foot
+  SHADOW_RIGHT:       50,
   SHADOW_TOP:         30,
   SHADOW_BOTTOM:     -30,
   SHADOW_BIAS:       -0.001,
@@ -408,3 +408,86 @@ export const ANIM_PARAMS = {
     },
 };
 
+
+// Tall floor lamp standing beside the bookcase (see items/floorLamp/FloorLamp.js).
+// All Y values are inches above the floor; the lamp's origin sits on the floor plane.
+export const FLOOR_LAMP = {
+  POSITION:   { x: 37, z: 4 },  // floor position; the bookcase spans x ±30
+  ROTATION_Y: 0.35,             // slight turn so the shade seam faces away
+
+  // Metalwork (base, pole, collars, harp, finial) — aged brass
+  METAL_COLOR:         0x9a7b45,
+  METAL_ROUGHNESS:     0.32,
+  METAL_METALNESS:     0.95,
+  METAL_ENV_INTENSITY: 1.3,
+
+  // Weighted foot — a lathed dome that flows up into the pole
+  BASE_RADIUS:   6.4,
+  BASE_HEIGHT:   2.2,
+  BASE_SEGMENTS: 64,
+
+  // Pole and the decorative rings banding it
+  POLE_RADIUS:     0.34,
+  POLE_TOP_Y:      46,
+  COLLAR_YS:       [3.2, 23],
+  COLLAR_RADIUS:   0.62,
+  COLLAR_HEIGHT:   0.9,
+
+  SOCKET_RADIUS: 0.85,
+  SOCKET_HEIGHT: 2.4,
+
+  BULB_RADIUS:             1.25,
+  BULB_Y:                  49.5,
+  BULB_COLOR:              0xfff2d0,
+  BULB_EMISSIVE_INTENSITY: 3.0,
+
+  // Pull chain dangling from the socket
+  CHAIN_LENGTH:      4.5,
+  CHAIN_RADIUS:      0.05,
+  CHAIN_BEAD_RADIUS: 0.16,
+  CHAIN_OFFSET:      1.0,   // how far off the pole axis it hangs
+
+  // Harp — two bowed wires carrying the shade
+  HARP_BASE_Y:     45.0,
+  HARP_TOP_Y:      57.4,
+  HARP_WIDTH:      4.6,     // how far the wires bow out
+  HARP_WIRE_RADIUS: 0.14,
+
+  FINIAL_Y:      57.6,
+  FINIAL_RADIUS: 0.8,
+
+  // Empire (tapered drum) shade
+  SHADE_BOTTOM_Y:      45.5,
+  SHADE_HEIGHT:        11.5,
+  SHADE_BOTTOM_RADIUS: 9.2,
+  SHADE_TOP_RADIUS:    6.6,
+  SHADE_SEGMENTS:      64,
+  SHADE_ROUGHNESS:     0.9,
+  SHADE_EMISSIVE:      0xffb765,  // warm light bleeding through the linen
+  SHADE_EMISSIVE_INTENSITY: 1.1,
+  SHADE_OPACITY:       0.96,
+  SHADE_BUMP_SCALE:    0.035,
+  TRIM_TUBE_RADIUS:    0.11,      // rolled rim at the shade's top and bottom edges
+
+  // Warm bulb light thrown into the room (physical falloff: irradiance ≈ INTENSITY / d²)
+  LIGHT_COLOR:     0xffc98a,
+  LIGHT_INTENSITY: 1100,
+  LIGHT_DISTANCE:  260,
+  LIGHT_DECAY:     2,
+
+  // Procedurally woven linen for the shade (see floorLampTextures.js)
+  TEXTURE: {
+    SIZE_X:        1024,
+    SIZE_Y:        512,
+    LINEN:         [239, 224, 194],  // RGB of the undyed linen
+    WEAVE_PERIOD:  5,     // px per warp/weft thread
+    WEAVE_DEPTH:   16,    // ±brightness of the weave crosshatch
+    SLUB_DEPTH:    10,    // ±brightness of the thicker irregular threads
+    GRAIN:         7,     // ±per-pixel fibre noise
+    SEAM_WIDTH:    6,     // px of the vertical stitched seam
+    SEAM_DARKEN:   0.82,
+    GLOW_CENTER:   0.58,  // v of the hottest band (roughly the bulb's height)
+    GLOW_FALLOFF:  0.62,  // how fast the glow fades toward the rims
+    GLOW_FLOOR:    0.35,  // dimmest the shade ever glows
+  },
+};

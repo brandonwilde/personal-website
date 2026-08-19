@@ -3,6 +3,7 @@ import { Book } from '../items/book/Book.js';
 import { BlogNotebook } from '../items/BlogNotebook.js';
 import { BusinessCard } from '../items/businessCard/BusinessCard.js';
 import { Bookcase } from '../items/Bookcase.js';
+import { FloorLamp } from '../items/floorLamp/FloorLamp.js';
 import { Shelf } from '../items/shelf/Shelf.js';
 import { ShelfLabel } from '../items/shelf/ShelfLabel.js';
 import { Stage } from './Stage.js';
@@ -45,6 +46,10 @@ export class BookshelfScene {
         this.bookcase = new Bookcase();
         this.bookcase.objects.forEach(o => this.sceneManager.add(o));
         this.shelves = this.bookcase.shelves;
+
+        // Decorative floor lamp standing beside the bookcase.
+        this.floorLamp = new FloorLamp();
+        this.sceneManager.add(this.floorLamp);
 
         this.items = new Map(); // mixed: books, the business card, the blog notebook
     }
