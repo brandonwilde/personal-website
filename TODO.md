@@ -12,11 +12,9 @@
 
 - [ ] **More realistic lighting** — Add multiple light sources of varying brightness and color temperature to simulate a real room (overhead, sconce, ambient fill, etc.). Current lighting is functional but flat.
 - [ ] **Lived-in book arrangement** — Add slight random Y offsets and lean angles so books don't all sit perfectly flush — more natural bookshelf look.
-- [ ] **Shadow between books** — Books next to each other should cast soft contact shadows onto neighboring spines.
 - [ ] Fill empty space with more books or decorative objects.
   - [ ] Generate 3D items with TripoSR, StableFast3D, Hunyuan3D, Meshy, Tripo3D, or Hyper3D Rodin
   - [ ] Add something above the shelf (artwork, wifi router?) and something in the foreground (Persian rug?) for mobile displays where there's a lot of vertical space
-  - [ ] Add lamp beside shelf
   - [ ] **Miniature piano/keyboard prop** — Add a small 3D piano (or keyboard) sitting on a shelf, mirroring the mini keyboard on Brandon's real bookshelf. A personality touch nodding to playing piano. Could also be the home for an "improv comedy" easter egg/personal note.
   - [ ] Add chessboard
 
