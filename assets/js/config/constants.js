@@ -141,7 +141,6 @@ export const BOOKSHELF_DIMENSIONS = {
   HEIGHT: 36,          // 3 feet
   DEPTH: 7.2,         // 7.2 inches
   BASE_DISTANCE: 240,  // 20 feet - camera distance
-  FRAME_THICKNESS: 1.2,// 1.2 inches
   SHELF_THICKNESS: 1,  // 1 inch
   SHELF_SPACING: 12,   // 1 foot between shelves
   SECTION_WIDTH: 12,   // 1 foot per section

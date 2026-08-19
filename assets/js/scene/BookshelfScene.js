@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { Book } from '../items/book/Book.js';
 import { BlogNotebook } from '../items/BlogNotebook.js';
 import { BusinessCard } from '../items/businessCard/BusinessCard.js';
@@ -8,7 +7,7 @@ import { Shelf } from '../items/shelf/Shelf.js';
 import { ShelfLabel } from '../items/shelf/ShelfLabel.js';
 import { Stage } from './Stage.js';
 import { InteractionManager } from './InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, SHELF_BRACKET, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
 import { goodreadsSnapshot } from '../data/goodreadsSnapshot.js';
 import { fetchRecentReads } from '../data/goodreads.js';
 
@@ -169,48 +168,26 @@ export class BookshelfScene {
         this.items.set('contact', { object: card });
     }
 
-    // Places the blog as a spiral notebook leaning into the back-left corner of a shelf.
+    // Places the blog as a spiral notebook leaning against the corbel under the shelf above.
     addBlogNotebook(config) {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
 
         const { shelfId, section } = this.placementFor('blog');
-        const { leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack, flowReserve } = config.placement;
+        const { flowReserve } = config.placement;
 
         const shelf = this.shelves.get(shelfId);
-        const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
 
-        // The plank's own left and back edges. (These used to be the inner faces of
-        // the side post and back panel; the shelves are open-ended now, so the
-        // notebook's leanLeft has nothing to rest against — see placement config.)
-        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2;
-        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2;
+        // The surfaces the notebook sits against: its own plank, the leftmost corbel
+        // hanging under the shelf above, and the plank's back edge. With the frame
+        // gone that corbel is the only upright left to lean on.
+        notebook.applyPlacement(config.placement, {
+            shelfSurfaceY: shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2,
+            corbelX:       -(BOOKSHELF_DIMENSIONS.WIDTH / 2 - SHELF_BRACKET.END_INSET),
+            backEdgeZ:     -BOOKSHELF_DIMENSIONS.DEPTH / 2,
+        });
 
-        const posX = leftInnerX + offsetFromLeft;
-        const posZ = backInnerZ + offsetFromBack;
-
-        notebook.rotation.set(leanBack, swivel, leanLeft);
-
-        // Auto-compute Y so the lowest corner of the rotated body rests flush on
-        // the shelf — keeps the bottom edge planted however the angles are tuned.
-        const { width, height, thickness } = notebook.dimensions;
-        const q = new THREE.Quaternion().setFromEuler(notebook.rotation);
-        let minCornerY = Infinity;
-        for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
-            const corner = new THREE.Vector3(sx * width / 2, sy * height / 2, sz * thickness / 2)
-                .applyQuaternion(q);
-            if (corner.y < minCornerY) minCornerY = corner.y;
-        }
-        const posY = shelfSurfaceY - minCornerY;
-
-        notebook.position.set(posX, posY, posZ);
-
-        notebook.initialX         = notebook.position.x;
-        notebook.initialY         = notebook.position.y;
-        notebook.initialZ         = notebook.position.z;
-        notebook.initialRotationY = notebook.rotation.y;
-
-        // Anchored to the corner — opt out of the flex flow and reserve the left
+        // Anchored to the corbel — opt out of the flex flow and reserve the left
         // end so flowed books on this shelf clear the leaning notebook.
         shelf.registerGroup({
             id:          'blog',

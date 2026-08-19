@@ -384,14 +384,15 @@ export const bookConfigs = {
             id: 'blog',
             color: colors.green,
             link: 'https://the.btw.so',
-            // Leans into the back-left corner of its shelf.
+            // Stands just inboard of the leftmost corbel under the shelf above,
+            // tipped toward it so its top edge comes to rest against it.
             placement: {
-                leanBack:       -0.40, // rotation.x — tip the top back toward the panel (more negative = leans back more)
-                swivel:          0.55, // rotation.y — turn the right side toward the back wall
-                leanLeft:        0.22, // rotation.z — tip the top toward the left side wall
-                offsetFromLeft:  4.2,  // inches inward from the left side wall
-                offsetFromBack:  3.5,  // inches forward from the back panel
-                flowReserve:     13,   // inches reserved from the left so flowed books clear the notebook
+                leanBack:         -0.62,  // rotation.x — tip the top back toward the wall (more negative = leans back more)
+                swivel:            0.34,  // rotation.y — turn the right side toward the wall
+                leanSide:          0.23,  // rotation.z — positive tips the top left, into the corbel
+                offsetFromCorbel:  2.575, // inches from the corbel's center line, positive = toward mid-shelf
+                offsetFromBack:    3.3,   // inches forward from the plank's back edge
+                flowReserve:        13,   // inches reserved from the left so flowed books clear the notebook
             },
         },
         // Goodreads recent reads, rendered as real 3D books from the committed snapshot
