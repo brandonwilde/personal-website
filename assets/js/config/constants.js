@@ -20,7 +20,9 @@ export const SCENE_BACKGROUND = 0x3b4a66;
 
 export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
-  WALL_GAP:        0.9,       // how far the wall sits behind the bookcase's back face
+  // The planks and their corbels mount straight onto the wall, so it sits right
+  // behind them. (This used to clear the bookcase's back panel.)
+  WALL_GAP:        0,         // how far the wall sits behind the shelves' back edge
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
   SIDE_WALL_X:     120,       // ±X position of the left/right side walls (= PLANE_SIZE/2 for a true corner)
   WALL_ROUGHNESS:  0.95,
