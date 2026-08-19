@@ -175,8 +175,9 @@ export class FloorLamp extends THREE.Group {
             })
         );
         shade.position.y = L.SHADE_BOTTOM_Y + L.SHADE_HEIGHT / 2;
-        // No shadow casting: the linen is meant to let the bulb's light through.
-        this._add(shade, { cast: false, receive: true });
+        // Off by default so the bulb's light reaches the shelves and they cast
+        // their own shadows from it — see SHADE_CASTS_SHADOW.
+        this._add(shade, { cast: L.SHADE_CASTS_SHADOW, receive: true });
 
         const rims = [
             [L.SHADE_BOTTOM_RADIUS, L.SHADE_BOTTOM_Y],
@@ -196,6 +197,16 @@ export class FloorLamp extends THREE.Group {
     _buildLight() {
         const light = new THREE.PointLight(L.LIGHT_COLOR, L.LIGHT_INTENSITY, L.LIGHT_DISTANCE, L.LIGHT_DECAY);
         light.position.y = L.BULB_Y;
+
+        light.castShadow = true;
+        light.shadow.mapSize.width  = L.LIGHT_SHADOW_MAP;
+        light.shadow.mapSize.height = L.LIGHT_SHADOW_MAP;
+        light.shadow.camera.near = L.LIGHT_SHADOW_NEAR;
+        light.shadow.camera.far  = L.LIGHT_DISTANCE;
+        light.shadow.bias        = L.LIGHT_SHADOW_BIAS;
+        light.shadow.normalBias  = L.LIGHT_SHADOW_NORMAL_BIAS;
+        light.shadow.radius      = L.LIGHT_SHADOW_RADIUS;
+
         this.add(light);
         this.light = light;
     }

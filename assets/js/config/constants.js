@@ -84,31 +84,53 @@ export const LIGHTING_SETTINGS = {
   // Key light
   KEY_COLOR:         0xfff5e0,
   KEY_INTENSITY:     1.2,
-  KEY_POSITION:      { x: 0, y: 80, z: 30 },
+  // Direction only — a directional light has no position. The y/z ratio sets how
+  // far a shelf's shadow runs down the wall (DEPTH x ratio); at 80/30 each 7.2in
+  // plank smeared a 19in band across an 11in gap, so 45° keeps it to 7.2in. The
+  // x offset swings the light off-center, so shadows fall on a slant rather than
+  // straight down — and away from the lamp, which lights from the right.
+  KEY_POSITION:      { x: -20, y: 60, z: 60 },
 
-  // Shadow frustum — kept tight around the shelf to maximise shadow resolution
-  SHADOW_MAP_SIZE:   2048,
-  SHADOW_NEAR:       1,
-  SHADOW_FAR:        300,
+  // 'BASIC' | 'PCF' | 'PCF_SOFT' | 'VSM'. Note that SHADOW_RADIUS below only has
+  // any effect under PCF and VSM — PCF_SOFT ignores it and uses a fixed kernel,
+  // which is why the edges stayed crisp however high the radius went.
+  SHADOW_TYPE:       'PCF',
+
+  // Shadow frustum — kept tight around the shelf to maximise shadow resolution.
+  // NEAR/FAR bracket the scene along the light's axis; the old 1..300 spread the
+  // depth buffer so thin that the bias needed to fight acne also detached the
+  // shadows from their casters.
+  SHADOW_MAP_SIZE:   1024,  // smaller texels blur further, which we want here
+  SHADOW_NEAR:       20,
+  SHADOW_FAR:        220,
   SHADOW_LEFT:       -50,   // wide enough to include the floor lamp's foot
   SHADOW_RIGHT:       50,
   SHADOW_TOP:         30,
   SHADOW_BOTTOM:     -30,
-  SHADOW_BIAS:       -0.001,
-  SHADOW_RADIUS:      6,
+  SHADOW_BIAS:       -0.0004,
+  SHADOW_NORMAL_BIAS: 0.3,  // offsets along the surface normal, not the light ray;
+                            // keep well under the 1in plank thickness or light leaks through
+  SHADOW_RADIUS:      6,   // blur width in shadow-map texels
 
   // Cool fill from opposite side
   FILL_COLOR:        0xd0e8ff,
   FILL_INTENSITY:    0.7,
   FILL_POSITION:     { x: -40, y: 30, z: -30 },
 
-  // Warm sconce-style point lights flanking the shelf
+  // Warm sconce-style point lights flanking the shelf. Three.js uses physical
+  // light units, so a point light's contribution is intensity / distance² —
+  // and with the scene measured in inches these sit ~40in out. Intensity has to
+  // be in the thousands to register at all; at 2.5 they were contributing
+  // ~0.003 against an ambient of 1.0, i.e. nothing.
   SCONCE_COLOR:      0xffa060,
-  SCONCE_INTENSITY:  2.5,
-  SCONCE_DISTANCE:   80,
-  SCONCE_X:          30,   // mirrored to ±X
-  SCONCE_Y:          28,
-  SCONCE_Z:          18,
+  SCONCE_INTENSITY:  1000,
+  SCONCE_DISTANCE:   220,  // cutoff radius; at 80 the falloff clipped mid-shelf
+  // Standing well off the shelves: the closer they sit, the bigger the gap
+  // between what the near and far ends of a plank receive, which is what made
+  // the outer books bleach while the middle stayed flat.
+  SCONCE_X:          44,   // mirrored to ±X
+  SCONCE_Y:          42,
+  SCONCE_Z:          34,
 
   TONE_MAPPING_EXPOSURE: 1.1,
 };
@@ -124,7 +146,7 @@ export const BOOKSHELF_DIMENSIONS = {
   SHELF_SPACING: 12,   // 1 foot between shelves
   SECTION_WIDTH: 12,   // 1 foot per section
   BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
-  MOUNT_HEIGHT:  26,   // inches of wall between the floor and the case's underside (0 = stands on the floor)
+  MOUNT_HEIGHT:  32,   // inches of wall between the floor and the case's underside (0 = stands on the floor)
 };
 
 // The floor plane's Y. The bookcase is modelled centered on the origin, so
@@ -508,6 +530,17 @@ export const FLOOR_LAMP = {
   LIGHT_INTENSITY: 1100,
   LIGHT_DISTANCE:  260,
   LIGHT_DECAY:     2,
+
+  // The bulb casts, so the shelves, corbels, and books throw their own shadows
+  // from it. The shade deliberately does not: blocking the light sideways would
+  // shape it into up/down cones, but then nothing on the shelves is lit by the
+  // lamp at all, and none of it casts. Treat the linen as translucent instead.
+  SHADE_CASTS_SHADOW:       false,
+  LIGHT_SHADOW_MAP:         1024,   // per cube face
+  LIGHT_SHADOW_NEAR:        1,
+  LIGHT_SHADOW_BIAS:       -0.001,
+  LIGHT_SHADOW_NORMAL_BIAS: 0.3,
+  LIGHT_SHADOW_RADIUS:      8,
 
   // Procedurally woven linen for the shade (see floorLampTextures.js)
   TEXTURE: {
