@@ -176,9 +176,9 @@ export const SHELF_BRACKET = {
   FOOT_R:   0.55,    // rounding where the wall arm meets its underside
   SEGMENTS: 32,      // curve subdivisions
 
-  // Same grain as the planks, in a darker tone so the supports read as their
-  // own pieces rather than as shadow under the shelf.
-  COLOR:     0x8a6a44,
+  // Same grain as the planks, a half-shade darker so the supports read as their
+  // own pieces without going muddy under the shelf.
+  COLOR:     0xb0906a,
   ROUGHNESS: 0.7,
 };
 
