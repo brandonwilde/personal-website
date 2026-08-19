@@ -169,8 +169,7 @@ export class BookshelfScene {
         this.items.set('contact', { object: card });
     }
 
-    // Places the blog as a spiral notebook leaning into a shelf's back-left corner,
-    // resting against the shelf, left side wall, and back panel.
+    // Places the blog as a spiral notebook leaning into the back-left corner of a shelf.
     addBlogNotebook(config) {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
@@ -181,10 +180,11 @@ export class BookshelfScene {
         const shelf = this.shelves.get(shelfId);
         const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
 
-        // Inner faces of the bookcase the notebook leans against (posts/back are
-        // inset by a full FRAME_THICKNESS from the outer envelope).
-        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS;
-        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS;
+        // The plank's own left and back edges. (These used to be the inner faces of
+        // the side post and back panel; the shelves are open-ended now, so the
+        // notebook's leanLeft has nothing to rest against — see placement config.)
+        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2;
+        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2;
 
         const posX = leftInnerX + offsetFromLeft;
         const posZ = backInnerZ + offsetFromBack;

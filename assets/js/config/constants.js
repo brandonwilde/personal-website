@@ -136,6 +136,23 @@ export const FLOOR_Y = -(
   + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
 );
 
+// Wrought-iron gusset brackets carrying each wall-mounted shelf (see
+// items/shelf/shelfBracket.js). The profile is drawn in the plane of the
+// bracket and extruded sideways into a plate.
+export const SHELF_BRACKET = {
+  COUNT:      3,     // brackets per shelf, spread evenly across its span
+  END_INSET:  9,     // inches from each shelf end to the outermost bracket
+  ARM:        5.4,   // how far it reaches forward under the shelf (shelf DEPTH is 7.2)
+  DROP:       5.0,   // how far the wall arm hangs below the shelf
+  STOCK:      0.75,  // thickness of each arm of the L
+  PLATE:      0.5,   // how thick the bracket plate is (its extrusion)
+
+  COLOR:         0x3a3a3e,  // dark wrought iron
+  ROUGHNESS:     0.45,
+  METALNESS:     0.85,
+  ENV_INTENSITY: 1.0,
+};
+
 // Flex-style shelf layout: groups are distributed across the shelf's inner span
 // rather than pinned to fixed section centers, so each shelf fills its width
 // evenly and rows stagger naturally instead of aligning column-to-column.
