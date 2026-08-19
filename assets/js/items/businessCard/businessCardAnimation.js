@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BUSINESS_CARD_DEFAULTS } from '../../config/constants.js';
-import { showcasePosition } from '../../utils/showcase.js';
+import { showcasePosition, facingYaw } from '../../utils/showcase.js';
 import { localCardCenter } from './businessCardGeometry.js';
 
 // GSAP timelines for the flying card: out of the tray to a showcase pose facing the
@@ -33,16 +33,17 @@ export function buildOpenTimeline(card) {
         ease:     'power2.inOut',
     }, '>-0.05');
 
-    // 3. Card rotates flat to face camera
+    // 3. Card rotates flat to face camera, wherever the viewer is standing
+    const facing = cam ? facingYaw(cam, target) : 0;
     tl.to(card.flyingCard.rotation, {
-        x: 0, y: 0, z: 0,
+        x: 0, y: facing, z: 0,
         duration: duration * 0.7,
         ease,
     }, '<0.1');
 
     // 4. Card flips 180° to reveal contact details on the back face
     tl.to(card.flyingCard.rotation, {
-        y: Math.PI,
+        y: facing + Math.PI,
         duration: duration * 0.7,
         ease: 'power2.inOut',
     });
@@ -66,8 +67,11 @@ export function buildCloseTimeline(card) {
     card._linkOverlay?.hide();
 
     // 1. Card flips back to front face
+    const facing = card._openCtx?.camera
+        ? facingYaw(card._openCtx.camera, card.flyingCard.position)
+        : 0;
     tl.to(card.flyingCard.rotation, {
-        y: 0,
+        y: facing,
         duration: duration * 0.5,
         ease: 'power2.inOut',
     });

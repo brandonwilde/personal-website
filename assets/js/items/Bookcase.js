@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, SHELF_BRACKET } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, SHELF_BRACKET, SHELF_YS } from '../config/constants.js';
 import { Shelf } from './shelf/Shelf.js';
 import { shelfBrackets } from './shelf/shelfBracket.js';
 
@@ -41,17 +41,15 @@ export class Bookcase {
     }
 
     _buildShelves() {
-        const { WIDTH, HEIGHT } = BOOKSHELF_DIMENSIONS;
+        const { WIDTH } = BOOKSHELF_DIMENSIONS;
 
         // Each plank spans the full width — with no side posts, there is nothing
         // to butt into. Y-centers are unchanged, so book/label placement carries over.
         // The topmost position is left bare: it was the frame's cap, not a shelf.
-        const numShelves = Math.floor(HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING);
-        for (let i = 0; i < numShelves; i++) {
-            const y = i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - HEIGHT / 2;
+        SHELF_YS.forEach((y, i) => {
             const shelf = new Shelf(String.fromCharCode(65 + i), y, this.shelfMaterial, WIDTH);
             this.objects.push(shelf.mesh, ...shelfBrackets(y, WIDTH, this.bracketMaterial));
             this.shelves.set(shelf.id, shelf);
-        }
+        });
     }
 }

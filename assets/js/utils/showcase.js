@@ -12,3 +12,10 @@ export function showcasePosition(camera, distance) {
     camera.getWorldDirection(_dir);                 // unit forward vector
     return camera.position.clone().addScaledVector(_dir, d);
 }
+
+// Yaw that turns a +z-facing object squarely toward the camera. The showcase
+// poses used to assume the camera sat head-on at yaw 0; with a default viewing
+// angle (CAMERA_SETTINGS.DEFAULT_YAW) they have to follow it around instead.
+export function facingYaw(camera, point) {
+    return Math.atan2(camera.position.x - point.x, camera.position.z - point.z);
+}

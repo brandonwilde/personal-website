@@ -149,6 +149,13 @@ export const BOOKSHELF_DIMENSIONS = {
   MOUNT_HEIGHT:  32,   // inches of wall between the floor and the case's underside (0 = stands on the floor)
 };
 
+// Y of each shelf plank, bottom-up. Bookcase builds the planks from this and the
+// camera frames to it, so there is one definition of where the shelves sit.
+export const SHELF_YS = Array.from(
+  { length: Math.floor(BOOKSHELF_DIMENSIONS.HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING) },
+  (_, i) => i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - BOOKSHELF_DIMENSIONS.HEIGHT / 2,
+);
+
 // The floor plane's Y. The bookcase is modelled centered on the origin, so
 // hanging it on the wall is expressed as dropping the floor away beneath it —
 // which leaves every shelf, book, label, and the camera framing untouched.
@@ -248,6 +255,13 @@ export const CAMERA_SETTINGS = {
   FRAME_MARGIN: 1.1,
   // Aspect the fixed showcase distances were tuned at; narrower screens push opened items back to fit by width.
   SHOWCASE_BASE_ASPECT: 1.1,
+  // Default viewing angle around the shelf, in degrees off head-on. Negative
+  // swings the camera toward -x (the key light's side), so the corbels and plank
+  // ends catch the light instead of reading as flat silhouettes. 0 = straight on.
+  DEFAULT_YAW: -18,
+  // How far the camera sits above what it is looking at, in inches. Smaller means
+  // a more level, less top-down view of the shelves.
+  EYE_RISE: 10,
 };
 
 // Renderer settings
