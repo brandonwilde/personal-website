@@ -1,13 +1,13 @@
 import { Book } from '../items/book/Book.js';
 import { BlogNotebook } from '../items/BlogNotebook.js';
 import { BusinessCard } from '../items/businessCard/BusinessCard.js';
-import { Bookcase } from '../items/Bookcase.js';
+import { ShelfRun } from '../items/shelf/ShelfRun.js';
 import { FloorLamp } from '../items/floorLamp/FloorLamp.js';
 import { Shelf } from '../items/shelf/Shelf.js';
 import { ShelfLabel } from '../items/shelf/ShelfLabel.js';
 import { Stage } from './Stage.js';
 import { InteractionManager } from './InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, SHELF_BRACKET, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, SHELF_SUPPORT, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
 import { goodreadsSnapshot } from '../data/goodreadsSnapshot.js';
 import { fetchRecentReads } from '../data/goodreads.js';
 
@@ -39,14 +39,14 @@ export class BookshelfScene {
         );
         this.sceneManager.interactionManager = this.interactionManager;
         
-        // Build the bookcase (frame + shelves) and install it into the scene. The
+        // Build the run of wall-mounted shelves and install it into the scene. The
         // shelves Map is shared by reference, so the rest of this class reads it via
         // this.shelves as before.
-        this.bookcase = new Bookcase();
-        this.bookcase.objects.forEach(o => this.sceneManager.add(o));
-        this.shelves = this.bookcase.shelves;
+        this.shelfRun = new ShelfRun();
+        this.shelfRun.objects.forEach(o => this.sceneManager.add(o));
+        this.shelves = this.shelfRun.shelves;
 
-        // Decorative floor lamp standing beside the bookcase.
+        // Decorative floor lamp standing beside the shelves.
         this.floorLamp = new FloorLamp();
         this.sceneManager.add(this.floorLamp);
 
@@ -168,7 +168,7 @@ export class BookshelfScene {
         this.items.set('contact', { object: card });
     }
 
-    // Places the blog as a spiral notebook leaning against the corbel under the shelf above.
+    // Places the blog as a spiral notebook leaning against the support under the shelf above.
     addBlogNotebook(config) {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
@@ -178,16 +178,16 @@ export class BookshelfScene {
 
         const shelf = this.shelves.get(shelfId);
 
-        // The surfaces the notebook sits against: its own plank, the leftmost corbel
+        // The surfaces the notebook sits against: its own plank, the leftmost support
         // hanging under the shelf above, and the plank's back edge. With the frame
-        // gone that corbel is the only upright left to lean on.
+        // gone that support is the only upright left to lean on.
         notebook.applyPlacement(config.placement, {
             shelfSurfaceY: shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2,
-            corbelX:       -(BOOKSHELF_DIMENSIONS.WIDTH / 2 - SHELF_BRACKET.END_INSET),
+            supportX:       -(BOOKSHELF_DIMENSIONS.WIDTH / 2 - SHELF_SUPPORT.END_INSET),
             backEdgeZ:     -BOOKSHELF_DIMENSIONS.DEPTH / 2,
         });
 
-        // Anchored to the corbel — opt out of the flex flow and reserve the left
+        // Anchored to the support — opt out of the flex flow and reserve the left
         // end so flowed books on this shelf clear the leaning notebook.
         shelf.registerGroup({
             id:          'blog',

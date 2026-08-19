@@ -44,7 +44,7 @@ export class Stage {
         this.scene.environment = roomEnvironment();
     }
 
-    // Wall the bookcase hangs on and the floor below it, framing it as a room.
+    // Wall the shelves hang on and the floor below them, framing it as a room.
     setupBackdrop() {
         const wallZ  = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
         const floorY = FLOOR_Y;

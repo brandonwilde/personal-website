@@ -31,12 +31,12 @@ export class BlogNotebook extends InteractiveItem {
     }
 
     // Poses the notebook where it stands: leaning back and tipped sideways so its
-    // top edge rests against the corbel hanging under the shelf above. `anchors`
+    // top edge rests against the support hanging under the shelf above. `anchors`
     // are the surfaces it sits against (from BookshelfScene); `placement` is the
     // tunable part (from contentConfig).
     applyPlacement(placement, anchors) {
-        const { shelfSurfaceY, corbelX, backEdgeZ } = anchors;
-        const { leanBack, swivel, leanSide, offsetFromCorbel, offsetFromBack } = placement;
+        const { shelfSurfaceY, supportX, backEdgeZ } = anchors;
+        const { leanBack, swivel, leanSide, offsetFromSupport, offsetFromBack } = placement;
 
         this.rotation.set(leanBack, swivel, leanSide);
 
@@ -52,7 +52,7 @@ export class BlogNotebook extends InteractiveItem {
         }
 
         this.position.set(
-            corbelX + offsetFromCorbel,
+            supportX + offsetFromSupport,
             shelfSurfaceY - minCornerY,
             backEdgeZ + offsetFromBack,
         );

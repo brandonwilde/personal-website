@@ -20,7 +20,7 @@ export const SCENE_BACKGROUND = 0x3b4a66;
 
 export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
-  // The planks and their corbels mount straight onto the wall, so it sits right
+  // The planks and their supports mount straight onto the wall, so it sits right
   // behind them. (This used to clear the bookcase's back panel.)
   WALL_GAP:        0,         // how far the wall sits behind the shelves' back edge
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
@@ -142,22 +142,20 @@ export const BOOKSHELF_DIMENSIONS = {
   WIDTH: 60,           // 5 feet
   HEIGHT: 36,          // 3 feet
   DEPTH: 7.2,         // 7.2 inches
-  BASE_DISTANCE: 240,  // 20 feet - camera distance
   SHELF_THICKNESS: 1,  // 1 inch
   SHELF_SPACING: 12,   // 1 foot between shelves
-  SECTION_WIDTH: 12,   // 1 foot per section
   BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
-  MOUNT_HEIGHT:  32,   // inches of wall between the floor and the case's underside (0 = stands on the floor)
+  MOUNT_HEIGHT:  32,   // inches of wall between the floor and the lowest shelf's underside
 };
 
-// Y of each shelf plank, bottom-up. Bookcase builds the planks from this and the
+// Y of each shelf plank, bottom-up. ShelfRun builds the planks from this and the
 // camera frames to it, so there is one definition of where the shelves sit.
 export const SHELF_YS = Array.from(
   { length: Math.floor(BOOKSHELF_DIMENSIONS.HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING) },
   (_, i) => i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - BOOKSHELF_DIMENSIONS.HEIGHT / 2,
 );
 
-// The floor plane's Y. The bookcase is modelled centered on the origin, so
+// The floor plane's Y. The shelves are modelled centered on the origin, so
 // hanging it on the wall is expressed as dropping the floor away beneath it —
 // which leaves every shelf, book, label, and the camera framing untouched.
 export const FLOOR_Y = -(
@@ -166,17 +164,17 @@ export const FLOOR_Y = -(
   + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
 );
 
-// Wooden gusset brackets carrying each wall-mounted shelf (see
-// items/shelf/shelfBracket.js). The profile is drawn in the plane of the
-// bracket and extruded sideways into a plate; it wears the same wood as the
+// Wooden gusset supports carrying each wall-mounted shelf (see
+// items/shelf/shelfSupport.js). The profile is drawn in the plane of the
+// support and extruded sideways into a plate; it wears the same wood as the
 // planks it holds up.
-export const SHELF_BRACKET = {
-  COUNT:      3,     // brackets per shelf, spread evenly across its span
-  END_INSET:  9,     // inches from each shelf end to the outermost bracket
+export const SHELF_SUPPORT = {
+  COUNT:      3,     // supports per shelf, spread evenly across its span
+  END_INSET:  9,     // inches from each shelf end to the outermost support
   ARM:        5.2,   // how far it reaches forward under the shelf (shelf DEPTH is 7.2)
   DROP:       6.4,   // how far the wall arm hangs below the shelf
   STOCK:      1.0,   // thickness of each arm
-  PLATE:      1.25,  // how thick the corbel is (its extrusion)
+  PLATE:      1.25,  // how thick the support is (its extrusion)
 
   // Rounded ends — every corner eased so the outline reads as one flowing curve
   TIP:      1.1,     // height of the front tip face (must exceed NOSE_R)
@@ -257,7 +255,7 @@ export const CAMERA_SETTINGS = {
   // Aspect the fixed showcase distances were tuned at; narrower screens push opened items back to fit by width.
   SHOWCASE_BASE_ASPECT: 1.1,
   // Default viewing angle around the shelf, in degrees off head-on. Negative
-  // swings the camera toward -x (the key light's side), so the corbels and plank
+  // swings the camera toward -x (the key light's side), so the supports and plank
   // ends catch the light instead of reading as flat silhouettes. 0 = straight on.
   DEFAULT_YAW: -18,
   // How far the camera sits above what it is looking at, in inches. Smaller means
@@ -480,7 +478,7 @@ export const ANIM_PARAMS = {
 };
 
 
-// Tall floor lamp standing beside the bookcase (see items/floorLamp/FloorLamp.js).
+// Tall floor lamp standing beside the shelves (see items/floorLamp/FloorLamp.js).
 // All Y values are inches above the floor; the lamp's origin sits on the floor plane.
 export const FLOOR_LAMP = {
   POSITION:   { x: 41, z: 5 },  // floor position; clears the wall-mounted case (x ±30, front face z 3.6)
@@ -546,7 +544,7 @@ export const FLOOR_LAMP = {
   LIGHT_DISTANCE:  260,
   LIGHT_DECAY:     2,
 
-  // The bulb casts, so the shelves, corbels, and books throw their own shadows
+  // The bulb casts, so the shelves, supports, and books throw their own shadows
   // from it. The shade deliberately does not: blocking the light sideways would
   // shape it into up/down cones, but then nothing on the shelves is lit by the
   // lamp at all, and none of it casts. Treat the linen as translucent instead.
