@@ -1,4 +1,4 @@
-import { BookshelfScene } from './assets/js/BookshelfScene.js';
+import { BookshelfScene } from './assets/js/scene/BookshelfScene.js';
 import { bookConfigs, shelfConfigs } from './assets/js/config/contentConfig.js';
 import { initDebugPanel } from './assets/js/ui/debugPanel.js';
 import { initNavHints } from './assets/js/ui/navHints.js';

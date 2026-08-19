@@ -1,39 +1,17 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, CONTROLS_SETTINGS } from '../config/constants.js';
-import { roomEnvironment } from '../room/environment.js';
-import { addWalls } from '../room/walls.js';
-import { addBaseboards } from '../room/baseboards.js';
-import { addFloor } from '../room/floor.js';
+import { CAMERA_SETTINGS, BOOKSHELF_DIMENSIONS, CONTROLS_SETTINGS, ROOM } from '../config/constants.js';
 
-export class SceneManager {
-    constructor() {
-        this.setupScene();
+// Owns the camera and OrbitControls, and choreographs them: auto-framing the bookcase,
+// clamping to the room bounds, touch-gesture arbitration, and the lock / snap / focus /
+// fly camera moves that play as items open and close. Stage adds the camera to the
+// scene and drives update()/onResize() from its render loop; BookshelfScene calls the
+// choreography methods from its interaction callbacks.
+export class CameraController {
+    constructor(domElement) {
+        this._domElement = domElement;
         this.setupCamera();
-        this.setupRenderer();
-        this.setupLighting();
-        this.setupBackdrop();
         this.setupControls();
-        this.setupEventListeners();
-        this.interactionManager = null; // Will be set by BookshelfScene
-    }
-
-    setupScene() {
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(SCENE_BACKGROUND);
-
-        // Scene-wide reflection source
-        this.scene.environment = roomEnvironment();
-    }
-
-    // Wall behind the bookcase and a floor it stands on, framing it as a room.
-    setupBackdrop() {
-        const wallZ  = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
-        const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
-
-        const { sideDepth } = addWalls(this.scene, { wallZ });
-        addBaseboards(this.scene, { wallZ, floorY, sideDepth });
-        addFloor(this.scene, { floorY });
     }
 
     setupCamera() {
@@ -46,10 +24,7 @@ export class SceneManager {
 
         const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
         this.camera.position.set(0, centerY, this._fitDistance());
-
-        // Camera must be in the scene so objects parented to it are rendered.
-        // (OrbitControls will set lookAt each frame via its target.)
-        this.scene.add(this.camera);
+        // Stage adds the camera to the scene (so camera-parented objects render).
     }
 
     // Camera distance that "contains" the whole bookcase (plus FRAME_MARGIN
@@ -65,54 +40,9 @@ export class SceneManager {
         return Math.max(distForHeight, distForWidth);
     }
 
-    setupRenderer() {
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_SETTINGS.MAX_PIXEL_RATIO));
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = LIGHTING_SETTINGS.TONE_MAPPING_EXPOSURE;
-        document.body.appendChild(this.renderer.domElement);
-    }
-
-    setupLighting() {
-        const L = LIGHTING_SETTINGS;
-
-        const ambientLight = new THREE.AmbientLight(L.AMBIENT_COLOR, L.AMBIENT_INTENSITY);
-        this.scene.add(ambientLight);
-
-        const keyLight = new THREE.DirectionalLight(L.KEY_COLOR, L.KEY_INTENSITY);
-        keyLight.position.set(L.KEY_POSITION.x, L.KEY_POSITION.y, L.KEY_POSITION.z);
-        keyLight.castShadow = true;
-        keyLight.shadow.mapSize.width  = L.SHADOW_MAP_SIZE;
-        keyLight.shadow.mapSize.height = L.SHADOW_MAP_SIZE;
-        keyLight.shadow.camera.near   = L.SHADOW_NEAR;
-        keyLight.shadow.camera.far    = L.SHADOW_FAR;
-        keyLight.shadow.camera.left   = L.SHADOW_LEFT;
-        keyLight.shadow.camera.right  = L.SHADOW_RIGHT;
-        keyLight.shadow.camera.top    = L.SHADOW_TOP;
-        keyLight.shadow.camera.bottom = L.SHADOW_BOTTOM;
-        keyLight.shadow.bias          = L.SHADOW_BIAS;
-        keyLight.shadow.radius        = L.SHADOW_RADIUS;
-        this.scene.add(keyLight);
-
-        const fillLight = new THREE.DirectionalLight(L.FILL_COLOR, L.FILL_INTENSITY);
-        fillLight.position.set(L.FILL_POSITION.x, L.FILL_POSITION.y, L.FILL_POSITION.z);
-        this.scene.add(fillLight);
-
-        const sconce1 = new THREE.PointLight(L.SCONCE_COLOR, L.SCONCE_INTENSITY, L.SCONCE_DISTANCE);
-        sconce1.position.set(L.SCONCE_X, L.SCONCE_Y, L.SCONCE_Z);
-        this.scene.add(sconce1);
-
-        const sconce2 = new THREE.PointLight(L.SCONCE_COLOR, L.SCONCE_INTENSITY, L.SCONCE_DISTANCE);
-        sconce2.position.set(-L.SCONCE_X, L.SCONCE_Y, L.SCONCE_Z);
-        this.scene.add(sconce2);
-    }
-
     setupControls() {
         const C = CONTROLS_SETTINGS;
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls = new OrbitControls(this.camera, this._domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = C.DAMPING_FACTOR;
         this.controls.maxPolarAngle = Math.PI / C.MAX_POLAR_ANGLE_DENOM;
@@ -128,7 +58,7 @@ export class SceneManager {
         if (this._isTouchDevice()) this._setupTouchControls();
 
         // Lowest/closest the camera and target may sit, keeping them clear of the
-        // floor and back-wall planes (see setupBackdrop for their positions).
+        // floor and back-wall planes (see Stage.setupBackdrop for their positions).
         const clr = C.BOUNDS_CLEARANCE;
         this._minY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2) + clr;
         this._minZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP + clr;
@@ -162,7 +92,7 @@ export class SceneManager {
         this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
         this.controls.zoomSpeed   = C.TOUCH_ZOOM_SPEED;
 
-        const el = this.renderer.domElement;
+        const el = this._domElement;
         let startDist = 0, startMidX = 0, startMidY = 0, classified = false;
 
         const reset = () => {
@@ -201,14 +131,20 @@ export class SceneManager {
         el.addEventListener('touchcancel', reset);
     }
 
-    setupEventListeners() {
-        window.addEventListener('resize', () => this.onWindowResize());
+    // Per-frame: advance the controls and re-clamp when the user has control. Returns
+    // whether controls are active, so the caller knows to keep open-item overlays synced.
+    // When locked, the camera is driven directly (GSAP tweens or snapToDefault), and
+    // controls.update() would fight those by reapplying its stored spherical.
+    update() {
+        if (!this.controls.enabled) return false;
+        this.controls.update();
+        this._clampToBounds();
+        return true;
     }
 
-    onWindowResize() {
+    onResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
 
         // Re-fit the bookcase to the new viewport and update the saved "home"
         // distance so reset() stays correct.
@@ -231,20 +167,6 @@ export class SceneManager {
             this.controls.target.copy(this.controls.target0);
             this.controls.update();
         }
-    }
-
-    animate() {
-        requestAnimationFrame(() => this.animate());
-        // Only run OrbitControls update when controls are active.
-        // When locked, we drive the camera directly (GSAP tweens or snapToDefault),
-        // and controls.update() would fight those changes by reapplying its stored spherical.
-        if (this.controls.enabled) {
-            this.controls.update();
-            this._clampToBounds();
-            // Keep an open item's link hotspots aligned as the camera moves.
-            this.interactionManager?.openItem?.object?.syncOverlay?.();
-        }
-        this.renderer.render(this.scene, this.camera);
     }
 
     lockCamera() {
@@ -322,13 +244,5 @@ export class SceneManager {
         if (!this._flyTweens) return;
         this._flyTweens.forEach(t => t.kill());
         this._flyTweens = null;
-    }
-
-    add(object) {
-        this.scene.add(object);
-    }
-
-    remove(object) {
-        this.scene.remove(object);
     }
 }

@@ -134,42 +134,6 @@ export const SHELF_LAYOUT = {
   EDGE_PADDING: 1.5,           // inches kept clear inside each frame end
 };
 
-// Inner X range available for laying out groups on a shelf.
-export function shelfInnerSpan() {
-  const half = BOOKSHELF_DIMENSIONS.WIDTH / 2
-    - BOOKSHELF_DIMENSIONS.FRAME_THICKNESS
-    - SHELF_LAYOUT.EDGE_PADDING;
-  return { left: -half, right: half };
-}
-
-// Distribute items of the given widths across [left, right] and return their
-// center X positions, mirroring CSS flex justify-content behavior.
-export function flexCenters(widths, left, right, justify = SHELF_LAYOUT.JUSTIFY) {
-  const n = widths.length;
-  if (n === 0) return [];
-
-  const free = Math.max(0, (right - left) - widths.reduce((a, b) => a + b, 0));
-
-  let lead, gap;
-  if (justify === 'space-between') {
-    gap = n > 1 ? free / (n - 1) : 0;
-    lead = n > 1 ? 0 : free / 2;        // lone item: center it
-  } else if (justify === 'space-evenly') {
-    gap = lead = free / (n + 1);
-  } else {                              // space-around
-    gap = free / n;
-    lead = gap / 2;
-  }
-
-  const centers = [];
-  let cursor = left + lead;
-  for (let i = 0; i < n; i++) {
-    centers.push(cursor + widths[i] / 2);
-    cursor += widths[i] + gap;
-  }
-  return centers;
-}
-
 // Shelf nameplate — a thin brass plaque fixed flat to the front face of a shelf plank
 export const SHELF_LABEL = {
   PIXELS_PER_UNIT: 140,        // canvas px per inch (crisp engraved text)

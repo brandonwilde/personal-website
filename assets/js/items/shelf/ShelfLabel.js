@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS, SHELF_LABEL } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, SHELF_LABEL } from '../../config/constants.js';
 
 // Thin brass nameplate fixed to the front face of a shelf plank
 

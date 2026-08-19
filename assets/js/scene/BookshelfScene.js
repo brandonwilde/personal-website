@@ -1,19 +1,20 @@
 import * as THREE from 'three';
-import { Book } from './components/Book.js';
-import { BlogNotebook } from './components/BlogNotebook.js';
-import { BusinessCard } from './components/BusinessCard.js';
-import { Shelf } from './components/Shelf.js';
-import { ShelfLabel } from './components/ShelfLabel.js';
-import { SceneManager } from './managers/SceneManager.js';
-import { InteractionManager } from './managers/InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, WOOD_MATERIAL, colors, BUSINESS_CARD_DEFAULTS } from './config/constants.js';
-import { goodreadsSnapshot } from './data/goodreadsSnapshot.js';
-import { fetchRecentReads } from './data/goodreads.js';
+import { Book } from '../items/book/Book.js';
+import { BlogNotebook } from '../items/BlogNotebook.js';
+import { BusinessCard } from '../items/businessCard/BusinessCard.js';
+import { Bookcase } from '../items/Bookcase.js';
+import { Shelf } from '../items/shelf/Shelf.js';
+import { ShelfLabel } from '../items/shelf/ShelfLabel.js';
+import { Stage } from './Stage.js';
+import { InteractionManager } from './InteractionManager.js';
+import { BOOKSHELF_DIMENSIONS, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
+import { goodreadsSnapshot } from '../data/goodreadsSnapshot.js';
+import { fetchRecentReads } from '../data/goodreads.js';
 
 export class BookshelfScene {
     constructor() {
         // Initialize managers
-        this.sceneManager = new SceneManager();
+        this.sceneManager = new Stage();
         this.interactionManager = new InteractionManager(
             this.sceneManager.camera,
             this.sceneManager.renderer,
@@ -22,96 +23,30 @@ export class BookshelfScene {
                     // Snap camera to the default shelf view so the book always
                     // animates into a known, visible position, then lock controls
                     // until it settles (focus re-enables them via onShowcased).
-                    this.sceneManager.snapToDefault();
-                    this.sceneManager.lockCamera();
+                    this.sceneManager.cameraController.snapToDefault();
+                    this.sceneManager.cameraController.lockCamera();
                 },
                 onShowcased: (center) => {
                     // Item has settled on display: retarget controls onto it so the
                     // user can zoom in to read while it's open.
-                    this.sceneManager.focusOpenItem(center);
+                    this.sceneManager.cameraController.focusOpenItem(center);
                 },
                 onCloseStart: () => {
                     // Release focus and fly camera back to default, unlock on arrival.
-                    this.sceneManager.unfocusAndFlyToDefault();
+                    this.sceneManager.cameraController.unfocusAndFlyToDefault();
                 },
             }
         );
         this.sceneManager.interactionManager = this.interactionManager;
         
-        // Initialize collections
-        this.shelves = new Map();
+        // Build the bookcase (frame + shelves) and install it into the scene. The
+        // shelves Map is shared by reference, so the rest of this class reads it via
+        // this.shelves as before.
+        this.bookcase = new Bookcase();
+        this.bookcase.objects.forEach(o => this.sceneManager.add(o));
+        this.shelves = this.bookcase.shelves;
+
         this.items = new Map(); // mixed: books, the business card, the blog notebook
-        this.setupTextures();
-        this.createBookshelf();
-    }
-
-    setupTextures() {
-        this.textureLoader = new THREE.TextureLoader();
-        const woodTex = this.textureLoader.load('assets/textures/wood2.png');
-        const woodTexH = this.textureLoader.load('assets/textures/wood2-h-cropped.png');
-
-        woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping;
-        woodTexH.wrapS = woodTexH.wrapT = THREE.RepeatWrapping;
-
-        // Build materials once; share across all frame/shelf meshes
-        this.frameMaterial = this.createWoodMaterial(woodTex);
-        this.shelfMaterial = this.createWoodMaterial(woodTexH);
-    }
-
-    createBookshelf() {
-        const { WIDTH, HEIGHT, DEPTH, FRAME_THICKNESS, SHELF_THICKNESS } = BOOKSHELF_DIMENSIONS;
-        // Side posts are the outer envelope; everything else butts flush inside them.
-        const innerWidth = WIDTH - 2 * FRAME_THICKNESS;   // span between the side posts
-        const sideInnerX = innerWidth / 2;                // inner face of each post
-
-        // Posts/back run a touch taller than HEIGHT so they cover the top and
-        // bottom cap shelves (which straddle ±HEIGHT/2), giving flush edges.
-        const outerHeight = HEIGHT + SHELF_THICKNESS;
-
-        // Back panel — inset so its rear face sits flush with the posts' back edge.
-        const backPanel = new THREE.Mesh(
-            new THREE.BoxGeometry(innerWidth, outerHeight, FRAME_THICKNESS),
-            this.frameMaterial
-        );
-        backPanel.position.set(0, 0, -DEPTH / 2 + FRAME_THICKNESS / 2);
-        backPanel.castShadow = true;
-        backPanel.receiveShadow = true;
-        this.sceneManager.add(backPanel);
-
-        // Side posts — run the full height (covering the cap shelves) and full
-        // depth, with their outer faces flush at ±WIDTH/2.
-        const sidePanelGeometry = new THREE.BoxGeometry(FRAME_THICKNESS, outerHeight, DEPTH);
-
-        const leftPanel = new THREE.Mesh(sidePanelGeometry, this.frameMaterial);
-        leftPanel.position.set(-(WIDTH / 2 - FRAME_THICKNESS / 2), 0, 0);
-        leftPanel.castShadow = true;
-        leftPanel.receiveShadow = true;
-        this.sceneManager.add(leftPanel);
-
-        const rightPanel = new THREE.Mesh(sidePanelGeometry, this.frameMaterial);
-        rightPanel.position.set(WIDTH / 2 - FRAME_THICKNESS / 2, 0, 0);
-        rightPanel.castShadow = true;
-        rightPanel.receiveShadow = true;
-        this.sceneManager.add(rightPanel);
-
-        // Shelves — span only the inner width so each plank butts cleanly between
-        // the side posts. Y-centers are unchanged, so book/label placement is too.
-        const numShelves = Math.floor(HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING);
-        for (let i = 0; i <= numShelves; i++) {
-            const y = i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - HEIGHT / 2;
-            const shelf = new Shelf(String.fromCharCode(65 + i), y, this.shelfMaterial, 2 * sideInnerX);
-            this.sceneManager.add(shelf.mesh);
-            this.shelves.set(shelf.id, shelf);
-        }
-    }
-
-    createWoodMaterial(texture) {
-        return new THREE.MeshStandardMaterial({
-            map:       texture,
-            color:     new THREE.Color(WOOD_MATERIAL.COLOR),
-            roughness: WOOD_MATERIAL.ROUGHNESS,
-            metalness: WOOD_MATERIAL.METALNESS,
-        });
     }
 
     createBook(id, bookProps) {
