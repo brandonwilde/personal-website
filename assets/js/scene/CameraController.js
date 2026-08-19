@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, BOOKSHELF_DIMENSIONS, CONTROLS_SETTINGS, ROOM } from '../config/constants.js';
+import { CAMERA_SETTINGS, BOOKSHELF_DIMENSIONS, CONTROLS_SETTINGS, ROOM, FLOOR_Y } from '../config/constants.js';
 
 // Owns the camera and OrbitControls, and choreographs them: auto-framing the bookcase,
 // clamping to the room bounds, touch-gesture arbitration, and the lock / snap / focus /
@@ -60,7 +60,7 @@ export class CameraController {
         // Lowest/closest the camera and target may sit, keeping them clear of the
         // floor and back-wall planes (see Stage.setupBackdrop for their positions).
         const clr = C.BOUNDS_CLEARANCE;
-        this._minY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2) + clr;
+        this._minY = FLOOR_Y + clr;
         this._minZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP + clr;
 
         // target stays at (0,0,0) — the bookshelf center — which is the OrbitControls default.

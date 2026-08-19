@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS } from '../config/constants.js';
+import { SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, FLOOR_Y } from '../config/constants.js';
 import { roomEnvironment } from '../room/environment.js';
 import { addWalls } from '../room/walls.js';
 import { addBaseboards } from '../room/baseboards.js';
@@ -37,10 +37,10 @@ export class Stage {
         this.scene.environment = roomEnvironment();
     }
 
-    // Wall behind the bookcase and a floor it stands on, framing it as a room.
+    // Wall the bookcase hangs on and the floor below it, framing it as a room.
     setupBackdrop() {
         const wallZ  = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
-        const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
+        const floorY = FLOOR_Y;
 
         const { sideDepth } = addWalls(this.scene, { wallZ });
         addBaseboards(this.scene, { wallZ, floorY, sideDepth });

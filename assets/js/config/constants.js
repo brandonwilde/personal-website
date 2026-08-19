@@ -124,7 +124,17 @@ export const BOOKSHELF_DIMENSIONS = {
   SHELF_SPACING: 12,   // 1 foot between shelves
   SECTION_WIDTH: 12,   // 1 foot per section
   BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
+  MOUNT_HEIGHT:  26,   // inches of wall between the floor and the case's underside (0 = stands on the floor)
 };
+
+// The floor plane's Y. The bookcase is modelled centered on the origin, so
+// hanging it on the wall is expressed as dropping the floor away beneath it —
+// which leaves every shelf, book, label, and the camera framing untouched.
+export const FLOOR_Y = -(
+  BOOKSHELF_DIMENSIONS.HEIGHT / 2
+  + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2
+  + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
+);
 
 // Flex-style shelf layout: groups are distributed across the shelf's inner span
 // rather than pinned to fixed section centers, so each shelf fills its width
@@ -412,7 +422,7 @@ export const ANIM_PARAMS = {
 // Tall floor lamp standing beside the bookcase (see items/floorLamp/FloorLamp.js).
 // All Y values are inches above the floor; the lamp's origin sits on the floor plane.
 export const FLOOR_LAMP = {
-  POSITION:   { x: 37, z: 4 },  // floor position; the bookcase spans x ±30
+  POSITION:   { x: 41, z: 5 },  // floor position; clears the wall-mounted case (x ±30, front face z 3.6)
   ROTATION_Y: 0.35,             // slight turn so the shade seam faces away
 
   // Metalwork (base, pole, collars, harp, finial) — aged brass

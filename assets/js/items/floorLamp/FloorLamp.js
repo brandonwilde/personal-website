@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOOKSHELF_DIMENSIONS, FLOOR_LAMP } from '../../config/constants.js';
+import { FLOOR_LAMP, FLOOR_Y } from '../../config/constants.js';
 import { shadeTextures } from './floorLampTextures.js';
 
 const L = FLOOR_LAMP;
@@ -27,8 +27,7 @@ export class FloorLamp extends THREE.Group {
         this._buildShade();
         this._buildLight();
 
-        const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
-        this.position.set(L.POSITION.x, floorY, L.POSITION.z);
+        this.position.set(L.POSITION.x, FLOOR_Y, L.POSITION.z);
         this.rotation.y = L.ROTATION_Y;
     }
 
