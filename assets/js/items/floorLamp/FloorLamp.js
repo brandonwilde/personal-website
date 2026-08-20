@@ -4,10 +4,8 @@ import { shadeTextures } from './floorLampTextures.js';
 
 const L = FLOOR_LAMP;
 
-// A tall brass floor lamp: lathed weighted foot, slender banded pole, a bowed
-// harp carrying a tapered linen shade, and a warm bulb that actually lights the
-// room. Built with its origin on the floor so every Y in FLOOR_LAMP reads as
-// "inches above the carpet". Purely decorative — not registered for interaction.
+// A tall brass floor lamp, decorative but genuinely lighting the room. Origin
+// sits on the floor, so every Y in FLOOR_LAMP reads as inches above the carpet.
 export class FloorLamp extends THREE.Group {
     constructor() {
         super();
@@ -38,9 +36,8 @@ export class FloorLamp extends THREE.Group {
         return mesh;
     }
 
-    // Weighted foot — a spun dome flowing from the floor up into the pole. The
-    // only part low enough to sit inside the key light's shadow frustum, so it
-    // carries the lamp's contact shadow on the carpet.
+    // The only part low enough to sit inside the key light's shadow frustum, so
+    // it carries the lamp's contact shadow on the carpet.
     _buildBase() {
         const r = L.BASE_RADIUS;
         const h = L.BASE_HEIGHT;
@@ -59,7 +56,6 @@ export class FloorLamp extends THREE.Group {
         this._add(new THREE.Mesh(new THREE.LatheGeometry(smooth(profile), L.BASE_SEGMENTS), this.metal));
     }
 
-    // Pole from the top of the foot to the socket, banded by decorative collars.
     _buildPole() {
         const from = L.BASE_HEIGHT;
         const len  = L.POLE_TOP_Y - from;
@@ -79,7 +75,6 @@ export class FloorLamp extends THREE.Group {
         }
     }
 
-    // Socket housing the bulb, plus the pull chain hanging off it.
     _buildSocket() {
         const socket = new THREE.Mesh(
             new THREE.CylinderGeometry(L.SOCKET_RADIUS, L.SOCKET_RADIUS * 0.8, L.SOCKET_HEIGHT, 24),
@@ -113,8 +108,7 @@ export class FloorLamp extends THREE.Group {
         this._add(bead, { cast: false });
     }
 
-    // Two wires bowing out around the bulb to carry the shade, tied off at a
-    // finial on top.
+    // Two wires bowing out around the bulb to carry the shade, tied off at a finial.
     _buildHarp() {
         const saddle = new THREE.Mesh(
             new THREE.TorusGeometry(L.POLE_RADIUS * 2.2, L.HARP_WIRE_RADIUS * 1.6, 10, 28),
@@ -151,7 +145,6 @@ export class FloorLamp extends THREE.Group {
         this._add(finial, { cast: false });
     }
 
-    // Tapered drum shade in lit linen, rolled rims top and bottom.
     _buildShade() {
         const { linen, glow } = shadeTextures();
 
@@ -175,8 +168,6 @@ export class FloorLamp extends THREE.Group {
             })
         );
         shade.position.y = L.SHADE_BOTTOM_Y + L.SHADE_HEIGHT / 2;
-        // Off by default so the bulb's light reaches the shelves and they cast
-        // their own shadows from it — see SHADE_CASTS_SHADOW.
         this._add(shade, { cast: L.SHADE_CASTS_SHADOW, receive: true });
 
         const rims = [
@@ -212,8 +203,8 @@ export class FloorLamp extends THREE.Group {
     }
 }
 
-// Runs a spline through a sparse [radius, y] profile so lathed parts read as
-// turned metal rather than faceted stacks of cones.
+// Splines a sparse [radius, y] profile so lathed parts read as turned metal
+// rather than faceted stacks of cones.
 function smooth(points, divisions = 8) {
     const curve = new THREE.CatmullRomCurve3(points.map(([x, y]) => new THREE.Vector3(x, y, 0)));
     return curve.getPoints(points.length * divisions)

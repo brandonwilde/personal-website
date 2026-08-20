@@ -1,11 +1,8 @@
 import * as THREE from 'three';
 import { FLOOR_LAMP } from '../../config/constants.js';
 
-// Procedural textures for the lamp shade. Both maps share one canvas pass:
-//   linen — woven cloth colour (also used as the bump map)
-//   glow  — greyscale emissive mask, hottest at the bulb's height and fading
-//           toward the rims, so the shade lights up like real lit linen
-// Built once and shared by every shade.
+// Lamp shade maps, built once in a single pass: `linen` is the woven cloth
+// colour (also its bump map), `glow` the emissive mask, hottest at the bulb.
 
 let _maps = null;
 

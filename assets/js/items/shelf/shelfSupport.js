@@ -1,15 +1,13 @@
 import * as THREE from 'three';
 import { BOOKSHELF_DIMENSIONS, ROOM, SHELF_SUPPORT as S } from '../../config/constants.js';
 
-// The wooden supports each wall-mounted shelf rests on. The gusset outline is
-// drawn once in the support's own plane (u forward from the wall, v down from
-// the shelf's underside) and extruded sideways into a plate, then turned to
-// stand against the wall — the same trick baseboards.js uses.
+// The wooden supports each wall-mounted shelf rests on. The outline is drawn in
+// the support's own plane (u forward from the wall, v down from the shelf's
+// underside), extruded sideways into a plate, then turned to face the wall.
 
 let _geometry = null;
 
-// The supports for one shelf, spread evenly across its span. Takes the plank's own
-// material so the supports match the shelves they carry.
+// The supports for one shelf, spread evenly across its span.
 export function shelfSupports(shelfY, shelfWidth, material) {
     const geometry = supportGeometry();
 
@@ -34,12 +32,8 @@ export function shelfSupports(shelfY, shelfWidth, material) {
     return supports;
 }
 
-// Support outline, clockwise from the wall/shelf corner: forward along the
-// shelf's underside, around the rounded front tip, back along a concave sweep,
-// then around the rounded foot and up the wall face. Every corner is eased into
-// the next, so the tangents stay continuous and the whole edge reads as one
-// curve. The sweep's control point sits at the inner corner — that is what
-// pulls it hollow rather than bulging.
+// Outline, clockwise from the wall/shelf corner. The concave sweep's control
+// point sits at the inner corner, which is what pulls it hollow rather than bulging.
 function supportGeometry() {
     if (_geometry) return _geometry;
 
@@ -63,10 +57,8 @@ function supportGeometry() {
         curveSegments: S.SEGMENTS,
     });
 
-    // ExtrudeGeometry lays out UVs in shape units (inches), while a plank's
-    // BoxGeometry stretches one tile across its whole face. Rescale so the
-    // support's grain runs at the same inches-per-tile as the shelves it holds,
-    // instead of ~60x finer.
+    // ExtrudeGeometry lays out UVs in inches; a plank's BoxGeometry stretches one
+    // tile across its face. Rescale to match the shelves' inches-per-tile.
     const uv = _geometry.attributes.uv;
     for (let i = 0; i < uv.count; i++) {
         uv.setXY(i, uv.getX(i) / BOOKSHELF_DIMENSIONS.WIDTH, uv.getY(i) / BOOKSHELF_DIMENSIONS.WIDTH);

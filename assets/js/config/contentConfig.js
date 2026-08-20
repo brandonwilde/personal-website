@@ -391,8 +391,6 @@ export const bookConfigs = {
                 swivel:            0.34,  // rotation.y — turn the right side toward the wall
                 leanSide:          0.23,  // rotation.z — positive tips the top left, into the support
                 offsetFromSupport:  2.575, // inches from the support's center line, positive = toward mid-shelf
-                // The plank's back edge is the wall now (ROOM.WALL_GAP is 0), so this
-                // carries the 0.9" the notebook used to lean back into.
                 offsetFromBack:    4.2,   // inches forward from the plank's back edge
                 flowReserve:        13,   // inches reserved from the left so flowed books clear the notebook
             },

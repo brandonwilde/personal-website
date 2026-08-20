@@ -26,10 +26,9 @@ export class CameraController {
         // Stage adds the camera to the scene (so camera-parented objects render).
     }
 
-    // What actually has to be in frame, vertically: from the top of a book standing
-    // on the highest shelf down to the bottom of the supports under the lowest one.
-    // The planks only occupy the lower part of the modelled HEIGHT, so framing on
-    // HEIGHT alone wasted room overhead and clipped the supports off the bottom.
+    // What has to be in frame vertically: the top of a book on the highest shelf
+    // down to the foot of the supports under the lowest. Framing on the modelled
+    // HEIGHT instead wastes room overhead and clips the supports off the bottom.
     _contentSpan() {
         const half   = BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
         const top    = SHELF_YS[SHELF_YS.length - 1] + half + BOOK_DEFAULTS.HEIGHT;
@@ -37,9 +36,8 @@ export class CameraController {
         return { center: (top + bottom) / 2, half: (top - bottom) / 2 };
     }
 
-    // Home position: on an arc of the given radius around the look-at point, swung
-    // DEFAULT_YAW degrees off head-on and EYE_RISE above it. Keeping the target
-    // centered on the content means the fit distance frames the same at any angle.
+    // Home position: DEFAULT_YAW degrees around the look-at point at the given
+    // radius, EYE_RISE above it.
     _defaultPosition(distance) {
         const yaw = CAMERA_SETTINGS.DEFAULT_YAW * Math.PI / 180;
         return new THREE.Vector3(
@@ -85,9 +83,8 @@ export class CameraController {
         this._minY = FLOOR_Y + clr;
         this._minZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP + clr;
 
-        // Look at the middle of the content rather than the modelled origin, so the
-        // shelves sit centered in frame with their supports fully visible.
-        // saveState() records this as the "home" position for reset().
+        // Look at the middle of the content, not the modelled origin, so the
+        // supports stay in frame. saveState() records the "home" pose for reset().
         this.controls.target.y = this._contentSpan().center;
         this.controls.update();
         this.controls.saveState();

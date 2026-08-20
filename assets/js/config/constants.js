@@ -20,9 +20,7 @@ export const SCENE_BACKGROUND = 0x3b4a66;
 
 export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
-  // The planks and their supports mount straight onto the wall, so it sits right
-  // behind them. (This used to clear the bookcase's back panel.)
-  WALL_GAP:        0,         // how far the wall sits behind the shelves' back edge
+  WALL_GAP:        0,         // the planks mount straight onto the wall
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
   SIDE_WALL_X:     120,       // ±X position of the left/right side walls (= PLANE_SIZE/2 for a true corner)
   WALL_ROUGHNESS:  0.95,
@@ -86,22 +84,17 @@ export const LIGHTING_SETTINGS = {
   // Key light
   KEY_COLOR:         0xfff5e0,
   KEY_INTENSITY:     1.2,
-  // Direction only — a directional light has no position. The y/z ratio sets how
-  // far a shelf's shadow runs down the wall (DEPTH x ratio); at 80/30 each 7.2in
-  // plank smeared a 19in band across an 11in gap, so 45° keeps it to 7.2in. The
-  // x offset swings the light off-center, so shadows fall on a slant rather than
-  // straight down — and away from the lamp, which lights from the right.
+  // Direction, not position. The y/z ratio sets how far a shelf's shadow runs
+  // down the wall (DEPTH x ratio); x swings it off-center for a slanted cast.
   KEY_POSITION:      { x: -20, y: 60, z: 60 },
 
-  // 'BASIC' | 'PCF' | 'PCF_SOFT' | 'VSM'. Note that SHADOW_RADIUS below only has
-  // any effect under PCF and VSM — PCF_SOFT ignores it and uses a fixed kernel,
-  // which is why the edges stayed crisp however high the radius went.
+  // 'BASIC' | 'PCF' | 'PCF_SOFT' | 'VSM'. SHADOW_RADIUS applies under PCF and
+  // VSM only; PCF_SOFT uses a fixed kernel and ignores it.
   SHADOW_TYPE:       'PCF',
 
   // Shadow frustum — kept tight around the shelf to maximise shadow resolution.
-  // NEAR/FAR bracket the scene along the light's axis; the old 1..300 spread the
-  // depth buffer so thin that the bias needed to fight acne also detached the
-  // shadows from their casters.
+  // NEAR/FAR bracket the scene along the light's axis; too wide a spread thins
+  // the depth buffer until the anti-acne bias detaches shadows from their casters.
   SHADOW_MAP_SIZE:   1024,  // smaller texels blur further, which we want here
   SHADOW_NEAR:       20,
   SHADOW_FAR:        220,
@@ -110,8 +103,7 @@ export const LIGHTING_SETTINGS = {
   SHADOW_TOP:         30,
   SHADOW_BOTTOM:     -30,
   SHADOW_BIAS:       -0.0004,
-  SHADOW_NORMAL_BIAS: 0.3,  // offsets along the surface normal, not the light ray;
-                            // keep well under the 1in plank thickness or light leaks through
+  SHADOW_NORMAL_BIAS: 0.3,  // along the surface normal; keep under the 1in plank thickness or light leaks
   SHADOW_RADIUS:      6,   // blur width in shadow-map texels
 
   // Cool fill from opposite side
@@ -119,17 +111,13 @@ export const LIGHTING_SETTINGS = {
   FILL_INTENSITY:    0.7,
   FILL_POSITION:     { x: -40, y: 30, z: -30 },
 
-  // Warm sconce-style point lights flanking the shelf. Three.js uses physical
-  // light units, so a point light's contribution is intensity / distance² —
-  // and with the scene measured in inches these sit ~40in out. Intensity has to
-  // be in the thousands to register at all; at 2.5 they were contributing
-  // ~0.003 against an ambient of 1.0, i.e. nothing.
+  // Warm sconce-style point lights flanking the shelf. Physical falloff
+  // (intensity / distance²) over a scene measured in inches, hence the thousands.
   SCONCE_COLOR:      0xffa060,
   SCONCE_INTENSITY:  1000,
   SCONCE_DISTANCE:   220,  // cutoff radius; at 80 the falloff clipped mid-shelf
-  // Standing well off the shelves: the closer they sit, the bigger the gap
-  // between what the near and far ends of a plank receive, which is what made
-  // the outer books bleach while the middle stayed flat.
+  // Standing well off: up close, the near/far ends of a plank receive wildly
+  // different light and the outer books bleach.
   SCONCE_X:          44,   // mirrored to ±X
   SCONCE_Y:          42,
   SCONCE_Z:          34,
@@ -148,26 +136,21 @@ export const BOOKSHELF_DIMENSIONS = {
   MOUNT_HEIGHT:  32,   // inches of wall between the floor and the lowest shelf's underside
 };
 
-// Y of each shelf plank, bottom-up. ShelfRun builds the planks from this and the
-// camera frames to it, so there is one definition of where the shelves sit.
+// Y of each shelf plank, bottom-up — one definition, shared by ShelfRun and the camera framing.
 export const SHELF_YS = Array.from(
   { length: Math.floor(BOOKSHELF_DIMENSIONS.HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING) },
   (_, i) => i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - BOOKSHELF_DIMENSIONS.HEIGHT / 2,
 );
 
-// The floor plane's Y. The shelves are modelled centered on the origin, so
-// hanging it on the wall is expressed as dropping the floor away beneath it —
-// which leaves every shelf, book, label, and the camera framing untouched.
+// The floor plane's Y. Shelves stay modelled around the origin; mounting them
+// on the wall is expressed as dropping the floor away beneath them.
 export const FLOOR_Y = -(
   BOOKSHELF_DIMENSIONS.HEIGHT / 2
   + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2
   + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
 );
 
-// Wooden gusset supports carrying each wall-mounted shelf (see
-// items/shelf/shelfSupport.js). The profile is drawn in the plane of the
-// support and extruded sideways into a plate; it wears the same wood as the
-// planks it holds up.
+// Wooden gusset supports carrying each wall-mounted shelf (see items/shelf/shelfSupport.js).
 export const SHELF_SUPPORT = {
   COUNT:      3,     // supports per shelf, spread evenly across its span
   END_INSET:  9,     // inches from each shelf end to the outermost support
@@ -182,8 +165,7 @@ export const SHELF_SUPPORT = {
   FOOT_R:   0.55,    // rounding where the wall arm meets its underside
   SEGMENTS: 32,      // curve subdivisions
 
-  // Same grain as the planks, a half-shade darker so the supports read as their
-  // own pieces without going muddy under the shelf.
+  // Same grain as the planks, a half-shade darker
   COLOR:     0xb0906a,
   ROUGHNESS: 0.7,
 };
@@ -254,13 +236,10 @@ export const CAMERA_SETTINGS = {
   FRAME_MARGIN: 1.1,
   // Aspect the fixed showcase distances were tuned at; narrower screens push opened items back to fit by width.
   SHOWCASE_BASE_ASPECT: 1.1,
-  // Default viewing angle around the shelf, in degrees off head-on. Negative
-  // swings the camera toward -x (the key light's side), so the supports and plank
-  // ends catch the light instead of reading as flat silhouettes. 0 = straight on.
+  // Degrees off head-on (0 = straight on). Negative swings toward -x, the key
+  // light's side, so the supports and plank ends catch the light.
   DEFAULT_YAW: -18,
-  // How far the camera sits above what it is looking at, in inches. Smaller means
-  // a more level, less top-down view of the shelves.
-  EYE_RISE: 10,
+  EYE_RISE: 10,  // inches the camera sits above its look-at point
 };
 
 // Renderer settings
@@ -544,10 +523,8 @@ export const FLOOR_LAMP = {
   LIGHT_DISTANCE:  260,
   LIGHT_DECAY:     2,
 
-  // The bulb casts, so the shelves, supports, and books throw their own shadows
-  // from it. The shade deliberately does not: blocking the light sideways would
-  // shape it into up/down cones, but then nothing on the shelves is lit by the
-  // lamp at all, and none of it casts. Treat the linen as translucent instead.
+  // Linen treated as translucent: if the shade cast, it would cone the light off
+  // the shelves entirely and nothing there would be lit by the lamp or cast from it.
   SHADE_CASTS_SHADOW:       false,
   LIGHT_SHADOW_MAP:         1024,   // per cube face
   LIGHT_SHADOW_NEAR:        1,

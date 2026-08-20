@@ -178,9 +178,7 @@ export class BookshelfScene {
 
         const shelf = this.shelves.get(shelfId);
 
-        // The surfaces the notebook sits against: its own plank, the leftmost support
-        // hanging under the shelf above, and the plank's back edge. With the frame
-        // gone that support is the only upright left to lean on.
+        // With the frame gone, the leftmost support is the only upright left to lean on.
         notebook.applyPlacement(config.placement, {
             shelfSurfaceY: shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2,
             supportX:       -(BOOKSHELF_DIMENSIONS.WIDTH / 2 - SHELF_SUPPORT.END_INSET),

@@ -30,18 +30,17 @@ export class BlogNotebook extends InteractiveItem {
         this.userData.bookId = id;
     }
 
-    // Poses the notebook where it stands: leaning back and tipped sideways so its
-    // top edge rests against the support hanging under the shelf above. `anchors`
-    // are the surfaces it sits against (from BookshelfScene); `placement` is the
-    // tunable part (from contentConfig).
+    // Leans the notebook back and sideways so its top edge comes to rest against
+    // the support under the shelf above. `anchors` are the surfaces it sits
+    // against; `placement` is the tunable part, from contentConfig.
     applyPlacement(placement, anchors) {
         const { shelfSurfaceY, supportX, backEdgeZ } = anchors;
         const { leanBack, swivel, leanSide, offsetFromSupport, offsetFromBack } = placement;
 
         this.rotation.set(leanBack, swivel, leanSide);
 
-        // Y so the lowest corner of the rotated body rests flush on the plank —
-        // keeps the bottom edge planted however the angles are tuned.
+        // Y so the lowest corner of the rotated body rests flush on the plank,
+        // whatever the angles are tuned to.
         const { width, height, thickness } = this.dimensions;
         const q = new THREE.Quaternion().setFromEuler(this.rotation);
         let minCornerY = Infinity;
