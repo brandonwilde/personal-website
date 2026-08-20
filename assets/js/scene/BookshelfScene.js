@@ -3,6 +3,7 @@ import { BlogNotebook } from '../items/BlogNotebook.js';
 import { BusinessCard } from '../items/businessCard/BusinessCard.js';
 import { ShelfRun } from '../items/shelf/ShelfRun.js';
 import { FloorLamp } from '../items/floorLamp/FloorLamp.js';
+import { FloorHatch } from '../items/floorHatch/FloorHatch.js';
 import { Shelf } from '../items/shelf/Shelf.js';
 import { ShelfLabel } from '../items/shelf/ShelfLabel.js';
 import { Stage } from './Stage.js';
@@ -19,7 +20,8 @@ export class BookshelfScene {
             this.sceneManager.camera,
             this.sceneManager.renderer,
             {
-                onOpen: () => {
+                onOpen: (item) => {
+                    if (item.standalone) return;
                     // Snap camera to the default shelf view so the book always
                     // animates into a known, visible position, then lock controls
                     // until it settles (focus re-enables them via onShowcased).
@@ -31,7 +33,8 @@ export class BookshelfScene {
                     // user can zoom in to read while it's open.
                     this.sceneManager.cameraController.focusOpenItem(center);
                 },
-                onCloseStart: () => {
+                onCloseStart: (item) => {
+                    if (item.standalone) return;
                     // Release focus and fly camera back to default, unlock on arrival.
                     this.sceneManager.cameraController.unfocusAndFlyToDefault();
                 },
@@ -49,6 +52,11 @@ export class BookshelfScene {
         // Decorative floor lamp standing beside the shelves.
         this.floorLamp = new FloorLamp();
         this.sceneManager.add(this.floorLamp);
+
+        // Easter egg: only in frame once you have zoomed out past the back wall.
+        this.floorHatch = new FloorHatch();
+        this.sceneManager.add(this.floorHatch);
+        this.interactionManager.registerItem('floorHatch', this.floorHatch, { standalone: true });
 
         this.items = new Map(); // mixed: books, the business card, the blog notebook
     }

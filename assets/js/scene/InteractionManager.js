@@ -18,7 +18,8 @@ export class InteractionManager {
         this.setupEventListeners();
     }
 
-    // meta shape: { title, modalInfo, color }
+    // meta shape: { title, modalInfo, color, standalone }. A standalone item opens
+    // where it stands, so the open/close callbacks leave the camera alone.
     registerItem(id, item, meta) {
         this.items.set(id, { object: item, ...meta });
     }
@@ -43,7 +44,7 @@ export class InteractionManager {
         }
         const itemData = this.openItem;
         this.openItem  = null;
-        if (this._onCloseStart) this._onCloseStart();
+        if (this._onCloseStart) this._onCloseStart(itemData);
         itemData.object.close();
         if (onComplete) {
             const delay = (window.animParams ?? { close: { openDelay: 0.4 } }).close.openDelay;
@@ -56,7 +57,7 @@ export class InteractionManager {
 
     openItemEntry(itemData) {
         this.openItem = itemData;
-        if (this._onOpen) this._onOpen();
+        if (this._onOpen) this._onOpen(itemData);
         // Pass interaction context so components like BusinessCard can mount
         // an HTML link overlay positioned to the camera/renderer.
         itemData.object.open({
@@ -135,7 +136,8 @@ export class InteractionManager {
             this.hoveredItem = hoverItem;
         }
 
-        const clickable = kind === 'closed' || kind === 'open-interactable';
+        const clickable = kind === 'closed' || kind === 'open-interactable' ||
+                          (kind === 'open-body' && item.standalone);
         this.renderer.domElement.style.cursor = clickable ? 'pointer' : 'default';
     }
 
@@ -155,7 +157,11 @@ export class InteractionManager {
 
         // Click on the open item (body or its extras) — leave it open so users can
         // interact with the displayed content (text selection, links via the overlay).
-        if (kind === 'open-body' || kind === 'open-interactable') return;
+        // A standalone item has no such content, so a second click means "shut it".
+        if (kind === 'open-body' || kind === 'open-interactable') {
+            if (kind === 'open-body' && item.standalone) this.closeOpenItem();
+            return;
+        }
 
         if (kind === 'none') {
             this.closeOpenItem();
