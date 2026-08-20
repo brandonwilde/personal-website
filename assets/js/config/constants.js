@@ -31,6 +31,9 @@ export const ROOM = {
   BASEBOARD_DEPTH:     0.4,       // how far it juts out from the wall
   BASEBOARD_ROUGHNESS: 0.6,       // slightly sheened painted trim
   BASEBOARD_SINK:      0.4,       // how far the bottom tucks below the floor into the pile
+
+  // How far behind the wall its shadow-blocking plane sits (see room/walls.js).
+  SHADOW_BLOCKER_GAP:  0.5,
 };
 
 // Procedural cut-pile carpet for the floor (see room/carpet.js).
@@ -149,6 +152,9 @@ export const FLOOR_Y = -(
   + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2
   + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
 );
+
+// The back wall's Z — the shelves' rear face, since they mount straight onto it.
+export const WALL_Z = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
 
 // Wooden gusset supports carrying each wall-mounted shelf (see items/shelf/shelfSupport.js).
 export const SHELF_SUPPORT = {
@@ -546,5 +552,51 @@ export const FLOOR_LAMP = {
     GLOW_CENTER:   0.58,  // v of the hottest band (roughly the bulb's height)
     GLOW_FALLOFF:  0.62,  // how fast the glow fades toward the rims
     GLOW_FLOOR:    0.35,  // dimmest the shade ever glows
+  },
+};
+
+export const FLOOR_HATCH = {
+  POSITION_X:    0,
+  GAP_FROM_WALL: 6,     // carpet between the wall and the hatch's near edge
+
+  SIZE:          30,    // inches square of opening — sized to read while zoomed out
+  RIM_WIDTH:     2.2,
+  LID_THICKNESS: 1.0,
+  CURB_HEIGHT:   1.8,   // carpet up to the rim's top face
+  FLOOR_LIFT:    0.3,   // well floor, high enough to clear the displaced pile
+  HANDLE:      { LENGTH: 7, WIDTH: 1.3, HEIGHT: 0.5, INSET: 4 },  // pull bar, INSET from the front edge
+
+  LID_COLOR:   0x565c63,
+  RIM_COLOR:   0x878e97,
+  WELL_COLOR:  0x2b2f33,
+  METALNESS:   0.8,
+  ROUGHNESS:   0.45,
+
+  HOVER_ANGLE: 7,       // degrees the lid cracks open on hover
+  OPEN_ANGLE:  108,
+  OPEN_TIME:   0.9,     // seconds
+  CLOSE_TIME:  0.55,
+  HOVER_TIME:  0.25,
+
+  MESSAGE: 'ARTMAN WAS HERE',
+  // Drawn against a 1024px canvas and scaled to SIZE, so the resolution is free
+  // to move without redrawing anything.
+  TEXTURE: {
+    SIZE:         448,            // low on purpose — the GPU's upscale is the chalk's fuzz
+    BLUR:         1.1,            // px, over the finished canvas
+    SLATE:        [34, 39, 42],   // RGB of the slate ground
+    SLATE_GRAIN:  9,              // ±per-pixel noise in the ground
+    SMUDGES:      26,             // wiped chalk-dust blooms
+    CHALK:        [238, 238, 232],
+    STROKE:       9,              // px width of a chalk line
+    JITTER:       2.4,            // px of wobble that keeps lines hand-drawn
+    // The scrawl comes from the per-letter jitter below, not the typeface, so it
+    // survives phones that have none of these installed.
+    FONT:         'Impact, "Arial Black", "Franklin Gothic Medium", sans-serif',
+    FONT_SIZE:    120,
+    LETTER_ROT:   0.15,           // ±radians each letter is knocked off square
+    LETTER_SHIFT: 0.07,           // ±baseline wander, as a fraction of FONT_SIZE
+    LETTER_SIZE:  0.10,           // ±per-letter size variation
+    LETTER_GAP:   0.04,           // extra tracking, as a fraction of FONT_SIZE
   },
 };

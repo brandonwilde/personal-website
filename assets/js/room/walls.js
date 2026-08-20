@@ -26,5 +26,22 @@ export function addWalls(scene, { wallZ }) {
         scene.add(sideWall);
     }
 
+    // The wall is lit but casts nothing, so shadows carry through it onto the carpet
+    // beyond. This plane occludes in its place, writing neither colour nor depth so
+    // it stays invisible. DoubleSide is required: a FrontSide material casts from
+    // its back face, which the light never sees, and the shadow silently never appears.
+    const blocker = new THREE.Mesh(
+        new THREE.PlaneGeometry(size, size),
+        new THREE.MeshBasicMaterial({
+            side:       THREE.DoubleSide,
+            shadowSide: THREE.DoubleSide,
+            colorWrite: false,
+            depthWrite: false,
+        })
+    );
+    blocker.position.set(0, 0, wallZ - ROOM.SHADOW_BLOCKER_GAP);
+    blocker.castShadow = true;
+    scene.add(blocker);
+
     return { sideDepth };
 }
