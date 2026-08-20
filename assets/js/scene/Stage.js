@@ -1,10 +1,17 @@
 import * as THREE from 'three';
-import { SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS } from '../config/constants.js';
+import { SCENE_BACKGROUND, ROOM, LIGHTING_SETTINGS, BOOKSHELF_DIMENSIONS, RENDERER_SETTINGS, FLOOR_Y } from '../config/constants.js';
 import { roomEnvironment } from '../room/environment.js';
 import { addWalls } from '../room/walls.js';
 import { addBaseboards } from '../room/baseboards.js';
 import { addFloor } from '../room/floor.js';
 import { CameraController } from './CameraController.js';
+
+const SHADOW_TYPES = {
+    BASIC:    THREE.BasicShadowMap,
+    PCF:      THREE.PCFShadowMap,
+    PCF_SOFT: THREE.PCFSoftShadowMap,
+    VSM:      THREE.VSMShadowMap,
+};
 
 // Builds and draws the world (scene, renderer, lights, room backdrop) and
 // runs the render loop. The camera and its choreography live in CameraController.
@@ -37,10 +44,10 @@ export class Stage {
         this.scene.environment = roomEnvironment();
     }
 
-    // Wall behind the bookcase and a floor it stands on, framing it as a room.
+    // Wall the shelves hang on and the floor below them, framing it as a room.
     setupBackdrop() {
         const wallZ  = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP;
-        const floorY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2);
+        const floorY = FLOOR_Y;
 
         const { sideDepth } = addWalls(this.scene, { wallZ });
         addBaseboards(this.scene, { wallZ, floorY, sideDepth });
@@ -52,7 +59,7 @@ export class Stage {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDERER_SETTINGS.MAX_PIXEL_RATIO));
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.type = SHADOW_TYPES[LIGHTING_SETTINGS.SHADOW_TYPE] ?? THREE.PCFShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = LIGHTING_SETTINGS.TONE_MAPPING_EXPOSURE;
         document.body.appendChild(this.renderer.domElement);
@@ -76,6 +83,7 @@ export class Stage {
         keyLight.shadow.camera.top    = L.SHADOW_TOP;
         keyLight.shadow.camera.bottom = L.SHADOW_BOTTOM;
         keyLight.shadow.bias          = L.SHADOW_BIAS;
+        keyLight.shadow.normalBias    = L.SHADOW_NORMAL_BIAS;
         keyLight.shadow.radius        = L.SHADOW_RADIUS;
         this.scene.add(keyLight);
 

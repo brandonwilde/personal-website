@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { showcasePosition } from '../../utils/showcase.js';
+import { showcasePosition, facingYaw } from '../../utils/showcase.js';
 
 // GSAP timelines that fly a book from the shelf to its showcase pose and back.
 // Both read the live animation params via book._params() and tween the book's
@@ -50,9 +50,10 @@ export function buildOpenTimeline(book) {
         }
     });
 
-    // 2. Rotate so front cover faces viewer
+    // 2. Rotate so front cover faces viewer, wherever the viewer is standing
+    const facing = cam ? facingYaw(cam, book._showcaseCenter) : 0;
     tl.to(book.rotation, {
-        y:        bookRotation,
+        y:        bookRotation + facing,
         duration: duration * rotateMult,
         ease
     }, `>-${rotateOverlap}`);
@@ -61,14 +62,18 @@ export function buildOpenTimeline(book) {
     // stays visually centered. When fully open the cover's free edge lands at
     // x = -w/2 + w·cos(coverAngle) relative to the book, so the spread midpoint
     // is w/2·cos(coverAngle) to the left of position — negate to re-center.
+    // Drift runs along the book's own x axis, which the facing yaw has turned.
     const centeredX = -book.dimensions.width / 2 * Math.cos(coverAngle);
+    const driftX    = centeredX * Math.cos(facing);
+    const driftZ    = -centeredX * Math.sin(facing);
     tl.to(book.frontCoverPivot.rotation, {
         y:        coverAngle,
         duration: duration * coverOpenMult,
         ease
     }, `>-${coverDelay}`);
     tl.to(book.position, {
-        x:        showcase.x + centeredX,
+        x:        showcase.x + driftX,
+        z:        showcase.z + driftZ,
         duration: duration * coverOpenMult,
         ease
     }, `<`);

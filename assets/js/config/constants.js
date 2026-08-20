@@ -20,7 +20,7 @@ export const SCENE_BACKGROUND = 0x3b4a66;
 
 export const ROOM = {
   WALL_COLOR:      0x3b4a66,  // musty navy blue
-  WALL_GAP:        0.9,       // how far the wall sits behind the bookcase's back face
+  WALL_GAP:        0,         // the planks mount straight onto the wall
   PLANE_SIZE:      800,       // wall/floor extent — large enough to fill any view
   SIDE_WALL_X:     120,       // ±X position of the left/right side walls (= PLANE_SIZE/2 for a true corner)
   WALL_ROUGHNESS:  0.95,
@@ -84,31 +84,43 @@ export const LIGHTING_SETTINGS = {
   // Key light
   KEY_COLOR:         0xfff5e0,
   KEY_INTENSITY:     1.2,
-  KEY_POSITION:      { x: 0, y: 80, z: 30 },
+  // Direction, not position. The y/z ratio sets how far a shelf's shadow runs
+  // down the wall (DEPTH x ratio); x swings it off-center for a slanted cast.
+  KEY_POSITION:      { x: -20, y: 60, z: 60 },
 
-  // Shadow frustum — kept tight around the shelf to maximise shadow resolution
-  SHADOW_MAP_SIZE:   2048,
-  SHADOW_NEAR:       1,
-  SHADOW_FAR:        300,
-  SHADOW_LEFT:       -40,
-  SHADOW_RIGHT:       40,
+  // 'BASIC' | 'PCF' | 'PCF_SOFT' | 'VSM'. SHADOW_RADIUS applies under PCF and
+  // VSM only; PCF_SOFT uses a fixed kernel and ignores it.
+  SHADOW_TYPE:       'PCF',
+
+  // Shadow frustum — kept tight around the shelf to maximise shadow resolution.
+  // NEAR/FAR bracket the scene along the light's axis; too wide a spread thins
+  // the depth buffer until the anti-acne bias detaches shadows from their casters.
+  SHADOW_MAP_SIZE:   1024,  // smaller texels blur further, which we want here
+  SHADOW_NEAR:       20,
+  SHADOW_FAR:        220,
+  SHADOW_LEFT:       -50,   // wide enough to include the floor lamp's foot
+  SHADOW_RIGHT:       50,
   SHADOW_TOP:         30,
   SHADOW_BOTTOM:     -30,
-  SHADOW_BIAS:       -0.001,
-  SHADOW_RADIUS:      6,
+  SHADOW_BIAS:       -0.0004,
+  SHADOW_NORMAL_BIAS: 0.3,  // along the surface normal; keep under the 1in plank thickness or light leaks
+  SHADOW_RADIUS:      6,   // blur width in shadow-map texels
 
   // Cool fill from opposite side
   FILL_COLOR:        0xd0e8ff,
   FILL_INTENSITY:    0.7,
   FILL_POSITION:     { x: -40, y: 30, z: -30 },
 
-  // Warm sconce-style point lights flanking the shelf
+  // Warm sconce-style point lights flanking the shelf. Physical falloff
+  // (intensity / distance²) over a scene measured in inches, hence the thousands.
   SCONCE_COLOR:      0xffa060,
-  SCONCE_INTENSITY:  2.5,
-  SCONCE_DISTANCE:   80,
-  SCONCE_X:          30,   // mirrored to ±X
-  SCONCE_Y:          28,
-  SCONCE_Z:          18,
+  SCONCE_INTENSITY:  1000,
+  SCONCE_DISTANCE:   220,  // cutoff radius; at 80 the falloff clipped mid-shelf
+  // Standing well off: up close, the near/far ends of a plank receive wildly
+  // different light and the outer books bleach.
+  SCONCE_X:          44,   // mirrored to ±X
+  SCONCE_Y:          42,
+  SCONCE_Z:          34,
 
   TONE_MAPPING_EXPOSURE: 1.1,
 };
@@ -118,12 +130,44 @@ export const BOOKSHELF_DIMENSIONS = {
   WIDTH: 60,           // 5 feet
   HEIGHT: 36,          // 3 feet
   DEPTH: 7.2,         // 7.2 inches
-  BASE_DISTANCE: 240,  // 20 feet - camera distance
-  FRAME_THICKNESS: 1.2,// 1.2 inches
   SHELF_THICKNESS: 1,  // 1 inch
   SHELF_SPACING: 12,   // 1 foot between shelves
-  SECTION_WIDTH: 12,   // 1 foot per section
   BOOK_SPACING:  0.2,  // inches between adjacent books on a shelf
+  MOUNT_HEIGHT:  32,   // inches of wall between the floor and the lowest shelf's underside
+};
+
+// Y of each shelf plank, bottom-up — one definition, shared by ShelfRun and the camera framing.
+export const SHELF_YS = Array.from(
+  { length: Math.floor(BOOKSHELF_DIMENSIONS.HEIGHT / BOOKSHELF_DIMENSIONS.SHELF_SPACING) },
+  (_, i) => i * BOOKSHELF_DIMENSIONS.SHELF_SPACING - BOOKSHELF_DIMENSIONS.HEIGHT / 2,
+);
+
+// The floor plane's Y. Shelves stay modelled around the origin; mounting them
+// on the wall is expressed as dropping the floor away beneath them.
+export const FLOOR_Y = -(
+  BOOKSHELF_DIMENSIONS.HEIGHT / 2
+  + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2
+  + BOOKSHELF_DIMENSIONS.MOUNT_HEIGHT
+);
+
+// Wooden gusset supports carrying each wall-mounted shelf (see items/shelf/shelfSupport.js).
+export const SHELF_SUPPORT = {
+  COUNT:      3,     // supports per shelf, spread evenly across its span
+  END_INSET:  9,     // inches from each shelf end to the outermost support
+  ARM:        5.2,   // how far it reaches forward under the shelf (shelf DEPTH is 7.2)
+  DROP:       6.4,   // how far the wall arm hangs below the shelf
+  STOCK:      1.0,   // thickness of each arm
+  PLATE:      1.25,  // how thick the support is (its extrusion)
+
+  // Rounded ends — every corner eased so the outline reads as one flowing curve
+  TIP:      1.1,     // height of the front tip face (must exceed NOSE_R)
+  NOSE_R:   0.35,    // rounding at the top and bottom of that tip face
+  FOOT_R:   0.55,    // rounding where the wall arm meets its underside
+  SEGMENTS: 32,      // curve subdivisions
+
+  // Same grain as the planks, a half-shade darker
+  COLOR:     0xb0906a,
+  ROUGHNESS: 0.7,
 };
 
 // Flex-style shelf layout: groups are distributed across the shelf's inner span
@@ -192,6 +236,10 @@ export const CAMERA_SETTINGS = {
   FRAME_MARGIN: 1.1,
   // Aspect the fixed showcase distances were tuned at; narrower screens push opened items back to fit by width.
   SHOWCASE_BASE_ASPECT: 1.1,
+  // Degrees off head-on (0 = straight on). Negative swings toward -x, the key
+  // light's side, so the supports and plank ends catch the light.
+  DEFAULT_YAW: -18,
+  EYE_RISE: 10,  // inches the camera sits above its look-at point
 };
 
 // Renderer settings
@@ -408,3 +456,95 @@ export const ANIM_PARAMS = {
     },
 };
 
+
+// Tall floor lamp standing beside the shelves (see items/floorLamp/FloorLamp.js).
+// All Y values are inches above the floor; the lamp's origin sits on the floor plane.
+export const FLOOR_LAMP = {
+  POSITION:   { x: 41, z: 5 },  // floor position; clears the wall-mounted case (x ±30, front face z 3.6)
+  ROTATION_Y: 0.35,             // slight turn so the shade seam faces away
+
+  // Metalwork (base, pole, collars, harp, finial) — aged brass
+  METAL_COLOR:         0x9a7b45,
+  METAL_ROUGHNESS:     0.32,
+  METAL_METALNESS:     0.95,
+  METAL_ENV_INTENSITY: 1.3,
+
+  // Weighted foot — a lathed dome that flows up into the pole
+  BASE_RADIUS:   6.4,
+  BASE_HEIGHT:   2.2,
+  BASE_SEGMENTS: 64,
+
+  // Pole and the decorative rings banding it
+  POLE_RADIUS:     0.34,
+  POLE_TOP_Y:      46,
+  COLLAR_YS:       [3.2, 23],
+  COLLAR_RADIUS:   0.62,
+  COLLAR_HEIGHT:   0.9,
+
+  SOCKET_RADIUS: 0.85,
+  SOCKET_HEIGHT: 2.4,
+
+  BULB_RADIUS:             1.25,
+  BULB_Y:                  49.5,
+  BULB_COLOR:              0xfff2d0,
+  BULB_EMISSIVE_INTENSITY: 3.0,
+
+  // Pull chain dangling from the socket
+  CHAIN_LENGTH:      4.5,
+  CHAIN_RADIUS:      0.05,
+  CHAIN_BEAD_RADIUS: 0.16,
+  CHAIN_OFFSET:      1.0,   // how far off the pole axis it hangs
+
+  // Harp — two bowed wires carrying the shade
+  HARP_BASE_Y:     45.0,
+  HARP_TOP_Y:      57.4,
+  HARP_WIDTH:      4.6,     // how far the wires bow out
+  HARP_WIRE_RADIUS: 0.14,
+
+  FINIAL_Y:      57.6,
+  FINIAL_RADIUS: 0.8,
+
+  // Empire (tapered drum) shade
+  SHADE_BOTTOM_Y:      45.5,
+  SHADE_HEIGHT:        11.5,
+  SHADE_BOTTOM_RADIUS: 9.2,
+  SHADE_TOP_RADIUS:    6.6,
+  SHADE_SEGMENTS:      64,
+  SHADE_ROUGHNESS:     0.9,
+  SHADE_EMISSIVE:      0xffb765,  // warm light bleeding through the linen
+  SHADE_EMISSIVE_INTENSITY: 1.1,
+  SHADE_OPACITY:       0.96,
+  SHADE_BUMP_SCALE:    0.035,
+  TRIM_TUBE_RADIUS:    0.11,      // rolled rim at the shade's top and bottom edges
+
+  // Warm bulb light thrown into the room (physical falloff: irradiance ≈ INTENSITY / d²)
+  LIGHT_COLOR:     0xffc98a,
+  LIGHT_INTENSITY: 1100,
+  LIGHT_DISTANCE:  260,
+  LIGHT_DECAY:     2,
+
+  // Linen treated as translucent: if the shade cast, it would cone the light off
+  // the shelves entirely and nothing there would be lit by the lamp or cast from it.
+  SHADE_CASTS_SHADOW:       false,
+  LIGHT_SHADOW_MAP:         1024,   // per cube face
+  LIGHT_SHADOW_NEAR:        1,
+  LIGHT_SHADOW_BIAS:       -0.001,
+  LIGHT_SHADOW_NORMAL_BIAS: 0.3,
+  LIGHT_SHADOW_RADIUS:      8,
+
+  // Procedurally woven linen for the shade (see floorLampTextures.js)
+  TEXTURE: {
+    SIZE_X:        1024,
+    SIZE_Y:        512,
+    LINEN:         [239, 224, 194],  // RGB of the undyed linen
+    WEAVE_PERIOD:  5,     // px per warp/weft thread
+    WEAVE_DEPTH:   16,    // ±brightness of the weave crosshatch
+    SLUB_DEPTH:    10,    // ±brightness of the thicker irregular threads
+    GRAIN:         7,     // ±per-pixel fibre noise
+    SEAM_WIDTH:    6,     // px of the vertical stitched seam
+    SEAM_DARKEN:   0.82,
+    GLOW_CENTER:   0.58,  // v of the hottest band (roughly the bulb's height)
+    GLOW_FALLOFF:  0.62,  // how fast the glow fades toward the rims
+    GLOW_FLOOR:    0.35,  // dimmest the shade ever glows
+  },
+};

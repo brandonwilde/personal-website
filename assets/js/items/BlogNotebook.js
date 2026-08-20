@@ -30,6 +30,38 @@ export class BlogNotebook extends InteractiveItem {
         this.userData.bookId = id;
     }
 
+    // Leans the notebook back and sideways so its top edge comes to rest against
+    // the support under the shelf above. `anchors` are the surfaces it sits
+    // against; `placement` is the tunable part, from contentConfig.
+    applyPlacement(placement, anchors) {
+        const { shelfSurfaceY, supportX, backEdgeZ } = anchors;
+        const { leanBack, swivel, leanSide, offsetFromSupport, offsetFromBack } = placement;
+
+        this.rotation.set(leanBack, swivel, leanSide);
+
+        // Y so the lowest corner of the rotated body rests flush on the plank,
+        // whatever the angles are tuned to.
+        const { width, height, thickness } = this.dimensions;
+        const q = new THREE.Quaternion().setFromEuler(this.rotation);
+        let minCornerY = Infinity;
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+            const corner = new THREE.Vector3(sx * width / 2, sy * height / 2, sz * thickness / 2)
+                .applyQuaternion(q);
+            if (corner.y < minCornerY) minCornerY = corner.y;
+        }
+
+        this.position.set(
+            supportX + offsetFromSupport,
+            shelfSurfaceY - minCornerY,
+            backEdgeZ + offsetFromBack,
+        );
+
+        this.initialX         = this.position.x;
+        this.initialY         = this.position.y;
+        this.initialZ         = this.position.z;
+        this.initialRotationY = this.rotation.y;
+    }
+
     // Must be called before hover overlays will work.
     setContext(camera, renderer) {
         this._camera   = camera;

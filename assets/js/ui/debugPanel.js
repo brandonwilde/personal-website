@@ -5,6 +5,7 @@ import { ANIM_PARAMS } from '../config/constants.js';
  * Toggle with backtick (`) key or the ⚙ button.
  * All changes are written to window.animParams, which Book reads at timeline-build time.
  */
+
 export function initDebugPanel() {
     // Seed the global mutable copy from the exported defaults
     window.animParams = JSON.parse(JSON.stringify(ANIM_PARAMS));
@@ -18,6 +19,40 @@ export function initDebugPanel() {
     document.addEventListener('keydown', (e) => {
         if (e.key === '`') togglePanel(panel);
     });
+}
+
+// One labelled slider row with a live-updating readout.
+function sliderRow({ label, min, max, step, value, fmt, onInput }) {
+    const row = document.createElement('div');
+    row.style.cssText = 'margin-bottom:7px;';
+
+    const labelRow = document.createElement('div');
+    labelRow.style.cssText = 'display:flex;justify-content:space-between;';
+    const lbl = document.createElement('span');
+    lbl.textContent = label;
+    lbl.style.color = '#bbb';
+    const val = document.createElement('span');
+    val.style.cssText = 'color:#f0c060;min-width:48px;text-align:right;';
+    val.textContent = fmt(value);
+    labelRow.appendChild(lbl);
+    labelRow.appendChild(val);
+
+    const slider = document.createElement('input');
+    slider.type  = 'range';
+    slider.min   = min;
+    slider.max   = max;
+    slider.step  = step;
+    slider.value = value;
+    slider.style.cssText = 'width:100%;margin-top:2px;accent-color:#f0c060;';
+    slider.addEventListener('input', () => {
+        const n = parseFloat(slider.value);
+        val.textContent = fmt(n);
+        onInput(n);
+    });
+
+    row.appendChild(labelRow);
+    row.appendChild(slider);
+    return row;
 }
 
 function togglePanel(panel) {
@@ -77,44 +112,14 @@ function buildPanel() {
 
     sliders.forEach(cfg => {
         const p = window.animParams;
-        const currentVal = cfg.get ? cfg.get(p) : getPath(p, cfg.path);
-
-        const row = document.createElement('div');
-        row.style.cssText = 'margin-bottom:7px;';
-
-        const labelRow = document.createElement('div');
-        labelRow.style.cssText = 'display:flex;justify-content:space-between;';
-        const lbl = document.createElement('span');
-        lbl.textContent = cfg.label;
-        lbl.style.color = '#bbb';
-        const val = document.createElement('span');
-        val.style.cssText = 'color:#f0c060;min-width:48px;text-align:right;';
-        val.textContent = cfg.fmt(currentVal);
-
-        labelRow.appendChild(lbl);
-        labelRow.appendChild(val);
-
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min  = cfg.min;
-        slider.max  = cfg.max;
-        slider.step = cfg.step;
-        slider.value = currentVal;
-        slider.style.cssText = 'width:100%;margin-top:2px;accent-color:#f0c060;';
-
-        slider.addEventListener('input', () => {
-            const n = parseFloat(slider.value);
-            val.textContent = cfg.fmt(n);
-            if (cfg.set) {
-                cfg.set(window.animParams, n);
-            } else {
-                setPath(window.animParams, cfg.path, n);
-            }
-        });
-
-        row.appendChild(labelRow);
-        row.appendChild(slider);
-        body.appendChild(row);
+        body.appendChild(sliderRow({
+            ...cfg,
+            value: cfg.get ? cfg.get(p) : getPath(p, cfg.path),
+            onInput: n => {
+                if (cfg.set) cfg.set(window.animParams, n);
+                else         setPath(window.animParams, cfg.path, n);
+            },
+        }));
     });
 
     // Reset button

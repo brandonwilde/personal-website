@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CAMERA_SETTINGS, BOOKSHELF_DIMENSIONS, CONTROLS_SETTINGS, ROOM } from '../config/constants.js';
+import { CAMERA_SETTINGS, BOOKSHELF_DIMENSIONS, BOOK_DEFAULTS, CONTROLS_SETTINGS, ROOM, SHELF_SUPPORT, SHELF_YS, FLOOR_Y } from '../config/constants.js';
 
-// Owns the camera and OrbitControls, and choreographs them: auto-framing the bookcase,
+// Owns the camera and OrbitControls, and choreographs them: auto-framing the shelves,
 // clamping to the room bounds, touch-gesture arbitration, and the lock / snap / focus /
 // fly camera moves that play as items open and close. Stage adds the camera to the
 // scene and drives update()/onResize() from its render loop; BookshelfScene calls the
@@ -22,18 +22,38 @@ export class CameraController {
             CAMERA_SETTINGS.FAR
         );
 
-        const centerY = BOOKSHELF_DIMENSIONS.HEIGHT / 2;
-        this.camera.position.set(0, centerY, this._fitDistance());
+        this.camera.position.copy(this._defaultPosition(this._fitDistance()));
         // Stage adds the camera to the scene (so camera-parented objects render).
     }
 
-    // Camera distance that "contains" the whole bookcase (plus FRAME_MARGIN
+    // What has to be in frame vertically: the top of a book on the highest shelf
+    // down to the foot of the supports under the lowest. Framing on the modelled
+    // HEIGHT instead wastes room overhead and clips the supports off the bottom.
+    _contentSpan() {
+        const half   = BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
+        const top    = SHELF_YS[SHELF_YS.length - 1] + half + BOOK_DEFAULTS.HEIGHT;
+        const bottom = SHELF_YS[0] - half - SHELF_SUPPORT.DROP;
+        return { center: (top + bottom) / 2, half: (top - bottom) / 2 };
+    }
+
+    // Home position: DEFAULT_YAW degrees around the look-at point at the given
+    // radius, EYE_RISE above it.
+    _defaultPosition(distance) {
+        const yaw = CAMERA_SETTINGS.DEFAULT_YAW * Math.PI / 180;
+        return new THREE.Vector3(
+            Math.sin(yaw) * distance,
+            this._contentSpan().center + CAMERA_SETTINGS.EYE_RISE,
+            Math.cos(yaw) * distance,
+        );
+    }
+
+    // Camera distance that "contains" the whole shelf run (plus FRAME_MARGIN
     // headroom) for the current aspect ratio — fits by whichever of width or
     // height is more constraining, so labels never clip at any window size.
     _fitDistance() {
         const vFov   = this.camera.fov * Math.PI / 180;
         const margin = CAMERA_SETTINGS.FRAME_MARGIN;
-        const halfH  = (BOOKSHELF_DIMENSIONS.HEIGHT / 2) * margin;
+        const halfH  = this._contentSpan().half * margin;
         const halfW  = (BOOKSHELF_DIMENSIONS.WIDTH  / 2) * margin;
         const distForHeight = halfH / Math.tan(vFov / 2);
         const distForWidth  = halfW / (Math.tan(vFov / 2) * this.camera.aspect);
@@ -60,11 +80,12 @@ export class CameraController {
         // Lowest/closest the camera and target may sit, keeping them clear of the
         // floor and back-wall planes (see Stage.setupBackdrop for their positions).
         const clr = C.BOUNDS_CLEARANCE;
-        this._minY = -(BOOKSHELF_DIMENSIONS.HEIGHT / 2 + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2) + clr;
+        this._minY = FLOOR_Y + clr;
         this._minZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 - ROOM.WALL_GAP + clr;
 
-        // target stays at (0,0,0) — the bookshelf center — which is the OrbitControls default.
-        // saveState() records this as the "home" position for reset().
+        // Look at the middle of the content, not the modelled origin, so the
+        // supports stay in frame. saveState() records the "home" pose for reset().
+        this.controls.target.y = this._contentSpan().center;
         this.controls.update();
         this.controls.saveState();
     }
@@ -146,10 +167,10 @@ export class CameraController {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
 
-        // Re-fit the bookcase to the new viewport and update the saved "home"
+        // Re-fit the shelves to the new viewport and update the saved "home"
         // distance so reset() stays correct.
         const distance = this._fitDistance();
-        this.controls.position0.setZ(distance);
+        this.controls.position0.copy(this._defaultPosition(distance));
         const fitMax = Math.max(CONTROLS_SETTINGS.MAX_DISTANCE, distance * CONTROLS_SETTINGS.MAX_DISTANCE_FIT_MARGIN);
 
         // While focused on an open item, keep its framing (don't reframe to the
@@ -163,7 +184,7 @@ export class CameraController {
         this.controls.maxDistance = fitMax;
         // Reframe live only when the user is freely browsing (controls enabled).
         if (this.controls.enabled) {
-            this.camera.position.set(0, BOOKSHELF_DIMENSIONS.HEIGHT / 2, distance);
+            this.camera.position.copy(this._defaultPosition(distance));
             this.controls.target.copy(this.controls.target0);
             this.controls.update();
         }

@@ -4,11 +4,10 @@ import { BOOKSHELF_DIMENSIONS, SHELF_LAYOUT } from '../../config/constants.js';
 // mirroring CSS justify-content. Tunables (justify mode, edge padding) live in
 // SHELF_LAYOUT in config/constants.js.
 
-// Inner X range available for laying out groups on a shelf.
+// X range available for laying out groups on a shelf. The planks are open-ended
+// (no side posts), so only the edge padding keeps books back from the drop.
 export function shelfInnerSpan() {
-  const half = BOOKSHELF_DIMENSIONS.WIDTH / 2
-    - BOOKSHELF_DIMENSIONS.FRAME_THICKNESS
-    - SHELF_LAYOUT.EDGE_PADDING;
+  const half = BOOKSHELF_DIMENSIONS.WIDTH / 2 - SHELF_LAYOUT.EDGE_PADDING;
   return { left: -half, right: half };
 }
 

@@ -1,13 +1,13 @@
-import * as THREE from 'three';
 import { Book } from '../items/book/Book.js';
 import { BlogNotebook } from '../items/BlogNotebook.js';
 import { BusinessCard } from '../items/businessCard/BusinessCard.js';
-import { Bookcase } from '../items/Bookcase.js';
+import { ShelfRun } from '../items/shelf/ShelfRun.js';
+import { FloorLamp } from '../items/floorLamp/FloorLamp.js';
 import { Shelf } from '../items/shelf/Shelf.js';
 import { ShelfLabel } from '../items/shelf/ShelfLabel.js';
 import { Stage } from './Stage.js';
 import { InteractionManager } from './InteractionManager.js';
-import { BOOKSHELF_DIMENSIONS, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
+import { BOOKSHELF_DIMENSIONS, SHELF_SUPPORT, colors, BUSINESS_CARD_DEFAULTS } from '../config/constants.js';
 import { goodreadsSnapshot } from '../data/goodreadsSnapshot.js';
 import { fetchRecentReads } from '../data/goodreads.js';
 
@@ -39,12 +39,16 @@ export class BookshelfScene {
         );
         this.sceneManager.interactionManager = this.interactionManager;
         
-        // Build the bookcase (frame + shelves) and install it into the scene. The
+        // Build the run of wall-mounted shelves and install it into the scene. The
         // shelves Map is shared by reference, so the rest of this class reads it via
         // this.shelves as before.
-        this.bookcase = new Bookcase();
-        this.bookcase.objects.forEach(o => this.sceneManager.add(o));
-        this.shelves = this.bookcase.shelves;
+        this.shelfRun = new ShelfRun();
+        this.shelfRun.objects.forEach(o => this.sceneManager.add(o));
+        this.shelves = this.shelfRun.shelves;
+
+        // Decorative floor lamp standing beside the shelves.
+        this.floorLamp = new FloorLamp();
+        this.sceneManager.add(this.floorLamp);
 
         this.items = new Map(); // mixed: books, the business card, the blog notebook
     }
@@ -164,48 +168,24 @@ export class BookshelfScene {
         this.items.set('contact', { object: card });
     }
 
-    // Places the blog as a spiral notebook leaning into a shelf's back-left corner,
-    // resting against the shelf, left side wall, and back panel.
+    // Places the blog as a spiral notebook leaning against the support under the shelf above.
     addBlogNotebook(config) {
         const notebook = new BlogNotebook('blog', config);
         notebook.setContext(this.sceneManager.camera, this.sceneManager.renderer);
 
         const { shelfId, section } = this.placementFor('blog');
-        const { leanBack, swivel, leanLeft, offsetFromLeft, offsetFromBack, flowReserve } = config.placement;
+        const { flowReserve } = config.placement;
 
         const shelf = this.shelves.get(shelfId);
-        const shelfSurfaceY = shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2;
 
-        // Inner faces of the bookcase the notebook leans against (posts/back are
-        // inset by a full FRAME_THICKNESS from the outer envelope).
-        const leftInnerX = -BOOKSHELF_DIMENSIONS.WIDTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS;
-        const backInnerZ = -BOOKSHELF_DIMENSIONS.DEPTH / 2 + BOOKSHELF_DIMENSIONS.FRAME_THICKNESS;
+        // With the frame gone, the leftmost support is the only upright left to lean on.
+        notebook.applyPlacement(config.placement, {
+            shelfSurfaceY: shelf.y + BOOKSHELF_DIMENSIONS.SHELF_THICKNESS / 2,
+            supportX:       -(BOOKSHELF_DIMENSIONS.WIDTH / 2 - SHELF_SUPPORT.END_INSET),
+            backEdgeZ:     -BOOKSHELF_DIMENSIONS.DEPTH / 2,
+        });
 
-        const posX = leftInnerX + offsetFromLeft;
-        const posZ = backInnerZ + offsetFromBack;
-
-        notebook.rotation.set(leanBack, swivel, leanLeft);
-
-        // Auto-compute Y so the lowest corner of the rotated body rests flush on
-        // the shelf — keeps the bottom edge planted however the angles are tuned.
-        const { width, height, thickness } = notebook.dimensions;
-        const q = new THREE.Quaternion().setFromEuler(notebook.rotation);
-        let minCornerY = Infinity;
-        for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
-            const corner = new THREE.Vector3(sx * width / 2, sy * height / 2, sz * thickness / 2)
-                .applyQuaternion(q);
-            if (corner.y < minCornerY) minCornerY = corner.y;
-        }
-        const posY = shelfSurfaceY - minCornerY;
-
-        notebook.position.set(posX, posY, posZ);
-
-        notebook.initialX         = notebook.position.x;
-        notebook.initialY         = notebook.position.y;
-        notebook.initialZ         = notebook.position.z;
-        notebook.initialRotationY = notebook.rotation.y;
-
-        // Anchored to the corner — opt out of the flex flow and reserve the left
+        // Anchored to the support — opt out of the flex flow and reserve the left
         // end so flowed books on this shelf clear the leaning notebook.
         shelf.registerGroup({
             id:          'blog',
