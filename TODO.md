@@ -29,3 +29,9 @@
   - Sample each cover's dominant color and bake a spine/back hex into the snapshot, replacing the arbitrary `_hashColor(title)` so spines match the real books.
 - [ ] Improve code organization - break up big files, co-locate related code, such as that for displaying an item and its content
 - [ ] **ES module cache-busting** — Requires Ctrl+Shift+R to pick up JS changes in in browser. Add a version query string to module imports or use a bundler.
+
+## ⚡ Load Performance
+
+- [ ] **Vendor the third-party JS** — three.js now loads unpkg's *minified* build (654KB raw / 162KB gzipped, down from 1243KB / 250KB) with a `modulepreload` hint, so the remaining work is only about removing the third-party origin itself: serving three.js and GSAP locally so an unpkg outage can't blank the page. No sourcemap is published for the min build, so swap the importmap back to `three.module.js` when debugging inside three.
+- [ ] **Bundle the module graph** — 38 files resolved depth-first is a deep waterfall. An esbuild step collapses it to one request and also solves the cache-busting item above.
+- [ ] **Profile the carpet build** — The near patch is 720×720 segments (~1M triangles) on top of a 512² multi-octave noise field, all generated on the main thread before the first frame. If it's a real chunk of startup, lower `PATCH_SEGMENTS` or defer the patch a frame so the flat floor paints first.

@@ -16,21 +16,26 @@ export class ShelfRun {
     }
 
     _setupMaterials() {
-        const loader = new THREE.TextureLoader();
-        const woodTexH = loader.load('assets/textures/wood2-h-cropped.png');
-        woodTexH.wrapS = woodTexH.wrapT = THREE.RepeatWrapping;
-
         // Supports take the same grain in a darker tone, so they read as separate pieces.
-        this.shelfMaterial   = this._woodMaterial(woodTexH);
-        this.supportMaterial = this._woodMaterial(woodTexH, {
+        this.shelfMaterial   = this._woodMaterial();
+        this.supportMaterial = this._woodMaterial({
             color:     SHELF_SUPPORT.COLOR,
             roughness: SHELF_SUPPORT.ROUGHNESS,
         });
+
+        // The map is attached only once decoded: an unloaded Texture samples as
+        // black and multiplies the base color away, flashing black shelves.
+        new THREE.TextureLoader().load('assets/textures/wood2-h-cropped.png', (woodTexH) => {
+            woodTexH.wrapS = woodTexH.wrapT = THREE.RepeatWrapping;
+            for (const material of [this.shelfMaterial, this.supportMaterial]) {
+                material.map = woodTexH;
+                material.needsUpdate = true;
+            }
+        });
     }
 
-    _woodMaterial(texture, overrides = {}) {
+    _woodMaterial(overrides = {}) {
         return new THREE.MeshStandardMaterial({
-            map:       texture,
             color:     new THREE.Color(overrides.color ?? WOOD_MATERIAL.COLOR),
             roughness: overrides.roughness ?? WOOD_MATERIAL.ROUGHNESS,
             metalness: WOOD_MATERIAL.METALNESS,
